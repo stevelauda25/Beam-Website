@@ -25,7 +25,7 @@ export default function Sync() {
           delay={0.1}
           className="flex w-full items-center px-8 pt-12 lg:w-[621px] lg:pr-[131px] lg:pl-0 lg:pt-0"
         >
-          <div className="flex flex-col gap-[130px]">
+          <div className="flex flex-col gap-10 lg:gap-[130px]">
             <div className="flex max-w-[490px] flex-col gap-[10px]">
               <SectionLabel icon={syncIcon} label="Sync" />
               <h2 className="text-section font-normal text-text-primary">

@@ -32,8 +32,8 @@ export default function PricingCard({
         <div className="flex items-center justify-between">
           <span className="text-text-primary">{name}</span>
           {recommended && (
-            <span className="inline-flex items-center overflow-hidden rounded-full bg-[#3d3d3d] px-2 py-1 shadow-[inset_0_0_0_0.6px_rgba(0,0,0,0.5),inset_0_0.5px_2px_rgba(255,255,255,0.6),inset_0_-0.5px_0.5px_rgba(0,0,0,0.5)]">
-              <span className="pb-px text-[10px] leading-none text-white">
+            <span className="inline-flex items-center gap-1 overflow-hidden rounded-full bg-[#3d3d3d] px-2 py-1 shadow-[inset_0_0_0_0.6px_rgba(0,0,0,0.5),inset_0_0.5px_2px_rgba(255,255,255,0.6),inset_0_-0.5px_0.5px_rgba(0,0,0,0.5)]">
+              <span className="flex items-center justify-center whitespace-nowrap pb-px text-center text-[10px] font-normal leading-none text-white">
                 Recommended
               </span>
             </span>
@@ -53,7 +53,7 @@ export default function PricingCard({
 
       <div
         className={`flex w-full flex-col pt-3 ${
-          recommended ? 'h-[194px] pb-5' : 'h-[193px]'
+          recommended ? 'min-h-[194px] pb-5' : 'min-h-[193px]'
         }`}
       >
         <div className="flex w-full flex-col gap-1.5">

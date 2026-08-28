@@ -25,7 +25,7 @@ export default function OnDemand() {
           delay={0.1}
           className="flex w-full items-center px-8 pt-12 lg:w-[631px] lg:pl-[131px] lg:pr-0 lg:pt-0"
         >
-          <div className="flex flex-col gap-[130px]">
+          <div className="flex flex-col gap-10 lg:gap-[130px]">
             <div className="flex max-w-[500px] flex-col gap-[10px]">
               <SectionLabel icon={ondemandIcon} label="On demand files" />
               <h2 className="text-section font-normal text-text-primary">

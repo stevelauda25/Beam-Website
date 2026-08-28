@@ -23,7 +23,7 @@ export default function Footer() {
       <img
         src={footerGridPattern}
         alt=""
-        className="pointer-events-none absolute left-1/2 top-[701px] h-[363px] w-[1440px] max-w-none -translate-x-1/2"
+        className="pointer-events-none absolute bottom-0 left-1/2 h-[200px] w-[800px] max-w-none -translate-x-1/2 md:top-[701px] md:h-[363px] md:w-[1440px] md:bottom-auto"
         width={1440}
         height={363}
       />
@@ -46,7 +46,7 @@ export default function Footer() {
             delay={0.05}
             className="flex w-full flex-col items-center gap-2 px-6 pb-8 text-center"
           >
-            <h2 className="text-[32px] font-normal leading-[44px] tracking-[-0.64px]">
+            <h2 className="text-[24px] font-normal leading-[32px] tracking-[-0.48px] md:text-[32px] md:leading-[44px] md:tracking-[-0.64px]">
               Your workspace. Ready anywhere.
             </h2>
             <p className="max-w-[382px] text-[14px] leading-[1.6]">
@@ -57,7 +57,7 @@ export default function Footer() {
 
           <FadeIn
             delay={0.1}
-            className="flex w-full flex-col items-center gap-12 px-3 pb-8"
+            className="flex w-full flex-col items-center gap-12 px-5 pb-8"
           >
             <Button
               variant="dark"

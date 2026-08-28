@@ -25,7 +25,7 @@ export default function Button({
     primary: `${base} border-[0.5px] border-black/20 px-3 py-2 text-[14px] text-white hover:opacity-90 focus-visible:ring-black`,
     secondary: `${base} border-[0.5px] border-black/10 bg-[#fafafa] px-3 py-2 text-[14px] text-black hover:bg-canvas focus-visible:ring-text-secondary`,
     dark: `${base} h-[34px] border-[0.5px] border-black/20 py-2.5 pl-4 pr-3 text-[14px] leading-none text-black hover:bg-neutral-100 focus-visible:ring-white`,
-    pricing: `${base} h-[26px] w-full rounded border border-[#0a0a0a] px-3.5 py-2.5 text-[12px] leading-[18px] text-white hover:opacity-90 focus-visible:ring-black`,
+    pricing: `${base} h-[30px] w-full rounded-[34px] border border-[#0a0a0a] px-3.5 text-[12px] leading-[18px] text-white hover:opacity-90 focus-visible:ring-black`,
   };
 
   const backgroundStyle: Record<string, React.CSSProperties> = {

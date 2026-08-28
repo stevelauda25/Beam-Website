@@ -29,7 +29,9 @@ export default function FeatureItem({
         />
       </div>
       <div className="flex flex-col text-[12px] leading-[20px]">
-        <span className="font-normal text-text-primary">{title}</span>
+        <span className="whitespace-pre-line font-normal text-text-primary">
+          {title}
+        </span>
         {description && (
           <span className="text-text-secondary">{description}</span>
         )}

@@ -6,7 +6,7 @@ import arrowRight from '../../assets/icons/arrow-right.svg';
 export default function Hero() {
   return (
     <section className="relative w-full bg-canvas">
-      <div className="relative mx-auto flex max-w-[1176px] flex-col px-8 pb-10 pt-16 lg:h-[266px] lg:block lg:px-0 lg:py-0">
+      <div className="relative mx-auto flex max-w-[1176px] flex-col px-5 pb-8 pt-12 md:px-8 lg:h-[266px] lg:block lg:px-0 lg:py-0">
         <FadeIn>
           <div className="flex w-full max-w-[748px] flex-col gap-2 lg:absolute lg:left-0 lg:top-[103px]">
             <div className="flex flex-wrap items-center gap-[6px]">
@@ -24,7 +24,7 @@ export default function Hero() {
                 />
               </span>
             </div>
-            <h1 className="text-3xl font-normal leading-[44px] tracking-[-0.64px] text-text-primary">
+            <h1 className="text-[28px] font-normal leading-[36px] tracking-[-0.56px] text-text-primary md:text-3xl md:leading-[44px] md:tracking-[-0.64px]">
               One workspace. Everywhere.
             </h1>
             <p className="max-w-[564px] text-[16px] leading-[24px] text-[#3d3d3d]">
@@ -38,10 +38,18 @@ export default function Hero() {
           delay={0.1}
           className="mt-8 flex gap-3 lg:absolute lg:right-0 lg:top-[200px] lg:mt-0"
         >
-          <Button variant="secondary" href="#">
+          <Button
+            variant="secondary"
+            href="#"
+            className="!px-[14px] !leading-none whitespace-nowrap"
+          >
             Read docs
           </Button>
-          <Button variant="primary" href="#">
+          <Button
+            variant="primary"
+            href="#"
+            className="!px-[14px] !leading-none whitespace-nowrap"
+          >
             Start free
           </Button>
         </FadeIn>

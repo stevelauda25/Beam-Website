@@ -7,19 +7,19 @@ import toggleActive from '../../assets/icons/toggle-active.svg';
 
 const features = [
   {
-    width: 301,
+    className: 'lg:w-[301px]',
     title:
-      'Encrypted at rest with AES-256-GCM, never stored in snapshots, chunks, or logs',
+      'Encrypted at rest with AES-256-GCM,\nnever stored in snapshots, chunks, or logs',
   },
   {
-    width: 358,
+    className: 'lg:w-[358px]',
     title:
-      'Scoped to org, workspace, and profile (dev, staging, prod), so a token only unlocks what it needs',
+      'Scoped to org, workspace, and profile (dev,\nstaging, prod), so a token only unlocks what it needs',
   },
   {
-    width: 301,
+    className: 'lg:w-[325px]',
     title:
-      'Every read is audit-logged, and rotating a key reaches every live workspace in under 30 seconds',
+      'Every read is audit-logged, and rotating a key\nreaches every live workspace in under 30 seconds',
   },
 ];
 
@@ -56,8 +56,7 @@ export default function Secrets() {
                 key={feature.title.slice(0, 24)}
                 icon={toggleActive}
                 title={feature.title}
-                style={{ width: `${feature.width}px` }}
-                className="max-w-full"
+                className={`max-w-full ${feature.className}`}
               />
             ))}
           </div>
