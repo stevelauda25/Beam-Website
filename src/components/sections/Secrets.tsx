@@ -1,7 +1,7 @@
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import keyVisualSecrets from '../../assets/hero/key-visual-secrets.svg';
+import { SecretVisual } from '../../assets/hero/secret-visual';
 import secretsIcon from '../../assets/icons/secrets.svg';
 import toggleActive from '../../assets/icons/toggle-active.svg';
 
@@ -25,7 +25,7 @@ const features = [
 
 export default function Secrets() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-8 py-[100px] lg:px-[131px]">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
       <div className="mx-auto flex max-w-[1178px] flex-col items-center gap-8">
         <FadeIn className="flex flex-col items-center gap-3 text-center">
           <SectionLabel icon={secretsIcon} label="Secrets" />
@@ -33,20 +33,16 @@ export default function Secrets() {
             Env vars that travel, without leaving a trace
           </h2>
           <p className="max-w-[490px] text-[12px] leading-[18px] text-text-primary">
-            Agents get the same view of your files as you do, through the CLI and
-            an MCP server, authenticated with scoped tokens you can revoke at any
-            time.
+            Keep environment variables with your workspace and make them available
+            only where you explicitly mount them—without committing .env files or
+            copying secrets between machines.
           </p>
         </FadeIn>
 
         <FadeIn delay={0.05} className="w-full">
-          <img
-            src={keyVisualSecrets}
-            alt="A Beam workspace mounting encrypted environment variables on a new machine"
-            className="h-auto w-full"
-            width={1178}
-            height={484}
-          />
+          <div className="aspect-[1178/484] w-full [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
+            <SecretVisual />
+          </div>
         </FadeIn>
 
         <FadeIn delay={0.1} className="w-full">

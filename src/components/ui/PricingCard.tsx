@@ -9,6 +9,7 @@ interface PricingCardProps {
   features: string[];
   cta: string;
   recommended?: boolean;
+  className?: string;
 }
 
 export default function PricingCard({
@@ -19,14 +20,16 @@ export default function PricingCard({
   features,
   cta,
   recommended,
+  className = '',
 }: PricingCardProps) {
   return (
     <div
+      data-pricing-card
       className={`flex min-w-0 flex-col items-start overflow-hidden rounded-[2.83px] px-3 ${
         recommended
           ? 'lg:w-[277.25px] lg:shrink-0'
           : 'lg:flex-1'
-      }`}
+      } ${className}`}
     >
       <div className="flex w-full flex-col justify-center text-[12px] leading-[18px]">
         <div className="flex items-center justify-between">

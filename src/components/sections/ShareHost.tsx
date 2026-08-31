@@ -1,27 +1,23 @@
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import keyVisualShareHost from '../../assets/hero/key-visual-share-host.svg';
+import { ShareVisual } from '../../assets/hero/share-visual';
 import shareIcon from '../../assets/icons/share.svg';
 import toggleActive from '../../assets/icons/toggle-active.svg';
 
 export default function ShareHost() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-8 py-[100px] lg:px-0">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row-reverse lg:items-stretch">
         <FadeIn className="w-full lg:w-[809px]">
-          <img
-            src={keyVisualShareHost}
-            alt="A Beam folder branching into a share link and a deployed website"
-            className="h-auto w-full"
-            width={809}
-            height={692}
-          />
+          <div className="aspect-[809/692] w-full [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
+            <ShareVisual />
+          </div>
         </FadeIn>
 
         <FadeIn
           delay={0.1}
-          className="flex w-full items-center px-8 pt-12 lg:w-[631px] lg:pl-[131px] lg:pr-0 lg:pt-0"
+          className="flex w-full items-center pt-12 lg:w-[631px] lg:pl-[131px] lg:pr-0 lg:pt-0"
         >
           <div className="flex flex-col gap-10 lg:gap-[130px]">
             <div className="flex max-w-[500px] flex-col gap-[10px]">

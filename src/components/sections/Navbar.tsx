@@ -3,7 +3,7 @@ import Button from '../ui/Button';
 
 export default function Navbar() {
   return (
-    <nav className="w-full bg-[#fafafa] px-8 py-3 lg:px-[132px]">
+    <nav className="w-full bg-[#fafafa] px-5 py-3 sm:px-8 lg:px-[132px]">
       <div className="mx-auto flex max-w-[1176px] items-center justify-between">
         <a href="#" className="flex items-center gap-[5px]">
           <img

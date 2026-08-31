@@ -1,8 +1,36 @@
+import { useState } from 'react';
 import terminalHeader from '../../assets/icons/terminal-header.svg';
 import terminalCopy from '../../assets/icons/terminal-copy.svg';
 import terminalCheck from '../../assets/icons/terminal-check.svg';
 
+const COMMAND = 'beam mount ~/workspace';
+
 export default function TerminalCard() {
+  const [copied, setCopied] = useState(false);
+
+  const copyCommand = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(COMMAND);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = COMMAND;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const didCopy = document.execCommand('copy');
+        textarea.remove();
+        if (!didCopy) throw new Error('Copy command was rejected.');
+      }
+
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch (error) {
+      console.warn('Unable to copy the Beam mount command.', error);
+    }
+  };
+
   return (
     <div className="w-full max-w-[439px] rounded-[9px] bg-[#212121]">
       <div
@@ -31,15 +59,26 @@ export default function TerminalCard() {
           <div className="flex items-center gap-[5.115px] border-t-[0.5px] border-[#515151] bg-[#212121] p-3 pr-4 shadow-[inset_0_-0.707px_0.707px_rgba(0,0,0,0.1)]">
             <div className="flex min-w-0 flex-1 items-start gap-[8.5px] font-mono text-[14px] leading-[1.6] text-white">
               <span className="w-[17px] shrink-0 text-center text-[#0d76f2]">$</span>
-              <span>beam mount ~/workspace</span>
+              <span>{COMMAND}</span>
             </div>
-            <img
-              src={terminalCopy}
-              alt=""
-              className="h-3.5 w-3.5 shrink-0"
-              width={14}
-              height={14}
-            />
+            <button
+              type="button"
+              onClick={copyCommand}
+              aria-label={copied ? 'Command copied' : 'Copy command'}
+              title={copied ? 'Copied' : 'Copy command'}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/60 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60"
+            >
+              <img
+                src={terminalCopy}
+                alt=""
+                className="h-3.5 w-3.5"
+                width={14}
+                height={14}
+              />
+            </button>
+            <span className="sr-only" aria-live="polite">
+              {copied ? 'Command copied to clipboard.' : ''}
+            </span>
           </div>
         </div>
       </div>

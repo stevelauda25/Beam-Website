@@ -9,7 +9,7 @@ import syncFast from '../../assets/icons/sync-fast.svg';
 
 export default function Sync() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-8 py-[100px] lg:px-0">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row lg:items-stretch">
         <FadeIn className="w-full lg:w-[809px]">
           <img
@@ -23,7 +23,7 @@ export default function Sync() {
 
         <FadeIn
           delay={0.1}
-          className="flex w-full items-center px-8 pt-12 lg:w-[621px] lg:pr-[131px] lg:pl-0 lg:pt-0"
+          className="flex w-full items-center pt-12 lg:w-[621px] lg:pr-[131px] lg:pl-0 lg:pt-0"
         >
           <div className="flex flex-col gap-10 lg:gap-[130px]">
             <div className="flex max-w-[490px] flex-col gap-[10px]">

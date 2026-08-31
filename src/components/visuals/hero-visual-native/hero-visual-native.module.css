@@ -1,0 +1,289 @@
+.visual {
+  display: block;
+  width: 115%;
+  height: auto;
+  aspect-ratio: 1440 / 540;
+  flex: none;
+}
+
+@media (min-width: 640px) {
+  .visual {
+    width: 100%;
+  }
+}
+
+.app {
+  position: relative;
+  width: 1164.56px;
+  height: 669.682px;
+  overflow: hidden;
+  border-radius: 5.75533px;
+  color: #0a0a0a;
+  background: #fff;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11.12px;
+  line-height: 1;
+}
+
+.sidebar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 200.263px;
+  border-right: .463308px solid rgb(0 0 0 / 10%);
+}
+
+.workspace {
+  position: absolute;
+  top: 16.52px;
+  left: 15.09px;
+  display: flex;
+  align-items: center;
+  height: 14px;
+  gap: 5.4px;
+  white-space: nowrap;
+}
+
+.beamGlyph {
+  display: block;
+  width: 10.2px;
+  height: 10.2px;
+  color: #050505;
+}
+
+.beamGlyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.chevron {
+  display: block;
+  width: 11.1194px;
+  height: 11.1194px;
+  margin-left: -.35px;
+  color: #7a7a7a;
+}
+
+.sidebarToggle {
+  position: absolute;
+  left: 158.763px;
+  display: block;
+  width: 11.1194px;
+  height: 11.1194px;
+  color: #212121;
+}
+
+.chevron svg,
+.sidebarToggle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: .926617;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.search,
+.newFolder {
+  position: absolute;
+  left: 7.678px;
+  width: 184.708px;
+  height: 24.413px;
+  border-radius: 3.706px;
+}
+
+.search {
+  top: 43.211px;
+  display: flex;
+  align-items: center;
+  background: transparent;
+}
+
+.searchSurface {
+  position: absolute;
+  z-index: 0;
+  top: -.463308px;
+  left: 0;
+  display: block;
+  width: 184.708px;
+  height: 25.3396px;
+  overflow: visible;
+}
+
+.searchIcon,
+.folderIcon {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 11.12px;
+  height: 11.12px;
+  margin-left: 7.41px;
+}
+
+.searchIcon svg,
+.folderIcon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: .926617;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.searchIcon {
+  color: #7a7a7a;
+}
+
+.placeholder {
+  position: relative;
+  z-index: 1;
+  margin-left: 5.56px;
+  color: #7a7a7a;
+}
+
+.search kbd {
+  position: absolute;
+  right: 7.64px;
+  z-index: 1;
+  display: grid;
+  width: 10.19px;
+  height: 10.19px;
+  place-items: center;
+  border: .926617px solid #8f8f8f;
+  border-radius: 3.243px;
+  color: #7a7a7a;
+  background: #fff;
+  font: inherit;
+  font-size: 8px;
+}
+
+.search kbd svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: #8f8f8f;
+}
+
+.newFolder {
+  top: 67.624px;
+  display: flex;
+  align-items: center;
+}
+
+.newFolder span:last-child {
+  margin-left: 5.56px;
+}
+
+.folderList {
+  position: absolute;
+  top: 117.981px;
+  left: 7.678px;
+  width: 184.708px;
+}
+
+.folderRow,
+.folderActive {
+  display: flex;
+  width: 100%;
+  height: 20.707px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 7.42px;
+  border-radius: 3.706px;
+}
+
+.folderActive {
+  background: #f0f0f0;
+}
+
+.content {
+  position: absolute;
+  inset: 0 0 0 200.263px;
+}
+
+.title {
+  position: absolute;
+  top: 16.53px;
+  left: 14.36px;
+}
+
+.fileTable {
+  position: absolute;
+  top: 43.175px;
+  left: 7.574px;
+  width: 665.793px;
+  height: 97.652px;
+  overflow: hidden;
+  border: .463308px solid rgb(0 0 0 / 10%);
+  border-radius: 3.706px;
+  background: #fff;
+}
+
+.fileRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 49px 137px 19px;
+  height: 24.413px;
+  align-items: center;
+  padding-left: 7.42px;
+  border-top: .463308px solid rgb(0 0 0 / 10%);
+}
+
+.fileHeader {
+  border-top: 0;
+  color: #6f6f6f;
+  background: #f0f0f0;
+}
+
+.fileName {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7.4px;
+}
+
+.badge {
+  display: inline-flex;
+  height: 15.19px;
+  align-items: center;
+  padding: 0 6.48px;
+  border-radius: 999px;
+  color: #607273;
+  background: #eef4f4;
+  font-size: 9.27px;
+}
+
+.ellipsis {
+  color: #101010;
+  font-size: 7px;
+  letter-spacing: .45px;
+}
+
+.stats {
+  position: absolute;
+  top: 43.175px;
+  left: 680.777px;
+  width: 268.924px;
+  height: 73.239px;
+  overflow: hidden;
+  border: .463308px solid rgb(0 0 0 / 10%);
+  border-radius: 3.706px;
+  background: #fff;
+}
+
+.statRow {
+  display: flex;
+  height: 24.413px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 7.42px;
+  border-top: .463308px solid rgb(0 0 0 / 10%);
+}
+
+.statRow:first-child {
+  border-top: 0;
+}
