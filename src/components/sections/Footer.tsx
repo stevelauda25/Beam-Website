@@ -35,7 +35,8 @@ export default function Footer() {
             className="flex w-full flex-col items-center gap-2 px-5 pb-8 text-center"
           >
             <h2 className="text-[24px] font-normal leading-[32px] tracking-[-0.48px] md:text-[32px] md:leading-[44px] md:tracking-[-0.64px]">
-              Your workspace. Ready anywhere.
+              <span className="block md:inline">Your workspace.</span>{' '}
+              <span className="block md:inline">Ready anywhere.</span>
             </h2>
             <p className="max-w-[382px] text-[14px] leading-[1.6]">
               Mount your files in seconds and keep the same workspace across your
