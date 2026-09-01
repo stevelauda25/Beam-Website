@@ -1,51 +1,81 @@
 import { useEffect, useRef } from 'react';
+import activePattern from '../../../assets/key-visuals/footer/footer-active-pattern.png';
+import gateLeftClosed from '../../../assets/key-visuals/footer/footer-gate-left.svg';
+import gateRightClosed from '../../../assets/key-visuals/footer/footer-gate-right.svg';
+import gateLeftOpen from '../../../assets/key-visuals/footer/footer-gate-left-open.svg';
+import gateRightOpen from '../../../assets/key-visuals/footer/footer-gate-right-open.svg';
 import { BeamSymbol } from './BeamSymbol';
 import styles from './FooterVisual.module.css';
-
-const ARTWORK_WIDTH = 1460;
-const ARTWORK_HEIGHT = 292;
-const CENTER_X = 720;
-const CENTER_Y = 154;
-
-const symbolRows = [
-  { y: 47, xs: [272, 384, 496, 608, 720, 832, 944, 1056, 1168] },
-  { y: 155, xs: [160, 272, 384, 496, 608, 720, 832, 944, 1056, 1168, 1280, 1392] },
-  { y: 264, xs: [272, 384, 496, 608, 720, 832, 944, 1056, 1168] },
-] as const;
-
-function baseOpacity(x: number, y: number) {
-  const nx = (x - CENTER_X) / 790;
-  const ny = (y - CENTER_Y) / 175;
-  return 0.012 + Math.exp(-(nx * nx + ny * ny) * 1.45) * 0.032;
-}
 
 export function FooterVisual() {
   const rootRef = useRef<HTMLElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
+  const patternCanvasRef = useRef<HTMLCanvasElement>(null);
+  const interactionRef = useRef<HTMLDivElement>(null);
+  const pulseRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const root = rootRef.current;
     const centerTile = centerRef.current;
-    const glow = glowRef.current;
-    if (!root || !centerTile || !glow) return;
+    const patternCanvas = patternCanvasRef.current;
+    const interactionZone = interactionRef.current;
+    const footerPulse = pulseRef.current;
+    if (!root || !centerTile || !patternCanvas || !interactionZone || !footerPulse) {
+      return;
+    }
+
+    const patternContext = patternCanvas.getContext('2d');
+    if (!patternContext) return;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const symbols = Array.from(
-      root.querySelectorAll<HTMLElement>('[data-symbol]'),
-    );
     let animationFrame = 0;
     let visible = false;
+    let introStarted = false;
+    let pulseScaleAnimation: Animation | null = null;
+    let pulseOpacityAnimation: Animation | null = null;
+    let pulseExitAnimation: Animation | null = null;
     let lastFrame = performance.now();
     const started = lastFrame;
-    const pointer = {
-      x: CENTER_X,
-      y: CENTER_Y,
-      targetX: CENTER_X,
-      targetY: CENTER_Y,
+    const interaction = {
       strength: 0,
       targetStrength: 0,
     };
+    let seed = 0x42ea91;
+    const random = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const patternDots: Array<{
+      x: number;
+      y: number;
+      size: number;
+      phase: number;
+      speed: number;
+      falloff: number;
+    }> = [];
+
+    for (let y = 4; y < 339; y += 6) {
+      for (let x = 4; x < 848; x += 6) {
+        if (random() < 0.68) continue;
+
+        const horizontalDistance = Math.abs(x - 426) / 360;
+        const verticalDistance = Math.abs(y - 171.5) / 170;
+        const falloff = Math.max(
+          0,
+          1 - Math.pow(horizontalDistance, 1.7) - Math.pow(verticalDistance, 2.1),
+        );
+        if (falloff <= 0) continue;
+
+        patternDots.push({
+          x,
+          y,
+          size: random() > 0.86 ? 2 : 1,
+          phase: random() * Math.PI * 2,
+          speed: 0.0012 + random() * 0.0028,
+          falloff,
+        });
+      }
+    }
 
     const draw = (now: number) => {
       animationFrame = 0;
@@ -54,60 +84,159 @@ export function FooterVisual() {
       const frameScale = Math.min(3, (now - lastFrame) / 16.667);
       lastFrame = now;
       const ease = 1 - Math.pow(0.84, frameScale);
-      pointer.x += (pointer.targetX - pointer.x) * ease;
-      pointer.y += (pointer.targetY - pointer.y) * ease;
-      pointer.strength += (pointer.targetStrength - pointer.strength) * ease;
+      interaction.strength +=
+        (interaction.targetStrength - interaction.strength) * ease;
 
       const elapsed = now - started;
-      const breathRadius = ((elapsed % 9000) / 9000) * 860;
       const centerPulse = 0.5 + Math.sin(elapsed / 1450) * 0.5;
 
-      symbols.forEach((symbol) => {
-        const x = Number(symbol.dataset.x);
-        const y = Number(symbol.dataset.y);
-        const distanceFromCenter = Math.hypot(x - CENTER_X, y - CENTER_Y);
-        const breath = Math.exp(
-          -Math.pow((distanceFromCenter - breathRadius) / 72, 2),
-        );
-        const opacity = Number(symbol.dataset.baseOpacity) + breath * 0.035;
-        symbol.style.opacity = opacity.toFixed(4);
-      });
+      const centerScale = 1 + centerPulse * 0.006 + interaction.strength * 0.012;
+      centerTile.style.transform = `translate(-50%, -50%) scale(${centerScale.toFixed(4)})`;
 
-      const centerDistance = Math.hypot(
-        pointer.x - CENTER_X,
-        pointer.y - CENTER_Y,
-      );
-      const centerHover =
-        Math.exp(-Math.pow(centerDistance / 230, 2)) * pointer.strength;
-      const centerShiftX = ((pointer.x - CENTER_X) / 230) * centerHover * 3.5;
-      const centerShiftY = ((pointer.y - CENTER_Y) / 230) * centerHover * 3.5;
-      const centerScale = 1 + centerPulse * 0.006 + centerHover * 0.018;
-      centerTile.style.transform = `translate(-50%, -50%) translate(${centerShiftX.toFixed(2)}px, ${centerShiftY.toFixed(2)}px) scale(${centerScale.toFixed(4)})`;
-      glow.style.opacity = String(
-        0.48 + centerPulse * 0.12 + centerHover * 0.12,
-      );
+      patternContext.clearRect(0, 0, 852, 343);
+      if (interaction.strength > 0.01) {
+        for (const dot of patternDots) {
+          const signal =
+            Math.sin(now * dot.speed + dot.phase) * 0.62 +
+            Math.sin(now * dot.speed * 0.41 + dot.phase * 1.73) * 0.38;
+          const sparkle = Math.max(0, (signal - 0.18) / 0.82);
+          const alpha =
+            (0.025 + sparkle * sparkle * 0.42) *
+            dot.falloff *
+            interaction.strength;
+
+          if (alpha < 0.012) continue;
+          patternContext.fillStyle = `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+          patternContext.fillRect(dot.x, dot.y, dot.size, dot.size);
+        }
+      }
 
       animationFrame = window.requestAnimationFrame(draw);
     };
 
-    const updatePointer = (event: PointerEvent) => {
-      const bounds = root.getBoundingClientRect();
-      pointer.targetX =
-        ((event.clientX - bounds.left) / bounds.width) * ARTWORK_WIDTH;
-      pointer.targetY =
-        ((event.clientY - bounds.top) / bounds.height) * ARTWORK_HEIGHT;
-      pointer.targetStrength = event.pointerType === 'mouse' ? 1 : 0.55;
+    const clearPulseAnimations = () => {
+      pulseScaleAnimation?.cancel();
+      pulseOpacityAnimation?.cancel();
+      pulseExitAnimation?.cancel();
+      pulseScaleAnimation = null;
+      pulseOpacityAnimation = null;
+      pulseExitAnimation = null;
     };
 
-    const pointerLeave = () => {
-      pointer.targetX = CENTER_X;
-      pointer.targetY = CENTER_Y;
-      pointer.targetStrength = 0;
+    const resetPulse = () => {
+      footerPulse.style.removeProperty('opacity');
+      footerPulse.style.removeProperty('transform');
+    };
+
+    const startPulse = () => {
+      const computed = window.getComputedStyle(footerPulse);
+      const currentOpacity = Number.parseFloat(computed.opacity) || 0;
+      const currentTransform = computed.transform === 'none' ? 'scale(0.08)' : computed.transform;
+      const isInterrupted = currentOpacity > 0.01;
+
+      clearPulseAnimations();
+      footerPulse.style.opacity = String(currentOpacity);
+      footerPulse.style.transform = currentTransform;
+
+      const delay = isInterrupted ? 0 : 380;
+      const duration = isInterrupted ? 1180 : 1500;
+
+      pulseScaleAnimation = footerPulse.animate(
+        [
+          { transform: currentTransform },
+          { transform: 'scale(1.28)' },
+        ],
+        {
+          duration,
+          delay,
+          easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+          fill: 'forwards',
+        },
+      );
+
+      pulseOpacityAnimation = footerPulse.animate(
+        [
+          { opacity: currentOpacity, offset: 0 },
+          { opacity: 0.5, offset: 0.24 },
+          { opacity: 0.2, offset: 0.58 },
+          { opacity: 0.04, offset: 0.82 },
+          { opacity: 0, offset: 1 },
+        ],
+        { duration, delay, easing: 'linear', fill: 'forwards' },
+      );
+
+      const activeScaleAnimation = pulseScaleAnimation;
+      activeScaleAnimation.onfinish = () => {
+        if (pulseScaleAnimation !== activeScaleAnimation) return;
+        clearPulseAnimations();
+        resetPulse();
+      };
+    };
+
+    const finishPulse = () => {
+      const computed = window.getComputedStyle(footerPulse);
+      const currentOpacity = Number.parseFloat(computed.opacity) || 0;
+      const currentTransform = computed.transform === 'none' ? 'scale(0.08)' : computed.transform;
+      const matrix = new DOMMatrixReadOnly(currentTransform);
+      const currentScale = Math.hypot(matrix.a, matrix.b);
+      const exitScale = Math.min(1.36, currentScale + 0.16);
+
+      clearPulseAnimations();
+      footerPulse.style.opacity = String(currentOpacity);
+      footerPulse.style.transform = currentTransform;
+
+      if (currentOpacity <= 0.01) {
+        resetPulse();
+        return;
+      }
+
+      pulseExitAnimation = footerPulse.animate(
+        [
+          { opacity: currentOpacity, transform: currentTransform },
+          { opacity: 0, transform: `scale(${exitScale})` },
+        ],
+        {
+          duration: 360,
+          easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
+          fill: 'forwards',
+        },
+      );
+
+      const activeExitAnimation = pulseExitAnimation;
+      activeExitAnimation.onfinish = () => {
+        if (pulseExitAnimation !== activeExitAnimation) return;
+        clearPulseAnimations();
+        resetPulse();
+      };
+    };
+
+    const resetInteraction = () => {
+      if (root.dataset.hover !== 'true') return;
+      interaction.targetStrength = 0;
+      delete root.dataset.hover;
+      finishPulse();
+    };
+
+    const startInteraction = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || reducedMotion.matches) return;
+
+      interaction.targetStrength = 1;
+      root.dataset.hover = 'true';
+      startPulse();
+    };
+
+    const endInteraction = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') return;
+      resetInteraction();
     };
 
     const intersectionObserver = new IntersectionObserver(
       ([entry]) => {
         visible = entry.isIntersecting;
+        if (visible && !introStarted) {
+          introStarted = true;
+          root.dataset.intro = 'true';
+        }
         if (visible && !animationFrame && !reducedMotion.matches) {
           lastFrame = performance.now();
           animationFrame = window.requestAnimationFrame(draw);
@@ -120,14 +249,20 @@ export function FooterVisual() {
     );
 
     intersectionObserver.observe(root);
-    root.addEventListener('pointermove', updatePointer);
-    root.addEventListener('pointerleave', pointerLeave);
+    root.addEventListener('pointerleave', resetInteraction);
+    interactionZone.addEventListener('pointerenter', startInteraction);
+    interactionZone.addEventListener('pointerleave', endInteraction);
 
     return () => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      clearPulseAnimations();
+      resetPulse();
       intersectionObserver.disconnect();
-      root.removeEventListener('pointermove', updatePointer);
-      root.removeEventListener('pointerleave', pointerLeave);
+      root.removeEventListener('pointerleave', resetInteraction);
+      interactionZone.removeEventListener('pointerenter', startInteraction);
+      interactionZone.removeEventListener('pointerleave', endInteraction);
+      delete root.dataset.intro;
+      delete root.dataset.hover;
     };
   }, []);
 
@@ -137,44 +272,57 @@ export function FooterVisual() {
       className={styles.footerVisual}
       aria-label="Interactive Beam footer key visual"
     >
-      <div ref={glowRef} className={styles.centerGlow} aria-hidden="true" />
-
-      <div className={styles.symbolField} aria-hidden="true">
-        {symbolRows.flatMap((row) =>
-          row.xs.map((x) => {
-            if (row.y === 155 && x === 720) return null;
-            const opacity = baseOpacity(x, row.y);
-
-            return (
-              <span
-                className={styles.ghostSymbol}
-                data-symbol
-                data-x={x}
-                data-y={row.y}
-                data-base-opacity={opacity}
-                key={`${x}-${row.y}`}
-                style={{
-                  left: `${(x / ARTWORK_WIDTH) * 100}%`,
-                  top: `${(row.y / ARTWORK_HEIGHT) * 100}%`,
-                  opacity,
-                }}
-              >
-                <BeamSymbol variant="outline" />
-              </span>
-            );
-          }),
-        )}
+      <div className={styles.activeField} aria-hidden="true">
+        <img
+          className={styles.activePattern}
+          src={activePattern}
+          alt=""
+          draggable="false"
+          width={852}
+          height={343}
+        />
+        <canvas
+          ref={patternCanvasRef}
+          className={styles.randomPattern}
+          width={852}
+          height={343}
+        />
+        <img
+          className={styles.patternWave}
+          src={activePattern}
+          alt=""
+          draggable="false"
+          width={852}
+          height={343}
+        />
       </div>
 
+      <div className={styles.gates} aria-hidden="true">
+        <span className={`${styles.gate} ${styles.gateLeft}`}>
+          <img className={styles.gateClosed} src={gateLeftClosed} alt="" />
+          <img className={styles.gateOpen} src={gateLeftOpen} alt="" />
+        </span>
+        <span className={`${styles.gate} ${styles.gateRight}`}>
+          <img className={styles.gateClosed} src={gateRightClosed} alt="" />
+          <img className={styles.gateOpen} src={gateRightOpen} alt="" />
+        </span>
+      </div>
+
+      <span ref={pulseRef} className={styles.footerPulse} aria-hidden="true" />
+
+      <span className={styles.centerLine} aria-hidden="true" />
+      <div className={styles.centerGlow} aria-hidden="true" />
+
       <div ref={centerRef} className={styles.centerTile} aria-hidden="true">
+        <span className={styles.tileHighlight} />
         <span className={styles.tileEdge} />
         <BeamSymbol
           className={styles.activeSymbol}
-          hoverShineClassName={styles.hoverShineBand}
-          shineClassName={styles.shineBand}
           variant="metal"
         />
       </div>
+
+      <div ref={interactionRef} className={styles.interactionZone} aria-hidden="true" />
     </section>
   );
 }

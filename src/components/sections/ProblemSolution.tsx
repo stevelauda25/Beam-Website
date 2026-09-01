@@ -160,7 +160,19 @@ export default function ProblemSolution() {
           end: () => (window.innerWidth < 1024 ? '+=125%' : '+=150%'),
           pin: true,
           pinSpacing: true,
-          scrub: 0.35,
+          scrub: 0.18,
+          snap: reducedMotion
+            ? undefined
+            : {
+                // Directional scene stops prevent the pinned section from
+                // resting on an incomplete, blurred transformation.
+                snapTo: [0, 0.25, 0.65, 1],
+                directional: true,
+                duration: { min: 0.12, max: 0.3 },
+                delay: 0.04,
+                ease: 'power2.out',
+                inertia: false,
+              },
           anticipatePin: 1,
           fastScrollEnd: true,
           invalidateOnRefresh: true,

@@ -74,7 +74,7 @@ export function BeamSymbol({
         />
       ))}
 
-      {variant === 'metal' ? (
+      {variant === 'metal' && (shineClassName || hoverShineClassName) ? (
         <g clipPath={`url(#${clipId})`}>
           <rect
             className={shineClassName}

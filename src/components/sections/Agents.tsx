@@ -2,7 +2,6 @@ import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
 import { AgentVisual } from '../visuals/agents/AgentVisual';
-import featureAgents from '../../assets/icons/features/feature-agents.svg';
 import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 export default function Agents() {
@@ -21,7 +20,7 @@ export default function Agents() {
         >
           <div className="flex flex-col gap-10 lg:gap-[130px]">
             <div className="flex max-w-[500px] flex-col gap-[10px]">
-              <SectionLabel icon={featureAgents} label="Agents" />
+              <SectionLabel label="Agents" />
               <h2 className="text-section font-normal text-text-primary">
                 Built for agents, not just humans
               </h2>

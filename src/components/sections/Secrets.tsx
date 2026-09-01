@@ -2,7 +2,6 @@ import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
 import { SecretVisual } from '../visuals/secrets/SecretVisual';
-import secretsIcon from '../../assets/icons/features/secrets.svg';
 import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 const features = [
@@ -28,7 +27,7 @@ export default function Secrets() {
     <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
       <div className="mx-auto flex max-w-[1178px] flex-col items-center gap-8">
         <FadeIn className="flex flex-col items-center gap-3 text-center">
-          <SectionLabel icon={secretsIcon} label="Secrets" />
+          <SectionLabel label="Secrets" />
           <h2 className="max-w-[460px] text-section font-normal text-text-primary">
             Env vars that travel, without leaving a trace
           </h2>

@@ -2,7 +2,6 @@ import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
 import { ShareVisual } from '../visuals/share/ShareVisual';
-import shareIcon from '../../assets/icons/features/share.svg';
 import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 export default function ShareHost() {
@@ -21,7 +20,7 @@ export default function ShareHost() {
         >
           <div className="flex flex-col gap-10 lg:gap-[130px]">
             <div className="flex max-w-[500px] flex-col gap-[10px]">
-              <SectionLabel icon={shareIcon} label="Share & Host" />
+              <SectionLabel label="Share & Host" />
               <h2 className="text-section font-normal text-text-primary">
                 From drop to deploy
               </h2>

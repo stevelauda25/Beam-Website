@@ -7,7 +7,6 @@ import {
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SectionLabel from '../ui/SectionLabel';
-import ondemandIcon from '../../assets/icons/on-demand/ondemand.svg';
 import ondemandInstant from '../../assets/icons/on-demand/ondemand-instant.svg';
 import ondemandLoad from '../../assets/icons/on-demand/ondemand-load.svg';
 import ondemandRepos from '../../assets/icons/on-demand/ondemand-repos.svg';
@@ -145,7 +144,7 @@ export default function OnDemand() {
 
   const textHeader = (
     <div className="flex max-w-[500px] flex-col gap-[10px]">
-      <SectionLabel icon={ondemandIcon} label="On demand files" />
+      <SectionLabel label="On demand files" />
       <h2 className="text-section font-normal text-text-primary">
         The whole tree, a fraction of the disk
       </h2>
@@ -249,7 +248,7 @@ export default function OnDemand() {
               animate="animate"
               exit="exit"
               transition={transition}
-              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              className="pointer-events-auto absolute inset-0 flex items-center justify-center"
             >
               <div className="h-full w-full [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
                 <Component />

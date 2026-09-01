@@ -1,8 +1,7 @@
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import keyVisualSync from '../../assets/key-visuals/sync/sync.svg';
-import syncIcon from '../../assets/icons/sync/sync.svg';
+import { SyncVisual } from '../visuals/sync/SyncVisual';
 import syncCheck from '../../assets/icons/sync/sync-check.svg';
 import syncDotenv from '../../assets/icons/sync/sync-dotenv.svg';
 import syncFast from '../../assets/icons/sync/sync-fast.svg';
@@ -12,13 +11,7 @@ export default function Sync() {
     <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row lg:items-stretch">
         <FadeIn className="w-full lg:w-[809px]">
-          <img
-            src={keyVisualSync}
-            alt="A Beam workspace syncing files across a cloud VM and MacBook Pro"
-            className="h-auto w-full"
-            width={809}
-            height={692}
-          />
+          <SyncVisual />
         </FadeIn>
 
         <FadeIn
@@ -27,7 +20,7 @@ export default function Sync() {
         >
           <div className="flex flex-col gap-10 lg:gap-[130px]">
             <div className="flex max-w-[490px] flex-col gap-[10px]">
-              <SectionLabel icon={syncIcon} label="Sync" />
+              <SectionLabel label="Sync" />
               <h2 className="text-section font-normal text-text-primary">
                 One directory, every machine
               </h2>

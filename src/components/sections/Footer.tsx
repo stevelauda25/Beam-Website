@@ -2,7 +2,6 @@ import FadeIn from '../ui/FadeIn';
 import Button from '../ui/Button';
 import TerminalCard from '../ui/TerminalCard';
 import { FooterVisual } from '../visuals/footer/FooterVisual';
-import { FooterPattern } from '../visuals/footer/FooterPattern';
 import productIcon from '../../assets/icons/footer/footer-product.svg';
 import docsIcon from '../../assets/icons/footer/footer-docs.svg';
 import githubIcon from '../../assets/icons/footer/footer-github.svg';
@@ -18,13 +17,9 @@ const links = [
 export default function Footer() {
   return (
     <footer className="relative w-full overflow-hidden bg-[#292929] text-white">
-      <div className="pointer-events-none absolute -bottom-[130px] left-1/2 z-0 w-[1040px] max-w-none -translate-x-1/2 md:-bottom-[320px] md:w-[2031px]">
-        <FooterPattern />
-      </div>
-
-      <div className="relative z-10 w-full overflow-hidden pt-20">
+      <div className="relative z-10 w-full pt-20">
         <div className="relative mx-auto flex max-w-[1440px] flex-col items-center">
-          <FadeIn className="w-full">
+          <FadeIn className="relative z-0 w-full">
             <div className="flex w-full justify-center">
               <FooterVisual />
             </div>
@@ -32,7 +27,7 @@ export default function Footer() {
 
           <FadeIn
             delay={0.05}
-            className="flex w-full flex-col items-center gap-2 px-5 pb-8 text-center"
+            className="relative z-20 flex w-full flex-col items-center gap-2 px-5 pb-8 text-center"
           >
             <h2 className="text-[24px] font-normal leading-[32px] tracking-[-0.48px] md:text-[32px] md:leading-[44px] md:tracking-[-0.64px]">
               <span className="block md:inline">Your workspace.</span>{' '}
@@ -46,7 +41,7 @@ export default function Footer() {
 
           <FadeIn
             delay={0.1}
-            className="flex w-full flex-col items-center gap-12 px-5 pb-8"
+            className="relative z-20 flex w-full flex-col items-center gap-12 px-5 pb-8"
           >
             <div>
               <Button
