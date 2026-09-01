@@ -11,8 +11,8 @@ import {
   Monitor,
   RotateCcw,
 } from 'lucide-react';
-import { BeamMark } from './beam-mark';
-import styles from './solution-visual-native.module.css';
+import { BeamMark } from './BeamMark';
+import styles from './SolutionVisual.module.css';
 
 const files = [
   { name: 'src/', type: 'folder' },
@@ -163,16 +163,16 @@ function ProblemSteps() {
   );
 }
 
-type SolutionVisualNativeProps = {
+type SolutionVisualProps = {
   progress?: number;
   reducedMotion?: boolean;
   className?: string;
 };
 
-export const SolutionVisualNative = forwardRef<
+export const SolutionVisual = forwardRef<
   HTMLDivElement,
-  SolutionVisualNativeProps
->(function SolutionVisualNative(
+  SolutionVisualProps
+>(function SolutionVisual(
   { progress = 0, reducedMotion = false, className = '' },
   forwardedRef,
 ) {

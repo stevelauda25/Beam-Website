@@ -1,4 +1,4 @@
-import beamLogo from '../../assets/icons/beam-logo.svg';
+import beamLogo from '../../assets/brand/beam-logo.svg';
 import Button from '../ui/Button';
 
 export default function Navbar() {

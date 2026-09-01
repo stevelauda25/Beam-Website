@@ -1,11 +1,11 @@
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import keyVisualSync from '../../assets/hero/key-visual-sync.svg';
-import syncIcon from '../../assets/icons/sync.svg';
-import syncCheck from '../../assets/icons/sync-check.svg';
-import syncDotenv from '../../assets/icons/sync-dotenv.svg';
-import syncFast from '../../assets/icons/sync-fast.svg';
+import keyVisualSync from '../../assets/key-visuals/sync/sync.svg';
+import syncIcon from '../../assets/icons/sync/sync.svg';
+import syncCheck from '../../assets/icons/sync/sync-check.svg';
+import syncDotenv from '../../assets/icons/sync/sync-dotenv.svg';
+import syncFast from '../../assets/icons/sync/sync-fast.svg';
 
 export default function Sync() {
   return (

@@ -1,9 +1,9 @@
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import { SecretVisual } from '../../assets/hero/secret-visual';
-import secretsIcon from '../../assets/icons/secrets.svg';
-import toggleActive from '../../assets/icons/toggle-active.svg';
+import { SecretVisual } from '../visuals/secrets/SecretVisual';
+import secretsIcon from '../../assets/icons/features/secrets.svg';
+import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 const features = [
   {

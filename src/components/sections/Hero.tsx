@@ -1,7 +1,7 @@
 import Button from '../ui/Button';
 import FadeIn from '../ui/FadeIn';
 import HeroKeyVisual from './HeroKeyVisual';
-import arrowRight from '../../assets/icons/arrow-right.svg';
+import arrowRight from '../../assets/icons/common/arrow-right.svg';
 
 export default function Hero() {
   return (

@@ -1,4 +1,4 @@
-import styles from './hero-visual-native.module.css';
+import styles from './HeroVisual.module.css';
 
 const beamGlyphPaths = [
   'M155.584 27.1434C156.154 27.707 156.154 28.6177 155.584 29.1813L154.716 30.0408C154.714 30.042 154.713 30.0436 154.711 30.0453C154.706 30.0498 154.704 30.0514 154.705 30.0507L154.7 30.0544L154.696 30.0587C154.325 30.4114 153.686 30.1877 153.617 29.6819C153.607 29.6067 153.599 29.5291 153.593 29.4535V29.4531L153.584 29.3421C153.515 28.2291 153.857 27.0939 154.613 26.1821L155.584 27.1434Z',
@@ -106,7 +106,7 @@ function SearchSurface() {
   );
 }
 
-export function HeroVisualNative() {
+export function HeroVisual() {
   return (
     <svg
       className={styles.visual}

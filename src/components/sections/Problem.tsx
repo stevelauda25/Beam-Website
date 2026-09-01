@@ -1,10 +1,10 @@
 import FadeIn from '../ui/FadeIn';
 import FeatureItem from '../ui/FeatureItem';
-import keyVisualProblem from '../../assets/hero/key-visual-problem.svg';
-import featureGit from '../../assets/icons/feature-git.svg';
-import featureSecrets from '../../assets/icons/feature-secrets.svg';
-import featureColdstart from '../../assets/icons/feature-coldstart.svg';
-import featureAgents from '../../assets/icons/feature-agents.svg';
+import keyVisualProblem from '../../assets/key-visuals/problem/problem.svg';
+import featureGit from '../../assets/icons/features/feature-git.svg';
+import featureSecrets from '../../assets/icons/features/feature-secrets.svg';
+import featureColdstart from '../../assets/icons/features/feature-coldstart.svg';
+import featureAgents from '../../assets/icons/features/feature-agents.svg';
 
 const features = [
   {

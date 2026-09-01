@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
-import styles from './footer-pattern-native.module.css';
+import styles from './FooterPattern.module.css';
 
 const ARTWORK_WIDTH = 1562;
 const ARTWORK_HEIGHT = 463;
@@ -171,7 +171,7 @@ function StaticPattern({
   );
 }
 
-export function FooterPatternNative() {
+export function FooterPattern() {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const id = useId().replace(/:/g, '');

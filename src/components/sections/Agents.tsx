@@ -1,9 +1,9 @@
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import { AgentVisual } from '../../assets/hero/agent-visual';
-import featureAgents from '../../assets/icons/feature-agents.svg';
-import toggleActive from '../../assets/icons/toggle-active.svg';
+import { AgentVisual } from '../visuals/agents/AgentVisual';
+import featureAgents from '../../assets/icons/features/feature-agents.svg';
+import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 export default function Agents() {
   return (

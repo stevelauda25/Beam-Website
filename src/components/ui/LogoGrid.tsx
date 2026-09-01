@@ -1,8 +1,8 @@
-import logoPlaceholder from '../../assets/icons/logo-placeholder.svg';
-import quad1 from '../../assets/icons/quad1.svg';
-import quad2 from '../../assets/icons/quad2.svg';
-import quad3 from '../../assets/icons/quad3.svg';
-import quad4 from '../../assets/icons/quad4.svg';
+import logoPlaceholder from '../../assets/icons/logo-grid/logo-placeholder.svg';
+import quad1 from '../../assets/icons/logo-grid/quad1.svg';
+import quad2 from '../../assets/icons/logo-grid/quad2.svg';
+import quad3 from '../../assets/icons/logo-grid/quad3.svg';
+import quad4 from '../../assets/icons/logo-grid/quad4.svg';
 
 export default function LogoGrid() {
   const centerIndex = 19; // middle of the 13 x 3 grid

@@ -1,5 +1,5 @@
 import Button from './Button';
-import checkIcon from '../../assets/icons/check.svg';
+import checkIcon from '../../assets/icons/pricing/check.svg';
 
 interface PricingCardProps {
   name: string;

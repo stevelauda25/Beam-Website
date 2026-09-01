@@ -1,9 +1,9 @@
-import { HeroVisualNative } from '../visuals/hero-visual-native/hero-visual-native';
+import { HeroVisual } from '../visuals/hero/HeroVisual';
 
 export default function HeroKeyVisual() {
   return (
     <div className="flex w-full justify-center overflow-hidden">
-      <HeroVisualNative />
+      <HeroVisual />
     </div>
   );
 }

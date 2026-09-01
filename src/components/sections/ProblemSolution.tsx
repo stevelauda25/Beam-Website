@@ -5,12 +5,12 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import FeatureItem from '../ui/FeatureItem';
 import {
   setSolutionVisualProgress,
-  SolutionVisualNative,
-} from '../visuals/solution-visual-native/solution-visual-native';
-import featureGit from '../../assets/icons/feature-git.svg';
-import featureSecrets from '../../assets/icons/feature-secrets.svg';
-import featureColdstart from '../../assets/icons/feature-coldstart.svg';
-import featureAgents from '../../assets/icons/feature-agents.svg';
+  SolutionVisual,
+} from '../visuals/solution/SolutionVisual';
+import featureGit from '../../assets/icons/features/feature-git.svg';
+import featureSecrets from '../../assets/icons/features/feature-secrets.svg';
+import featureColdstart from '../../assets/icons/features/feature-coldstart.svg';
+import featureAgents from '../../assets/icons/features/feature-agents.svg';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -65,7 +65,7 @@ function MobileContent({ solution = false }: { solution?: boolean }) {
           ? 'One workspace. Every environment.'
           : 'Your workflow breaks between environments.'}
       </h2>
-      <SolutionVisualNative progress={solution ? 1 : 0} />
+      <SolutionVisual progress={solution ? 1 : 0} />
       {solution ? (
         <p className="max-w-[387px] text-center text-[12px] leading-[18px] text-text-primary">
           {solutionCopy}
@@ -245,7 +245,7 @@ export default function ProblemSolution() {
           </div>
 
           <div className="flex h-[min(350px,40svh)] w-full items-center">
-            <SolutionVisualNative
+            <SolutionVisual
               ref={visualRef}
               reducedMotion={Boolean(reducedMotion)}
             />

@@ -1,5 +1,5 @@
 import FadeIn from '../ui/FadeIn';
-import keyVisualSolution from '../../assets/hero/key-visual-solution.svg';
+import keyVisualSolution from '../../assets/key-visuals/solution/solution.svg';
 
 export default function Solution() {
   return (

@@ -1,9 +1,9 @@
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import { ShareVisual } from '../../assets/hero/share-visual';
-import shareIcon from '../../assets/icons/share.svg';
-import toggleActive from '../../assets/icons/toggle-active.svg';
+import { ShareVisual } from '../visuals/share/ShareVisual';
+import shareIcon from '../../assets/icons/features/share.svg';
+import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 export default function ShareHost() {
   return (

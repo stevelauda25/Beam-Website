@@ -7,13 +7,13 @@ import {
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SectionLabel from '../ui/SectionLabel';
-import ondemandIcon from '../../assets/icons/ondemand.svg';
-import ondemandInstant from '../../assets/icons/ondemand-instant.svg';
-import ondemandLoad from '../../assets/icons/ondemand-load.svg';
-import ondemandRepos from '../../assets/icons/ondemand-repos.svg';
-import { OnDemandVisual } from '../../assets/hero/on-demand-visual-1';
-import { OnDemandVisual2 } from '../../assets/hero/on-demand-visual-2';
-import { OnDemandVisual3 } from '../../assets/hero/on-demand-visual-3';
+import ondemandIcon from '../../assets/icons/on-demand/ondemand.svg';
+import ondemandInstant from '../../assets/icons/on-demand/ondemand-instant.svg';
+import ondemandLoad from '../../assets/icons/on-demand/ondemand-load.svg';
+import ondemandRepos from '../../assets/icons/on-demand/ondemand-repos.svg';
+import { OnDemandVisual } from '../visuals/on-demand/OnDemandVisual';
+import { OnDemandVisual2 } from '../visuals/on-demand/OnDemandVisual2';
+import { OnDemandVisual3 } from '../visuals/on-demand/OnDemandVisual3';
 
 gsap.registerPlugin(ScrollTrigger);
 

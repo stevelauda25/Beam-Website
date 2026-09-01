@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { BeamSymbol } from './beam-symbol';
-import styles from './footer-visual-native.module.css';
+import { BeamSymbol } from './BeamSymbol';
+import styles from './FooterVisual.module.css';
 
 const ARTWORK_WIDTH = 1460;
 const ARTWORK_HEIGHT = 292;
@@ -19,7 +19,7 @@ function baseOpacity(x: number, y: number) {
   return 0.012 + Math.exp(-(nx * nx + ny * ny) * 1.45) * 0.032;
 }
 
-export function FooterVisualNative() {
+export function FooterVisual() {
   const rootRef = useRef<HTMLElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);

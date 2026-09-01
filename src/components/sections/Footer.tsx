@@ -1,12 +1,12 @@
 import FadeIn from '../ui/FadeIn';
 import Button from '../ui/Button';
 import TerminalCard from '../ui/TerminalCard';
-import { FooterVisualNative } from '../visuals/footer-visual-native/footer-visual-native';
-import { FooterPatternNative } from '../visuals/footer-pattern-native/footer-pattern-native';
-import productIcon from '../../assets/icons/footer-product.svg';
-import docsIcon from '../../assets/icons/footer-docs.svg';
-import githubIcon from '../../assets/icons/footer-github.svg';
-import changelogIcon from '../../assets/icons/footer-changelog.svg';
+import { FooterVisual } from '../visuals/footer/FooterVisual';
+import { FooterPattern } from '../visuals/footer/FooterPattern';
+import productIcon from '../../assets/icons/footer/footer-product.svg';
+import docsIcon from '../../assets/icons/footer/footer-docs.svg';
+import githubIcon from '../../assets/icons/footer/footer-github.svg';
+import changelogIcon from '../../assets/icons/footer/footer-changelog.svg';
 
 const links = [
   { label: 'Product', icon: productIcon },
@@ -19,14 +19,14 @@ export default function Footer() {
   return (
     <footer className="relative w-full overflow-hidden bg-[#292929] text-white">
       <div className="pointer-events-none absolute -bottom-[130px] left-1/2 z-0 w-[1040px] max-w-none -translate-x-1/2 md:-bottom-[320px] md:w-[2031px]">
-        <FooterPatternNative />
+        <FooterPattern />
       </div>
 
       <div className="relative z-10 w-full overflow-hidden pt-20">
         <div className="relative mx-auto flex max-w-[1440px] flex-col items-center">
           <FadeIn className="w-full">
             <div className="flex w-full justify-center">
-              <FooterVisualNative />
+              <FooterVisual />
             </div>
           </FadeIn>
 

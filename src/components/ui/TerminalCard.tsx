@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import terminalHeader from '../../assets/icons/terminal-header.svg';
-import terminalCopy from '../../assets/icons/terminal-copy.svg';
-import terminalCheck from '../../assets/icons/terminal-check.svg';
+import terminalHeader from '../../assets/icons/terminal/terminal-header.svg';
+import terminalCopy from '../../assets/icons/terminal/terminal-copy.svg';
+import terminalCheck from '../../assets/icons/terminal/terminal-check.svg';
 
 const COMMAND = 'beam mount ~/workspace';
 

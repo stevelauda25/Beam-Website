@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import arrowRight from '../../assets/icons/arrow-right.svg';
+import arrowRight from '../../assets/icons/common/arrow-right.svg';
 
 interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'dark' | 'pricing';
