@@ -12,6 +12,7 @@ export type DemoFile = {
   mimeType: string;
   storageId?: string;
   content?: string;
+  previewUrl?: string;
 };
 
 export type UploadState = 'uploading' | 'paused' | 'complete' | 'error';

@@ -18,7 +18,7 @@ export default function Agents() {
           delay={0.1}
           className="flex w-full items-center pt-12 lg:w-[631px] lg:pr-[131px] lg:pl-0 lg:pt-0"
         >
-          <div className="flex flex-col gap-10 lg:gap-[130px]">
+          <div className="flex flex-col gap-6 lg:gap-[130px]">
             <div className="flex max-w-[500px] flex-col gap-[10px]">
               <SectionLabel label="Agents" />
               <h2 className="text-section font-normal text-text-primary">
@@ -31,7 +31,7 @@ export default function Agents() {
               </p>
             </div>
 
-            <div className="flex max-w-[500px] flex-col gap-3">
+            <div className="flex max-w-[500px] flex-col gap-2">
               <FeatureItem
                 icon={toggleActive}
                 title="MCP server: list, read, write, glob, and grep workspaces"

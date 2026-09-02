@@ -11,7 +11,7 @@ export function FooterVisual() {
   const rootRef = useRef<HTMLElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
   const patternCanvasRef = useRef<HTMLCanvasElement>(null);
-  const interactionRef = useRef<HTMLDivElement>(null);
+  const interactionRef = useRef<HTMLButtonElement>(null);
   const pulseRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -30,7 +30,8 @@ export function FooterVisual() {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let animationFrame = 0;
     let visible = false;
-    let introStarted = false;
+    let touchCloseTimer: number | null = null;
+    let sparkleReleaseTimer: number | null = null;
     let pulseScaleAnimation: Animation | null = null;
     let pulseOpacityAnimation: Animation | null = null;
     let pulseExitAnimation: Animation | null = null;
@@ -212,17 +213,30 @@ export function FooterVisual() {
 
     const resetInteraction = () => {
       if (root.dataset.hover !== 'true') return;
-      interaction.targetStrength = 0;
       delete root.dataset.hover;
       finishPulse();
+      if (sparkleReleaseTimer !== null) window.clearTimeout(sparkleReleaseTimer);
+      sparkleReleaseTimer = window.setTimeout(() => {
+        sparkleReleaseTimer = null;
+        interaction.targetStrength = 0;
+      }, 820);
+    };
+
+    const activateInteraction = () => {
+      if (sparkleReleaseTimer !== null) {
+        window.clearTimeout(sparkleReleaseTimer);
+        sparkleReleaseTimer = null;
+      }
+      interaction.targetStrength = 1;
+      delete root.dataset.hover;
+      void root.offsetWidth;
+      root.dataset.hover = 'true';
+      startPulse();
     };
 
     const startInteraction = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' || reducedMotion.matches) return;
-
-      interaction.targetStrength = 1;
-      root.dataset.hover = 'true';
-      startPulse();
+      activateInteraction();
     };
 
     const endInteraction = (event: PointerEvent) => {
@@ -230,13 +244,19 @@ export function FooterVisual() {
       resetInteraction();
     };
 
+    const playTouchInteraction = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse' || reducedMotion.matches) return;
+      if (touchCloseTimer !== null) window.clearTimeout(touchCloseTimer);
+      activateInteraction();
+      touchCloseTimer = window.setTimeout(() => {
+        touchCloseTimer = null;
+        resetInteraction();
+      }, 2600);
+    };
+
     const intersectionObserver = new IntersectionObserver(
       ([entry]) => {
         visible = entry.isIntersecting;
-        if (visible && !introStarted) {
-          introStarted = true;
-          root.dataset.intro = 'true';
-        }
         if (visible && !animationFrame && !reducedMotion.matches) {
           lastFrame = performance.now();
           animationFrame = window.requestAnimationFrame(draw);
@@ -249,19 +269,22 @@ export function FooterVisual() {
     );
 
     intersectionObserver.observe(root);
-    root.addEventListener('pointerleave', resetInteraction);
+    root.addEventListener('pointerleave', endInteraction);
     interactionZone.addEventListener('pointerenter', startInteraction);
     interactionZone.addEventListener('pointerleave', endInteraction);
+    interactionZone.addEventListener('pointerup', playTouchInteraction);
 
     return () => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      if (touchCloseTimer !== null) window.clearTimeout(touchCloseTimer);
+      if (sparkleReleaseTimer !== null) window.clearTimeout(sparkleReleaseTimer);
       clearPulseAnimations();
       resetPulse();
       intersectionObserver.disconnect();
-      root.removeEventListener('pointerleave', resetInteraction);
+      root.removeEventListener('pointerleave', endInteraction);
       interactionZone.removeEventListener('pointerenter', startInteraction);
       interactionZone.removeEventListener('pointerleave', endInteraction);
-      delete root.dataset.intro;
+      interactionZone.removeEventListener('pointerup', playTouchInteraction);
       delete root.dataset.hover;
     };
   }, []);
@@ -287,14 +310,6 @@ export function FooterVisual() {
           width={852}
           height={343}
         />
-        <img
-          className={styles.patternWave}
-          src={activePattern}
-          alt=""
-          draggable="false"
-          width={852}
-          height={343}
-        />
       </div>
 
       <div className={styles.gates} aria-hidden="true">
@@ -312,6 +327,7 @@ export function FooterVisual() {
 
       <span className={styles.centerLine} aria-hidden="true" />
       <div className={styles.centerGlow} aria-hidden="true" />
+      <div className={styles.activeTileShadow} aria-hidden="true" />
 
       <div ref={centerRef} className={styles.centerTile} aria-hidden="true">
         <span className={styles.tileHighlight} />
@@ -322,7 +338,12 @@ export function FooterVisual() {
         />
       </div>
 
-      <div ref={interactionRef} className={styles.interactionZone} aria-hidden="true" />
+      <button
+        ref={interactionRef}
+        type="button"
+        className={styles.interactionZone}
+        aria-label="Play Beam icon animation"
+      />
     </section>
   );
 }

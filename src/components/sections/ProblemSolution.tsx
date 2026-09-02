@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import FeatureItem from '../ui/FeatureItem';
@@ -13,6 +14,8 @@ import featureColdstart from '../../assets/icons/features/feature-coldstart.svg'
 import featureAgents from '../../assets/icons/features/feature-agents.svg';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const MOBILE_PROBLEM_CAROUSEL_PADDING = 20;
 
 const problemFeatures = [
   {
@@ -43,36 +46,113 @@ const solutionCopy =
   'One unified directory, mirrored everywhere. Attach it to any machine and your workspace is just there. Files on demand, secrets included, and the same view for agents through CLI and MCP.';
 
 function ProblemDetails() {
-  return (
-    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {problemFeatures.map((feature) => (
-        <FeatureItem
-          key={feature.title}
-          icon={feature.icon}
-          title={feature.title}
-          description={feature.description}
-        />
-      ))}
-    </div>
-  );
-}
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [activeFeature, setActiveFeature] = useState(0);
 
-function MobileContent({ solution = false }: { solution?: boolean }) {
+  const getSlides = () => {
+    if (!carouselRef.current) return [];
+    return Array.from(
+      carouselRef.current.querySelectorAll<HTMLElement>('[data-problem-slide]'),
+    );
+  };
+
+  const updateActiveFeature = () => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const targetLeft =
+      carousel.getBoundingClientRect().left + MOBILE_PROBLEM_CAROUSEL_PADDING;
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    getSlides().forEach((slide, index) => {
+      const distance = Math.abs(slide.getBoundingClientRect().left - targetLeft);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    setActiveFeature(nearestIndex);
+  };
+
+  const scrollToFeature = (index: number) => {
+    const carousel = carouselRef.current;
+    const slides = getSlides();
+    const nextIndex = Math.max(0, Math.min(index, slides.length - 1));
+    const slide = slides[nextIndex];
+    if (!carousel || !slide) return;
+
+    carousel.scrollTo({
+      left:
+        carousel.scrollLeft +
+        slide.getBoundingClientRect().left -
+        carousel.getBoundingClientRect().left -
+        MOBILE_PROBLEM_CAROUSEL_PADDING,
+      behavior: 'smooth',
+    });
+    setActiveFeature(nextIndex);
+  };
+
   return (
-    <div className="flex w-full max-w-[1178px] flex-col items-center gap-12">
-      <h2 className="text-center text-section font-normal text-text-primary">
-        {solution
-          ? 'One workspace. Every environment.'
-          : 'Your workflow breaks between environments.'}
-      </h2>
-      <SolutionVisual progress={solution ? 1 : 0} />
-      {solution ? (
-        <p className="max-w-[387px] text-center text-[12px] leading-[18px] text-text-primary">
-          {solutionCopy}
-        </p>
-      ) : (
-        <ProblemDetails />
-      )}
+    <div className="w-full">
+      <div
+        ref={carouselRef}
+        onScroll={updateActiveFeature}
+        role="region"
+        aria-label="Workflow problems"
+        aria-roledescription="carousel"
+        className="-mx-5 flex w-[calc(100%+40px)] snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-2 [scroll-padding-inline:20px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:w-full sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
+      >
+        {problemFeatures.map((feature) => (
+          <div
+            key={feature.title}
+            data-problem-slide
+            className="w-[calc(100vw-40px)] shrink-0 snap-start sm:w-auto sm:shrink"
+          >
+            <FeatureItem
+              icon={feature.icon}
+              title={feature.title}
+              description={feature.description}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex items-center justify-center gap-2 sm:hidden">
+        <button
+          type="button"
+          onClick={() => scrollToFeature(activeFeature - 1)}
+          disabled={activeFeature === 0}
+          aria-label="Show previous workflow problem"
+          className="flex h-8 w-8 items-center justify-center text-text-primary focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronLeft aria-hidden="true" size={14} strokeWidth={1.5} />
+        </button>
+        <div className="flex min-w-10 items-center justify-center gap-1.5" role="group" aria-label="Choose workflow problem">
+          {problemFeatures.map((feature, index) => (
+            <button
+              key={feature.title}
+              type="button"
+              onClick={() => scrollToFeature(index)}
+              aria-label={`Show workflow problem ${index + 1}`}
+              aria-current={activeFeature === index ? 'true' : undefined}
+              className={`h-1.5 w-1.5 rounded-full transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-text-primary ${
+                activeFeature === index ? 'bg-text-primary' : 'bg-black/15'
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => scrollToFeature(activeFeature + 1)}
+          disabled={activeFeature === problemFeatures.length - 1}
+          aria-label="Show next workflow problem"
+          className="flex h-8 w-8 items-center justify-center text-text-primary focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-text-primary disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronRight aria-hidden="true" size={14} strokeWidth={1.5} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -81,23 +161,10 @@ export default function ProblemSolution() {
   const sectionRef = useRef<HTMLElement>(null);
   const visualRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
-  const [usePinnedScene, setUsePinnedScene] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(min-width: 768px)').matches;
-  });
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 768px)');
-    const handleChange = (event: MediaQueryListEvent) =>
-      setUsePinnedScene(event.matches);
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    if (!usePinnedScene || !section) return;
+    if (!section) return;
 
     const context = gsap.context(() => {
       const problemElements = gsap.utils.toArray<HTMLElement>(
@@ -208,11 +275,9 @@ export default function ProblemSolution() {
     }, section);
 
     return () => context.revert();
-  }, [reducedMotion, usePinnedScene]);
+  }, [reducedMotion]);
 
   useEffect(() => {
-    if (!usePinnedScene) return;
-
     let cancelled = false;
     document.fonts.ready.then(() => {
       if (!cancelled) ScrollTrigger.refresh();
@@ -221,25 +286,12 @@ export default function ProblemSolution() {
     return () => {
       cancelled = true;
     };
-  }, [usePinnedScene]);
-
-  if (!usePinnedScene) {
-    return (
-      <section className="w-full overflow-hidden bg-canvas">
-        <div className="flex justify-center px-5 py-16 sm:px-8 sm:py-20">
-          <MobileContent />
-        </div>
-        <div className="flex justify-center px-5 py-16 sm:px-8 sm:py-20">
-          <MobileContent solution />
-        </div>
-      </section>
-    );
-  }
+  }, []);
 
   return (
     <section ref={sectionRef} className="relative h-[100svh] w-full bg-canvas">
-      <div className="flex h-full w-full items-center justify-center overflow-hidden px-8 md:px-16 lg:px-[131px]">
-        <div className="flex w-full max-w-[1178px] flex-col items-center gap-[clamp(20px,4svh,48px)]">
+      <div className="flex h-full w-full items-center justify-center overflow-hidden px-5 sm:px-8 md:px-16 lg:px-[131px]">
+        <div className="flex w-full max-w-[1178px] flex-col items-center gap-[clamp(16px,2svh,24px)] md:gap-[clamp(20px,4svh,48px)]">
           <div className="relative h-[clamp(58px,8svh,84px)] w-full">
             <h2
               data-problem-state
@@ -256,14 +308,16 @@ export default function ProblemSolution() {
             </h2>
           </div>
 
-          <div className="flex h-[min(350px,40svh)] w-full items-center">
-            <SolutionVisual
-              ref={visualRef}
-              reducedMotion={Boolean(reducedMotion)}
-            />
+          <div className="flex h-[min(260px,34svh)] w-full items-center md:h-[min(350px,40svh)]">
+            <div className="w-full origin-center scale-[1.2] md:scale-100">
+              <SolutionVisual
+                ref={visualRef}
+                reducedMotion={Boolean(reducedMotion)}
+              />
+            </div>
           </div>
 
-          <div className="relative min-h-[132px] w-full lg:min-h-[78px]">
+          <div className="relative min-h-[110px] w-full md:min-h-[132px] lg:min-h-[78px]">
             <div
               data-problem-state
               className="absolute inset-x-0 top-0 will-change-[transform,filter,opacity]"

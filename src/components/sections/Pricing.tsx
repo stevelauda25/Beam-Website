@@ -120,10 +120,11 @@ export default function Pricing() {
 
   return (
     <section className="w-full bg-[#fafafa] px-5 py-16 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
-      <div className="mx-auto flex max-w-[1144px] flex-col items-center gap-16">
+      <div className="mx-auto flex max-w-[1144px] flex-col items-center gap-6 lg:gap-16">
         <FadeIn className="flex w-full flex-col items-center gap-2.5 text-center">
           <h2 className="text-section font-normal text-text-primary">
-            Simple pricing. Built for teams of any size.
+            <span className="block">Simple pricing.</span>
+            <span className="block">Built for teams of any size.</span>
           </h2>
           <p className="max-w-[490px] text-[12px] leading-[18px] text-text-primary">
             Start free. Upgrade when you need more. All plans include end-to-end
@@ -150,7 +151,9 @@ export default function Pricing() {
                 )}
                 <PricingCard
                   {...plan}
-                  className="w-[calc(100vw-64px)] shrink-0 snap-start sm:w-auto sm:shrink"
+                  className={`w-[calc(100vw-64px)] shrink-0 snap-start transition-opacity duration-300 sm:w-auto sm:shrink sm:opacity-100 ${
+                    activePlan === index ? 'opacity-100' : 'opacity-35'
+                  }`}
                 />
               </Fragment>
             ))}

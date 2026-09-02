@@ -25,11 +25,12 @@ const features = [
 export default function Secrets() {
   return (
     <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
-      <div className="mx-auto flex max-w-[1178px] flex-col items-center gap-8">
-        <FadeIn className="flex flex-col items-center gap-3 text-center">
+      <div className="mx-auto flex max-w-[1178px] flex-col items-center gap-6 lg:gap-8">
+        <FadeIn className="order-2 flex flex-col items-center gap-3 text-center lg:order-1">
           <SectionLabel label="Secrets" />
           <h2 className="max-w-[460px] text-section font-normal text-text-primary">
-            Env vars that travel, without leaving a trace
+            Env vars that travel,
+            <span className="block">without leaving a trace</span>
           </h2>
           <p className="max-w-[490px] text-[12px] leading-[18px] text-text-primary">
             Keep environment variables with your workspace and make them available
@@ -38,14 +39,14 @@ export default function Secrets() {
           </p>
         </FadeIn>
 
-        <FadeIn delay={0.05} className="w-full">
-          <div className="aspect-[1178/484] w-full [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
+        <FadeIn delay={0.05} className="order-1 w-full lg:order-2">
+          <div className="aspect-[1178/484] w-full scale-150 [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full lg:scale-100">
             <SecretVisual />
           </div>
         </FadeIn>
 
-        <FadeIn delay={0.1} className="w-full">
-          <div className="flex w-full flex-col justify-center gap-8 lg:flex-row lg:gap-8">
+        <FadeIn delay={0.1} className="order-3 w-full">
+          <div className="flex w-full flex-col justify-center gap-3 lg:flex-row lg:gap-8">
             {features.map((feature) => (
               <FeatureItem
                 key={feature.title.slice(0, 24)}

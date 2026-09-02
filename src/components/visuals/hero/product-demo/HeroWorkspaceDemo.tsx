@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  ChevronLeft,
   ChevronDown,
   Download,
   File,
@@ -26,7 +27,15 @@ const metadataKey = 'beam-website-hero-demo-metadata-v1';
 function readMetadata() {
   try {
     const value = JSON.parse(window.localStorage.getItem(metadataKey) ?? 'null') as { folders?: DemoFolder[]; files?: DemoFile[] } | null;
-    if (value?.folders?.length && Array.isArray(value.files)) return { folders: value.folders, files: value.files };
+    if (value?.folders?.length && Array.isArray(value.files)) {
+      return {
+        folders: value.folders,
+        files: value.files.map((file) => ({
+          ...initialFiles.find((initialFile) => initialFile.id === file.id),
+          ...file,
+        })),
+      };
+    }
   } catch {
     // A clean demo is preferable to blocking the Hero when local metadata is malformed.
   }
@@ -178,19 +187,23 @@ export function HeroWorkspaceDemo() {
 
   async function openFile(file: DemoFile) {
     setMenuId(null);
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = undefined;
+    if (file.content) {
+      setPreview({ status: 'ready', file, text: file.content });
+      return;
+    }
+    if (file.previewUrl) {
+      setPreview({ status: 'ready', file, url: file.previewUrl });
+      return;
+    }
+    if (!file.storageId) {
+      setPreview({ status: 'error', file, message: 'Preview unavailable in this website demo.' });
+      return;
+    }
+
     setPreview({ status: 'loading', file });
-    await new Promise((resolve) => window.setTimeout(resolve, 260));
     try {
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = undefined;
-      if (file.content) {
-        setPreview({ status: 'ready', file, text: file.content });
-        return;
-      }
-      if (!file.storageId) {
-        setPreview({ status: 'error', file, message: 'Preview unavailable in this website demo.' });
-        return;
-      }
       const stored = await getDemoFile(file.storageId);
       if (!stored) throw new Error('The local file could not be found.');
       if (file.mimeType.startsWith('text/') || /\.(md|json)$/i.test(file.name)) {
@@ -389,7 +402,7 @@ export function HeroWorkspaceDemo() {
       {folderDialog && <div className={styles.overlay} onMouseDown={() => setFolderDialog(null)}><form className={styles.dialog} onSubmit={(event) => { event.preventDefault(); saveFolder(); }} onMouseDown={(event) => event.stopPropagation()}><div className={styles.dialogIcon}><FolderPlus size={18} /></div><h3>{folderDialog === 'rename' ? 'Rename folder' : 'Create a new folder'}</h3><label>Folder name<input autoFocus value={folderDraft} onChange={(event) => setFolderDraft(event.target.value)} placeholder="Folder name" /></label><div className={styles.dialogActions}><button type="button" onClick={() => setFolderDialog(null)}>Cancel</button><button className={styles.primaryButton} type="submit">{folderDialog === 'rename' ? 'Save' : 'Create folder'}</button></div></form></div>}
 
       {preview.status !== 'idle' && <div className={styles.preview}>
-        <div className={styles.previewBar}><div><FileText size={13} /><strong>{preview.file.name}</strong></div><div>{preview.status === 'ready' && <><button type="button" aria-label="Share file" onClick={() => void shareFile(preview.file)}><Share2 size={12} /></button><button type="button" aria-label="Download file" onClick={() => void downloadFile(preview.file)}><Download size={12} /></button></>}<button type="button" aria-label="Close preview" onClick={() => setPreview({ status: 'idle' })}><X size={13} /></button></div></div>
+        <div className={styles.previewBar}><div className={styles.previewBreadcrumb}><button type="button" aria-label="Back to files" title="Back to files" onClick={() => setPreview({ status: 'idle' })}><ChevronLeft size={12} /></button><strong>{preview.file.name}</strong></div><div>{preview.status === 'ready' && <><button type="button" aria-label="Share file" onClick={() => void shareFile(preview.file)}><Share2 size={12} /></button><button type="button" aria-label="Download file" onClick={() => void downloadFile(preview.file)}><Download size={12} /></button></>}<button type="button" aria-label="Close preview" onClick={() => setPreview({ status: 'idle' })}><X size={13} /></button></div></div>
         <div className={styles.previewBody}>{preview.status === 'loading' && <div className={styles.loading}><span /><span>Loading preview…</span></div>}{preview.status === 'error' && <div className={styles.previewMessage}><FileText size={28} /><strong>Preview unavailable</strong><span>{preview.message}</span></div>}{preview.status === 'ready' && preview.text && <pre>{preview.text}</pre>}{preview.status === 'ready' && preview.url && (preview.file.mimeType === 'application/pdf' ? <iframe src={preview.url} title={preview.file.name} /> : <img src={preview.url} alt={preview.file.name} />)}</div>
       </div>}
 

@@ -7,11 +7,16 @@ const canvasWidth = 1440;
 export function HeroVisual() {
   const visualRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
 
   useLayoutEffect(() => {
     const visual = visualRef.current;
     if (!visual) return;
-    const updateScale = () => setScale(visual.getBoundingClientRect().width / canvasWidth);
+    const updateScale = () => {
+      const width = visual.getBoundingClientRect().width;
+      setIsMobile(width < 640);
+      setScale(width / canvasWidth);
+    };
     updateScale();
     const observer = new ResizeObserver(updateScale);
     observer.observe(visual);
@@ -20,7 +25,10 @@ export function HeroVisual() {
 
   return (
     <div ref={visualRef} className={styles.visual} role="group" aria-label="Interactive Beam file manager demo">
-      <div className={styles.canvas} style={{ transform: `translateX(-50%) scale(${scale})` }}>
+      <div
+        className={styles.canvas}
+        style={{ transform: isMobile ? 'translateX(-112px)' : `translateX(-50%) scale(${scale})` }}
+      >
         <svg className={styles.background} viewBox="0 0 1440 540" width="1440" height="540" fill="none" aria-hidden="true">
           <g opacity="0.9">
             <rect width="1440" height="540" fill="#FAFAFA" />

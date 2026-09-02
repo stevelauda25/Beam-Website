@@ -17,8 +17,8 @@ export const initialFiles: DemoFile[] = [
   { id: 'brand-guidelines', folderId: 'product-resources', name: 'brand-guidelines.pdf', size: 42_000_000, modified: now - day * 2, mimeType: 'application/pdf' },
   { id: 'product-image', folderId: 'product-resources', name: 'product-image.png', size: 38_000_000, modified: now - day * 3, mimeType: 'image/png' },
   { id: 'release-notes', folderId: 'product-resources', name: 'release-notes.md', size: 56_000, modified: now - day * 5, mimeType: 'text/markdown', content: '# Product release notes\n\nFaster mounting, clearer activity, and improved previews.' },
-  { id: 'homepage-hero', folderId: 'website-assets', name: 'homepage-hero.webp', size: 24_000_000, modified: now - day, mimeType: 'image/webp' },
-  { id: 'campaign-image', folderId: 'website-assets', name: 'campaign-image.jpg', size: 15_000_000, modified: now - day * 4, mimeType: 'image/jpeg' },
+  { id: 'homepage-hero', folderId: 'website-assets', name: 'homepage-hero.webp', size: 24_000_000, modified: now - day, mimeType: 'image/webp', previewUrl: '/social-image.png' },
+  { id: 'campaign-image', folderId: 'website-assets', name: 'campaign-image.jpg', size: 15_000_000, modified: now - day * 4, mimeType: 'image/jpeg', previewUrl: '/social-image.png' },
   { id: 'logo-mark', folderId: 'website-assets', name: 'logo-mark.png', size: 3_000_000, modified: now - day * 6, mimeType: 'image/png' },
 ];
 

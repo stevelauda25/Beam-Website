@@ -29,13 +29,13 @@ export default function Footer() {
             delay={0.05}
             className="relative z-20 flex w-full flex-col items-center gap-2 px-5 pb-8 text-center"
           >
-            <h2 className="text-[24px] font-normal leading-[32px] tracking-[-0.48px] md:text-[32px] md:leading-[44px] md:tracking-[-0.64px]">
+            <h2 className="text-section font-normal text-white">
               <span className="block md:inline">Your workspace.</span>{' '}
               <span className="block md:inline">Ready anywhere.</span>
             </h2>
-            <p className="max-w-[382px] text-[14px] leading-[1.6]">
-              Mount your files in seconds and keep the same workspace across your
-              machines, tools, and agents.
+            <p className="max-w-[382px] text-[12px] leading-[18px]">
+              <span className="block">Mount your files in seconds and keep the same</span>
+              <span className="block">workspace across your machines, tools, and agents.</span>
             </p>
           </FadeIn>
 

@@ -34,7 +34,7 @@ const features = [
 export default function Problem() {
   return (
     <section className="w-full bg-canvas px-8 py-[100px] lg:px-[131px]">
-      <div className="mx-auto flex max-w-[1178px] flex-col items-center gap-12">
+      <div className="mx-auto flex max-w-[1178px] flex-col items-center gap-6 lg:gap-12">
         <FadeIn>
           <h2 className="text-center text-section font-normal text-text-primary">
             Your workflow breaks between environments.

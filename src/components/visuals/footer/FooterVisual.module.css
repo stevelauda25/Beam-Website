@@ -46,12 +46,12 @@
     transparent 72%
   );
   filter: blur(0.753cqw);
-  opacity: 0.44;
+  opacity: 0;
   transform: translate(-50%, -50%) scale(0.92);
   pointer-events: none;
   transition:
-    opacity 240ms ease-out,
-    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 
@@ -78,7 +78,26 @@
   transform: translate(-50%, -50%);
   transform-origin: center;
   will-change: transform;
-  transition: box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.activeTileShadow {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  width: 6.185cqw;
+  height: 6.185cqw;
+  border-radius: 1.46cqw;
+  box-shadow:
+    0 14px 32px rgb(0 0 0 / 48%),
+    0 4px 10px rgb(0 0 0 / 40%),
+    0 0 38px rgb(255 255 255 / 8%),
+    0 0 72px rgb(255 255 255 / 4%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: none;
+  will-change: opacity;
 }
 
 .tileHighlight {
@@ -87,7 +106,7 @@
   background: radial-gradient(circle at 48% 19%, rgb(255 255 255 / 8%), transparent 42%);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .footerPulse {
@@ -117,6 +136,7 @@
     transparent 100%
   );
   filter: blur(14px);
+  display: none;
   opacity: 0;
   pointer-events: none;
   transform: scale(0.08);
@@ -133,7 +153,6 @@
 }
 
 .activePattern,
-.patternWave,
 .randomPattern {
   position: absolute;
   display: block;
@@ -150,7 +169,7 @@
   opacity: 0;
   -webkit-mask-image: radial-gradient(ellipse at center, #000 0 40%, transparent 78%);
   mask-image: radial-gradient(ellipse at center, #000 0 40%, transparent 78%);
-  transition: opacity 180ms ease-out 80ms;
+  transition: opacity 180ms ease-out 820ms;
   will-change: opacity;
 }
 
@@ -165,33 +184,10 @@
   -webkit-mask-size: 0% 0%;
   mask-size: 0% 0%;
   transition:
-    opacity 220ms ease-out 90ms,
-    -webkit-mask-size 360ms cubic-bezier(0.4, 0, 1, 1) 90ms,
-    mask-size 360ms cubic-bezier(0.4, 0, 1, 1) 90ms;
+    opacity 220ms ease-out 820ms,
+    -webkit-mask-size 360ms cubic-bezier(0.4, 0, 1, 1) 820ms,
+    mask-size 360ms cubic-bezier(0.4, 0, 1, 1) 820ms;
   will-change: opacity, mask-size;
-}
-
-.patternWave {
-  opacity: 0;
-  filter: brightness(1.22);
-  -webkit-mask-image: radial-gradient(
-    ellipse at center,
-    transparent 0 32%,
-    #000 43%,
-    transparent 56%
-  );
-  mask-image: radial-gradient(
-    ellipse at center,
-    transparent 0 32%,
-    #000 43%,
-    transparent 56%
-  );
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 8% 18%;
-  mask-size: 8% 18%;
 }
 
 .gates {
@@ -246,30 +242,21 @@
   opacity: 0;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (hover: hover) and (pointer: fine), (hover: none) {
   .footerVisual .interactionZone {
     pointer-events: auto;
   }
 
-  .footerVisual[data-hover='true'] .centerTile {
-    box-shadow:
-      0 14px 32px rgb(0 0 0 / 48%),
-      0 4px 10px rgb(0 0 0 / 40%),
-      0 0 38px rgb(255 255 255 / 8%),
-      0 0 72px rgb(255 255 255 / 4%),
-      inset 0 1px 0 rgb(255 255 255 / 15%),
-      inset 0 0 0 1px rgb(255 255 255 / 6%);
-    transition-delay: 0ms;
+  .footerVisual[data-hover='true'] .activeTileShadow {
+    animation: footerShadowBloom 1600ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
   }
 
   .footerVisual[data-hover='true'] .tileHighlight {
-    opacity: 1;
+    animation: footerTileHighlightBloom 1600ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
   }
 
   .footerVisual[data-hover='true'] .centerGlow {
-    opacity: 0.82;
-    transform: translate(-50%, -50%) scale(1.08);
-    transition-delay: 120ms;
+    animation: footerGlowBloom 1600ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
   }
 
   .footerVisual[data-hover='true'] .activePattern {
@@ -280,10 +267,6 @@
       opacity 280ms ease-out 420ms,
       -webkit-mask-size 720ms cubic-bezier(0.16, 1, 0.3, 1) 400ms,
       mask-size 720ms cubic-bezier(0.16, 1, 0.3, 1) 400ms;
-  }
-
-  .footerVisual[data-hover='true'] .patternWave {
-    animation: footerDotWave 1080ms cubic-bezier(0.16, 1, 0.3, 1) 430ms both;
   }
 
   .footerVisual[data-hover='true'] .randomPattern {
@@ -325,7 +308,11 @@
   width: 9.6cqw;
   height: 9.6cqw;
   border-radius: 2.4cqw;
-  pointer-events: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
   transform: translate(-50%, -50%);
 }
 
@@ -344,41 +331,61 @@
   width: 3.356cqw;
   height: 3.356cqw;
   filter:
+    brightness(1)
     drop-shadow(0 1px 0 rgb(255 255 255 / 42%))
     drop-shadow(0 4px 5px rgb(0 0 0 / 65%));
   transition:
-    filter 180ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    filter 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .footerVisual[data-hover='true'] .activeSymbol {
-  filter:
-    brightness(1.08)
-    drop-shadow(0 1px 0 rgb(255 255 255 / 52%))
-    drop-shadow(0 5px 7px rgb(0 0 0 / 68%));
-  transform: scale(1.022);
+  animation: footerIconLightBloom 1600ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-@keyframes footerDotWave {
+@keyframes footerShadowBloom {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes footerGlowBloom {
   0% {
     opacity: 0;
-    -webkit-mask-size: 8% 18%;
-    mask-size: 8% 18%;
+    transform: translate(-50%, -50%) scale(0.92);
   }
-
-  20% {
-    opacity: 0.78;
+  18% {
+    opacity: 0.82;
+    transform: translate(-50%, -50%) scale(1.08);
   }
-
-  62% {
-    opacity: 0.42;
-  }
-
   100% {
     opacity: 0;
-    -webkit-mask-size: 190% 230%;
-    mask-size: 190% 230%;
+    transform: translate(-50%, -50%) scale(0.96);
   }
+}
+
+@keyframes footerIconLightBloom {
+  0%,
+  100% {
+    filter:
+      brightness(1)
+      drop-shadow(0 1px 0 rgb(255 255 255 / 42%))
+      drop-shadow(0 4px 5px rgb(0 0 0 / 65%));
+    transform: scale(1);
+  }
+  18% {
+    filter:
+      brightness(1.08)
+      drop-shadow(0 1px 0 rgb(255 255 255 / 52%))
+      drop-shadow(0 5px 7px rgb(0 0 0 / 68%));
+    transform: scale(1.022);
+  }
+}
+
+@keyframes footerTileHighlightBloom {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 @media (max-width: 640px) {
@@ -394,6 +401,12 @@
   }
 
   .centerTile {
+    width: clamp(88px, 25cqw, 96px);
+    height: clamp(88px, 25cqw, 96px);
+    border-radius: clamp(22px, 6.2cqw, 24px);
+  }
+
+  .activeTileShadow {
     width: clamp(88px, 25cqw, 96px);
     height: clamp(88px, 25cqw, 96px);
     border-radius: clamp(22px, 6.2cqw, 24px);
@@ -416,7 +429,6 @@
   }
 
   .activePattern,
-  .patternWave,
   .randomPattern {
     top: -93px;
     width: 842px;
@@ -436,120 +448,22 @@
     right: calc(50% - 732px);
   }
 
-  .footerVisual[data-intro='true'] .gateLeft {
-    animation: footerGateLeftIntro 1900ms cubic-bezier(0.16, 1, 0.3, 1) 240ms both;
+  .footerVisual[data-hover='true'] .gateLeft {
+    transform: translateX(-32.5vw);
   }
 
-  .footerVisual[data-intro='true'] .gateRight {
-    animation: footerGateRightIntro 1900ms cubic-bezier(0.16, 1, 0.3, 1) 240ms both;
+  .footerVisual[data-hover='true'] .gateRight {
+    transform: translateX(32.5vw);
   }
 
-  .footerVisual[data-intro='true'] .gateClosed {
-    animation: footerGateClosedIntro 1900ms ease 240ms both;
-  }
-
-  .footerVisual[data-intro='true'] .gateOpen {
-    animation: footerGateOpenIntro 1900ms ease 240ms both;
-  }
-
-  .footerVisual[data-intro='true'] .centerLine {
-    animation: footerGateLineIntro 1900ms ease 240ms both;
-  }
-
-  .footerVisual[data-intro='true'] .activePattern {
-    animation: footerPatternIntro 1900ms cubic-bezier(0.16, 1, 0.3, 1) 240ms both;
-  }
-
-  .footerVisual[data-intro='true'] .patternWave {
-    animation: footerDotWave 900ms cubic-bezier(0.16, 1, 0.3, 1) 720ms both;
-  }
-}
-
-@keyframes footerPatternIntro {
-  0%,
-  20%,
-  100% {
-    opacity: 0;
-    -webkit-mask-size: 0% 0%;
-    mask-size: 0% 0%;
-  }
-
-  40%,
-  68% {
-    opacity: 1;
-    -webkit-mask-size: 170% 210%;
-    mask-size: 170% 210%;
-  }
-}
-
-@keyframes footerGateLeftIntro {
-  0% {
-    transform: translateX(0);
-  }
-
-  28%,
-  68% {
-    transform: translateX(-198px);
-  }
-
-  100% {
-    transform: translateX(0);
-  }
-}
-
-@keyframes footerGateRightIntro {
-  0% {
-    transform: translateX(0);
-  }
-
-  28%,
-  68% {
-    transform: translateX(198px);
-  }
-
-  100% {
-    transform: translateX(0);
-  }
-}
-
-@keyframes footerGateClosedIntro {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  24%,
-  72% {
-    opacity: 0;
-  }
-}
-
-@keyframes footerGateOpenIntro {
-  0%,
-  100% {
-    opacity: 0;
-  }
-
-  24%,
-  72% {
-    opacity: 1;
-  }
-}
-
-@keyframes footerGateLineIntro {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  18%,
-  78% {
-    opacity: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .centerTile {
+    transition: none;
+  }
+
+  .activeTileShadow {
     transition: none;
   }
 
@@ -559,12 +473,13 @@
 
   .footerPulse,
   .activePattern,
-  .patternWave,
   .randomPattern,
   .gate,
   .gateClosed,
   .gateOpen,
-  .centerLine {
+  .centerLine,
+  .activeSymbol,
+  .tileHighlight {
     animation: none !important;
   }
 
@@ -578,10 +493,6 @@
   .centerLine,
   .activeSymbol {
     transition: none !important;
-  }
-
-  .patternWave {
-    display: none;
   }
 
   .randomPattern,

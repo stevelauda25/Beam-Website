@@ -48,6 +48,25 @@
   background: linear-gradient(180deg, rgb(250 250 250 / 0%) 0%, #fafafa 66.0644%);
 }
 
+@media (max-width: 639px) {
+  .visual {
+    width: 100%;
+    height: 344px;
+    aspect-ratio: auto;
+  }
+
+  .canvas {
+    left: 0;
+    transform-origin: top left;
+  }
+
+  .fade {
+    top: 133px;
+    height: 211px;
+    background: linear-gradient(180deg, rgb(250 250 250 / 0%) 0%, #fafafa 66.0644%);
+  }
+}
+
 @media (min-width: 640px) {
   .visual {
     width: 100%;

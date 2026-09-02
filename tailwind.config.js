@@ -28,7 +28,7 @@ export default {
       },
       fontSize: {
         '2xs': '10px',
-        'section': ['clamp(20px, 4vw, 24px)', { lineHeight: 'normal', letterSpacing: '-0.48px' }],
+        'section': ['28px', { lineHeight: '36px', letterSpacing: '-0.56px' }],
         'body': ['12px', { lineHeight: '18px' }],
         'body-sm': ['14px', { lineHeight: '20px' }],
         'price': ['24px', { lineHeight: '28px' }],
