@@ -16,6 +16,11 @@
  * installed and no tuning parameters exist yet.
  */
 import { useState } from 'react';
+// DialKit is DEV-ONLY authoring tooling. It is imported here, inside src/dev,
+// and never from any production component. Styles come in through this path
+// only, so nothing DialKit-related reaches the production bundle.
+import { DialRoot, DialTimeline } from 'dialkit';
+import 'dialkit/styles.css';
 import styles from './MotionLab.module.css';
 import { IsolatedHarness } from './harnesses/IsolatedHarness';
 import { ScrollHarness } from './harnesses/ScrollHarness';
@@ -124,6 +129,19 @@ export default function MotionLab() {
 
         {entry.notes && <p className={styles.notes}>{entry.notes}</p>}
 
+        {!isScroll && (
+          <p className={styles.presetNote}>
+            Viewport presets are a <strong>visual container preview</strong> — they set the preview
+            canvas width only. They are <strong>not</strong> true breakpoint behaviour: media
+            queries, <span className={styles.mono}>matchMedia</span> and{' '}
+            <span className={styles.mono}>svh</span> still follow the real browser window. Resize
+            the browser to test breakpoints.
+            {entry.intrinsicWidth
+              ? ` Desktop preview is capped at ${entry.intrinsicWidth}px to match this visual's production parent width.`
+              : ''}
+          </p>
+        )}
+
         {widthPresetIsMisleading && (
           <p className={styles.warning}>
             Width preset is cosmetic here. This section reads{' '}
@@ -157,19 +175,41 @@ export default function MotionLab() {
           </div>
         )}
 
-        {isScroll ? (
-          <ScrollHarness replayKey={replayKey}>{entry.render({ progress })}</ScrollHarness>
-        ) : (
-          <IsolatedHarness
-            replayKey={replayKey}
-            width={width}
-            stage={entry.stage}
-            aspect={entry.aspect}
-          >
-            {entry.render({ progress })}
-          </IsolatedHarness>
-        )}
+        {/* Authoring workspace: preview centre, DialKit parameter panel right. */}
+        <div className={styles.workspace}>
+          <div className={styles.previewColumn}>
+            {isScroll ? (
+              <ScrollHarness replayKey={replayKey}>{entry.render({ progress })}</ScrollHarness>
+            ) : (
+              <IsolatedHarness
+                replayKey={replayKey}
+                width={width}
+                intrinsicWidth={entry.intrinsicWidth}
+                sizing={entry.sizing}
+                stage={entry.stage}
+                aspect={entry.aspect}
+              >
+                {entry.render({ progress })}
+              </IsolatedHarness>
+            )}
+          </div>
+
+          <aside className={styles.panelColumn}>
+            <div className={styles.panelHeading}>DialKit parameters</div>
+            {/* Inline mode renders the panel in place rather than as a popover. */}
+            <DialRoot mode="inline" theme="light" />
+            {!entry.timelineId && (
+              <p className={styles.panelEmpty}>
+                No timeline is wired for this section yet. Panels and timelines are authored
+                per section after its motion brief — there is no global Beam timeline.
+              </p>
+            )}
+          </aside>
+        </div>
       </main>
+
+      {/* Bottom scrubbable timeline dock. Mounted once for the whole lab. */}
+      <DialTimeline theme="light" defaultVisible defaultOpen />
     </div>
   );
 }
