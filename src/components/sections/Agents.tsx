@@ -6,7 +6,7 @@ import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 export default function Agents() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row lg:items-stretch">
         <FadeIn className="w-full lg:w-[809px]">
           <div className="aspect-[809/520] w-full overflow-hidden [&>div]:h-full [&>div]:w-full [&_svg]:h-auto [&_svg]:w-full lg:aspect-[809/692] lg:overflow-visible lg:[&_svg]:h-full">
@@ -25,9 +25,22 @@ export default function Agents() {
                 Built for agents, not just humans
               </h2>
               <p className="text-[12px] leading-[18px] text-text-primary">
-                Agents get the same view of your files as you do, through the CLI
-                and an MCP server, authenticated with scoped tokens you can revoke
-                at any time.
+                <span className="sm:hidden">
+                  <span className="block">
+                    Agents get the same view of your files as you do,
+                  </span>
+                  <span className="block">
+                    through the CLI and an MCP server, authenticated
+                  </span>
+                  <span className="block">
+                    with scoped tokens you can revoke at any time.
+                  </span>
+                </span>
+                <span className="hidden sm:inline">
+                  Agents get the same view of your files as you do, through the CLI
+                  and an MCP server, authenticated with scoped tokens you can revoke
+                  at any time.
+                </span>
               </p>
             </div>
 
@@ -42,7 +55,17 @@ export default function Agents() {
               />
               <FeatureItem
                 icon={toggleActive}
-                title="Fresh agent sandboxes start with your working tree already there"
+                title={
+                  <>
+                    <span className="sm:hidden">
+                      Fresh agent sandboxes start with your
+                      <span className="block">working tree already there</span>
+                    </span>
+                    <span className="hidden sm:inline">
+                      Fresh agent sandboxes start with your working tree already there
+                    </span>
+                  </>
+                }
               />
             </div>
           </div>

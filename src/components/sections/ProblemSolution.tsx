@@ -330,7 +330,17 @@ export default function ProblemSolution() {
               className="invisible absolute inset-x-0 top-0 flex justify-center will-change-[transform,filter,opacity]"
             >
               <p className="max-w-[387px] text-center text-[12px] leading-[18px] text-text-primary">
-                {solutionCopy}
+                <span className="sm:hidden">
+                  <span className="block">One unified directory, mirrored everywhere.</span>
+                  <span className="block">
+                    Attach it to any machine and your workspace is just there.
+                  </span>
+                  <span className="block">
+                    Files on demand, secrets included, and the same
+                  </span>
+                  <span className="block">view for agents through CLI and MCP.</span>
+                </span>
+                <span className="hidden sm:inline">{solutionCopy}</span>
               </p>
             </div>
           </div>

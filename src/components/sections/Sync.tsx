@@ -8,7 +8,7 @@ import syncFast from '../../assets/icons/sync/sync-fast.svg';
 
 export default function Sync() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row lg:items-stretch">
         <FadeIn className="w-full lg:w-[809px]">
           <SyncVisual />

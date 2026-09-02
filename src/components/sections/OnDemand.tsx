@@ -282,7 +282,7 @@ export default function OnDemand() {
   );
 
   const mobileContent = (
-    <div className="mx-auto flex h-full w-full max-w-[500px] flex-col items-start justify-start gap-6 overflow-x-hidden px-5 pt-16">
+    <div className="mx-auto flex h-full w-full max-w-[500px] flex-col items-start justify-start gap-6 overflow-x-hidden px-5 pt-12">
       {keyVisual}
       {textHeader}
       {subheaderList}

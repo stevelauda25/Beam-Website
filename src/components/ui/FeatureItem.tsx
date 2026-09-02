@@ -2,7 +2,7 @@ import { CSSProperties, ReactNode } from 'react';
 
 interface FeatureItemProps {
   icon: string;
-  title: string;
+  title: ReactNode;
   description?: string;
   children?: ReactNode;
   className?: string;

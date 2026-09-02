@@ -119,7 +119,7 @@ export default function Pricing() {
   };
 
   return (
-    <section className="w-full bg-[#fafafa] px-5 py-16 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
+    <section className="w-full bg-[#fafafa] px-5 py-12 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
       <div className="mx-auto flex max-w-[1144px] flex-col items-center gap-6 lg:gap-16">
         <FadeIn className="flex w-full flex-col items-center gap-2.5 text-center">
           <h2 className="text-section font-normal text-text-primary">

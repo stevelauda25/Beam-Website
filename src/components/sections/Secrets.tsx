@@ -24,7 +24,7 @@ const features = [
 
 export default function Secrets() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
       <div className="mx-auto flex max-w-[1178px] flex-col items-center gap-6 lg:gap-8">
         <FadeIn className="order-2 flex flex-col items-center gap-3 text-center lg:order-1">
           <SectionLabel label="Secrets" />
@@ -33,9 +33,21 @@ export default function Secrets() {
             <span className="block">without leaving a trace</span>
           </h2>
           <p className="max-w-[490px] text-[12px] leading-[18px] text-text-primary">
-            Keep environment variables with your workspace and make them available
-            only where you explicitly mount them—without committing .env files or
-            copying secrets between machines.
+            <span className="sm:hidden">
+              <span className="block">Keep environment variables with your workspace</span>
+              <span className="block">
+                and make them available only where you explicitly
+              </span>
+              <span className="block">
+                mount them—without committing .env files or copying
+              </span>
+              <span className="block">secrets between machines.</span>
+            </span>
+            <span className="hidden sm:inline">
+              Keep environment variables with your workspace and make them available
+              only where you explicitly mount them—without committing .env files or
+              copying secrets between machines.
+            </span>
           </p>
         </FadeIn>
 

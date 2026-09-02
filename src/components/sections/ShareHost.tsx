@@ -6,7 +6,7 @@ import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 export default function ShareHost() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row-reverse lg:items-stretch">
         <FadeIn className="w-full lg:w-[809px]">
           <div className="aspect-[809/692] w-full [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
@@ -25,8 +25,19 @@ export default function ShareHost() {
                 From drop to deploy
               </h2>
               <p className="text-[12px] leading-[18px] text-text-primary">
-                Every file in Beam is one step from being live on the internet: a
-                share link for a teammate, or a full deploy on your own domain.
+                <span className="sm:hidden">
+                  <span className="block">
+                    Every file in Beam is one step from being live
+                  </span>
+                  <span className="block">
+                    on the internet: a share link for a teammate, or a full
+                  </span>
+                  <span className="block">deploy on your own domain.</span>
+                </span>
+                <span className="hidden sm:inline">
+                  Every file in Beam is one step from being live on the internet: a
+                  share link for a teammate, or a full deploy on your own domain.
+                </span>
               </p>
             </div>
 
