@@ -39,7 +39,7 @@ export default function Secrets() {
           </p>
         </FadeIn>
 
-        <FadeIn delay={0.05} className="order-1 w-full lg:order-2">
+        <FadeIn delay={0.05} className="order-1 mb-9 w-full lg:order-2 lg:mb-0">
           <div className="aspect-[1178/484] w-full scale-150 [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full lg:scale-100">
             <SecretVisual />
           </div>

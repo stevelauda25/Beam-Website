@@ -30,6 +30,7 @@ export function FooterVisual() {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let animationFrame = 0;
     let visible = false;
+    let desktopCloseTimer: number | null = null;
     let touchCloseTimer: number | null = null;
     let sparkleReleaseTimer: number | null = null;
     let pulseScaleAnimation: Animation | null = null;
@@ -236,12 +237,12 @@ export function FooterVisual() {
 
     const startInteraction = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' || reducedMotion.matches) return;
+      if (desktopCloseTimer !== null) return;
       activateInteraction();
-    };
-
-    const endInteraction = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') return;
-      resetInteraction();
+      desktopCloseTimer = window.setTimeout(() => {
+        desktopCloseTimer = null;
+        resetInteraction();
+      }, 2800);
     };
 
     const playTouchInteraction = (event: PointerEvent) => {
@@ -269,21 +270,18 @@ export function FooterVisual() {
     );
 
     intersectionObserver.observe(root);
-    root.addEventListener('pointerleave', endInteraction);
     interactionZone.addEventListener('pointerenter', startInteraction);
-    interactionZone.addEventListener('pointerleave', endInteraction);
     interactionZone.addEventListener('pointerup', playTouchInteraction);
 
     return () => {
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      if (desktopCloseTimer !== null) window.clearTimeout(desktopCloseTimer);
       if (touchCloseTimer !== null) window.clearTimeout(touchCloseTimer);
       if (sparkleReleaseTimer !== null) window.clearTimeout(sparkleReleaseTimer);
       clearPulseAnimations();
       resetPulse();
       intersectionObserver.disconnect();
-      root.removeEventListener('pointerleave', endInteraction);
       interactionZone.removeEventListener('pointerenter', startInteraction);
-      interactionZone.removeEventListener('pointerleave', endInteraction);
       interactionZone.removeEventListener('pointerup', playTouchInteraction);
       delete root.dataset.hover;
     };

@@ -9,14 +9,14 @@ export default function Agents() {
     <section className="w-full overflow-hidden bg-canvas px-5 py-16 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row lg:items-stretch">
         <FadeIn className="w-full lg:w-[809px]">
-          <div className="aspect-[809/692] w-full [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
+          <div className="aspect-[809/520] w-full overflow-hidden [&>div]:h-full [&>div]:w-full [&_svg]:h-auto [&_svg]:w-full lg:aspect-[809/692] lg:overflow-visible lg:[&_svg]:h-full">
             <AgentVisual />
           </div>
         </FadeIn>
 
         <FadeIn
           delay={0.1}
-          className="flex w-full items-center pt-12 lg:w-[631px] lg:pr-[131px] lg:pl-0 lg:pt-0"
+          className="flex w-full items-center pt-6 lg:w-[631px] lg:pr-[131px] lg:pl-0 lg:pt-0"
         >
           <div className="flex flex-col gap-6 lg:gap-[130px]">
             <div className="flex max-w-[500px] flex-col gap-[10px]">
