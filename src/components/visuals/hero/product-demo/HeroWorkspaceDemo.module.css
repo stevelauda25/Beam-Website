@@ -82,6 +82,8 @@
 .beamMark {
   width: 11px;
   height: 11px;
+  object-fit: contain;
+  filter: brightness(0);
 }
 
 .workspaceLabel {
@@ -654,6 +656,15 @@
   font-weight: 400;
   line-height: 26.385px;
   transition: min-height 180ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.uploadBackdrop {
+  position: absolute;
+  z-index: 34;
+  inset: 0;
+  background: rgb(10 10 10 / 10%);
+  backdrop-filter: blur(1.5px);
+  pointer-events: none;
 }
 
 .uploadPanelExpanded {

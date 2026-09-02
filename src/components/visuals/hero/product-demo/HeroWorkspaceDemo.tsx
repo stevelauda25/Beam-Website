@@ -17,37 +17,13 @@ import {
   X,
 } from 'lucide-react';
 import { formatBytes, formatModified, initialFiles, initialFolders } from './heroDemoData';
-import { deleteDemoFile, getDemoFile, storeDemoFile } from './heroDemoStorage';
 import type { DemoFile, DemoFolder, PreviewState, UploadItem } from './types';
+import personalLogo from '../../../../assets/brand/personal.svg';
 import styles from './HeroWorkspaceDemo.module.css';
 
 const supportedExtensions = ['md', 'txt', 'pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif'];
-const metadataKey = 'beam-website-hero-demo-metadata-v1';
-
-function readMetadata() {
-  try {
-    const value = JSON.parse(window.localStorage.getItem(metadataKey) ?? 'null') as { folders?: DemoFolder[]; files?: DemoFile[] } | null;
-    if (value?.folders?.length && Array.isArray(value.files)) {
-      return {
-        folders: value.folders,
-        files: value.files.map((file) => ({
-          ...initialFiles.find((initialFile) => initialFile.id === file.id),
-          ...file,
-        })),
-      };
-    }
-  } catch {
-    // A clean demo is preferable to blocking the Hero when local metadata is malformed.
-  }
-  return { folders: initialFolders, files: initialFiles };
-}
-
 function BeamMark() {
-  return (
-    <svg className={styles.beamMark} viewBox="0 0 12 12" aria-hidden="true">
-      <path d="M2.3 1.1c.8-.5 1.8-.7 2.8-.5L3.5 2.2a1.1 1.1 0 0 1-1.6 0l-.3-.3.7-.8Zm3.8.2A1.1 1.1 0 0 1 7.7 1l.7.7c.9 1 1.2 2.5.7 3.8L6 2.5a1.1 1.1 0 0 1 .1-1.2ZM1 2.9l.7.7c.4.4.4 1.1 0 1.6L.6 6.3A5 5 0 0 1 1 2.9Zm2.2 3.5c.4-.4 1.1-.4 1.6 0l3.1 3.1a5 5 0 0 1-6.5-.9l1.8-2.2Z" fill="currentColor" />
-    </svg>
-  );
+  return <img className={styles.beamMark} src={personalLogo} alt="" aria-hidden="true" />;
 }
 
 async function writeClipboard(value: string) {
@@ -84,9 +60,8 @@ function RowMenu({ onOpen, onRename, onShare, onDownload, onDelete }: {
 }
 
 export function HeroWorkspaceDemo() {
-  const initialMetadata = useMemo(readMetadata, []);
-  const [folders, setFolders] = useState<DemoFolder[]>(initialMetadata.folders);
-  const [files, setFiles] = useState<DemoFile[]>(initialMetadata.files);
+  const [folders, setFolders] = useState<DemoFolder[]>(initialFolders);
+  const [files, setFiles] = useState<DemoFile[]>(initialFiles);
   const [folderId, setFolderId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -108,6 +83,7 @@ export function HeroWorkspaceDemo() {
   const uploadTransferredBytes = uploads.reduce((total, item) => total + Math.max(1, item.file.size) * (item.progress / 100), 0);
   const uploadProgress = uploadTotalBytes ? Math.min(100, (uploadTransferredBytes / uploadTotalBytes) * 100) : 0;
   const uploadsComplete = uploads.length > 0 && uploads.every((item) => item.state === 'complete');
+  const uploadInProgress = uploads.some((item) => item.state === 'uploading' || (item.state === 'paused' && item.progress < 100));
   const uploadsPaused = uploads.some((item) => item.state === 'paused' && item.progress < 100) && !uploads.some((item) => item.state === 'uploading');
   const uploadsFailed = uploads.some((item) => item.state === 'error');
 
@@ -116,14 +92,6 @@ export function HeroWorkspaceDemo() {
     const timeout = window.setTimeout(() => setNotice(''), 2200);
     return () => window.clearTimeout(timeout);
   }, [notice]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(metadataKey, JSON.stringify({ folders, files }));
-    } catch {
-      // The current session remains functional if browser persistence is unavailable.
-    }
-  }, [folders, files]);
 
   useEffect(() => {
     function handleKeyboard(event: KeyboardEvent) {
@@ -147,27 +115,34 @@ export function HeroWorkspaceDemo() {
 
   useEffect(() => {
     const completed = uploads.filter((item) => item.state === 'uploading' && item.progress >= 100);
-    completed.forEach((item) => {
-      const storageId = `website-demo:${item.id}`;
-      setUploads((current) => current.map((entry) => entry.id === item.id ? { ...entry, state: 'paused' } : entry));
-      void storeDemoFile({ id: storageId, blob: item.file }).then(() => {
-        const targetFolder = folderId ?? folders[0]?.id;
-        if (!targetFolder) return;
-        setFiles((current) => current.some((file) => file.id === item.id) ? current : [...current, {
+    if (!completed.length) return;
+    const targetFolder = folderId ?? folders[0]?.id;
+    if (!targetFolder) return;
+    setFiles((current) => {
+      const additions = completed
+        .filter((item) => !current.some((file) => file.id === item.id))
+        .map((item) => ({
           id: item.id,
           folderId: targetFolder,
           name: item.file.name,
           size: item.file.size,
           modified: Date.now(),
           mimeType: item.file.type || 'application/octet-stream',
-          storageId,
-        }]);
-        setUploads((current) => current.map((entry) => entry.id === item.id ? { ...entry, state: 'complete' } : entry));
-      }).catch(() => {
-        setUploads((current) => current.map((entry) => entry.id === item.id ? { ...entry, state: 'error', error: 'Upload failed' } : entry));
-      });
+          blob: item.file,
+        }));
+      return additions.length ? [...current, ...additions] : current;
     });
+    setUploads((current) => current.map((entry) => completed.some((item) => item.id === entry.id) ? { ...entry, state: 'complete' } : entry));
   }, [uploads, folderId, folders]);
+
+  useEffect(() => {
+    if (!uploadsComplete) return;
+    const timeout = window.setTimeout(() => {
+      setUploads([]);
+      setIsUploadExpanded(false);
+    }, 900);
+    return () => window.clearTimeout(timeout);
+  }, [uploadsComplete]);
 
   useEffect(() => () => {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -197,19 +172,21 @@ export function HeroWorkspaceDemo() {
       setPreview({ status: 'ready', file, url: file.previewUrl });
       return;
     }
-    if (!file.storageId) {
-      setPreview({ status: 'error', file, message: 'Preview unavailable in this website demo.' });
+    if (!file.blob) {
+      setPreview({
+        status: 'ready',
+        file,
+        text: `# ${file.name}\n\nThis sample file is available in the Beam workspace and ready to use.`,
+      });
       return;
     }
 
     setPreview({ status: 'loading', file });
     try {
-      const stored = await getDemoFile(file.storageId);
-      if (!stored) throw new Error('The local file could not be found.');
       if (file.mimeType.startsWith('text/') || /\.(md|json)$/i.test(file.name)) {
-        setPreview({ status: 'ready', file, text: await stored.blob.text() });
+        setPreview({ status: 'ready', file, text: await file.blob.text() });
       } else if (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf') {
-        const url = URL.createObjectURL(stored.blob);
+        const url = URL.createObjectURL(file.blob);
         previewUrlRef.current = url;
         setPreview({ status: 'ready', file, url });
       } else {
@@ -256,10 +233,8 @@ export function HeroWorkspaceDemo() {
   async function downloadFile(file: DemoFile) {
     setMenuId(null);
     let blob: Blob;
-    if (file.storageId) {
-      const stored = await getDemoFile(file.storageId);
-      if (!stored) return setNotice('Download unavailable');
-      blob = stored.blob;
+    if (file.blob) {
+      blob = file.blob;
     } else {
       blob = new Blob([file.content ?? `Beam demo file: ${file.name}`], { type: file.mimeType });
     }
@@ -284,14 +259,12 @@ export function HeroWorkspaceDemo() {
 
   async function removeFile(file: DemoFile) {
     setMenuId(null);
-    if (file.storageId) await deleteDemoFile(file.storageId).catch(() => undefined);
     setFiles((current) => current.filter((entry) => entry.id !== file.id));
     setNotice('File deleted');
   }
 
   function removeFolder(id: string) {
     setMenuId(null);
-    files.filter((file) => file.folderId === id && file.storageId).forEach((file) => void deleteDemoFile(file.storageId as string).catch(() => undefined));
     setFolders((current) => current.filter((folder) => folder.id !== id));
     setFiles((current) => current.filter((file) => file.folderId !== id));
     if (folderId === id) setFolderId(null);
@@ -405,6 +378,8 @@ export function HeroWorkspaceDemo() {
         <div className={styles.previewBar}><div className={styles.previewBreadcrumb}><button type="button" aria-label="Back to files" title="Back to files" onClick={() => setPreview({ status: 'idle' })}><ChevronLeft size={12} /></button><strong>{preview.file.name}</strong></div><div>{preview.status === 'ready' && <><button type="button" aria-label="Share file" onClick={() => void shareFile(preview.file)}><Share2 size={12} /></button><button type="button" aria-label="Download file" onClick={() => void downloadFile(preview.file)}><Download size={12} /></button></>}<button type="button" aria-label="Close preview" onClick={() => setPreview({ status: 'idle' })}><X size={13} /></button></div></div>
         <div className={styles.previewBody}>{preview.status === 'loading' && <div className={styles.loading}><span /><span>Loading preview…</span></div>}{preview.status === 'error' && <div className={styles.previewMessage}><FileText size={28} /><strong>Preview unavailable</strong><span>{preview.message}</span></div>}{preview.status === 'ready' && preview.text && <pre>{preview.text}</pre>}{preview.status === 'ready' && preview.url && (preview.file.mimeType === 'application/pdf' ? <iframe src={preview.url} title={preview.file.name} /> : <img src={preview.url} alt={preview.file.name} />)}</div>
       </div>}
+
+      {uploadInProgress && <div className={styles.uploadBackdrop} aria-hidden="true" />}
 
       {!!uploads.length && (
         <section className={`${styles.uploadPanel} ${isUploadExpanded ? styles.uploadPanelExpanded : ''}`} aria-label="Upload progress">

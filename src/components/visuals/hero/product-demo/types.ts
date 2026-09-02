@@ -11,6 +11,7 @@ export type DemoFile = {
   modified: number;
   mimeType: string;
   storageId?: string;
+  blob?: Blob;
   content?: string;
   previewUrl?: string;
 };

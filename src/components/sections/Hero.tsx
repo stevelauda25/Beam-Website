@@ -53,7 +53,7 @@ function AgentPromptButton() {
         onClick={copyPrompt}
         className="w-[236px] !gap-0 !px-[14px] !leading-none whitespace-nowrap"
       >
-        <span className="flex items-center gap-1.5">
+        <span className="flex w-[118px] flex-none items-center justify-center gap-1.5">
           {copied && <Check aria-hidden="true" className="h-3 w-3" />}
           {copied ? 'Prompt copied' : 'Copy agent prompt'}
         </span>
@@ -107,7 +107,7 @@ export default function Hero() {
 
         <FadeIn
           delay={0.1}
-          className="mt-6 flex w-full items-center justify-center gap-3 lg:absolute lg:right-0 lg:top-[200px] lg:mt-0 lg:w-auto"
+          className="mt-6 flex w-full items-center justify-center gap-3 lg:absolute lg:right-0 lg:top-[185px] lg:mt-0 lg:w-auto"
         >
           <AgentPromptButton />
           <Button
