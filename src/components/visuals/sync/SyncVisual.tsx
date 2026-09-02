@@ -1,39 +1,261 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type AnimationEvent,
-  type KeyboardEvent,
-  type PointerEvent,
-} from "react";
+import { useEffect, useRef, type PointerEvent } from "react";
+
+/*
+ * REAL TIME OWNS THIS VISUAL.
+ *
+ *   performance.now()
+ *     -> elapsed ms since THIS transaction began
+ *     -> normalized progress
+ *     -> every stage value, the dotted trail, and the counter
+ *
+ * Nothing reads its state back from an animation. A transaction is 1800ms of
+ * wall clock, measured, not asserted by keyframe percentages: the MacBook change
+ * begins at elapsed 0 and the Cloud VM finishes at elapsed 1800, whatever the
+ * frame rate does in between. Easing is applied to VALUES sampled from that
+ * clock; the clock itself is never eased.
+ */
+const TRANSACTION_MS = 1800;
+const SETTLE_SHORT_MS = 500;
+const SETTLE_SYNCED_MS = 700;
+const LOOP_CYCLE_MS =
+  TRANSACTION_MS * 2 + SETTLE_SHORT_MS + SETTLE_SYNCED_MS;
+
+/* Stage windows, in ms from the transaction's own start. Cloud lands on 1800. */
+const MAC_CHANGE: readonly [number, number] = [0, 420];
+const LOWER_TRAIL: readonly [number, number] = [200, 640];
+const BEAM_RECEIVE: readonly [number, number] = [640, 1060];
+const UPPER_TRAIL: readonly [number, number] = [940, 1380];
+const CLOUD_RECEIVE: readonly [number, number] = [1380, TRANSACTION_MS];
+
+/* Dotted state trail: a clear head with a falloff tail, not a marquee. */
+const TRAIL_OPACITY = [1, 0.85, 0.65, 0.45, 0.28, 0.15, 0.06, 0] as const;
+const TRAIL_SIZE = [5.4, 5, 4.6, 4.3, 4, 3.7, 3.5, 3.3] as const;
+const TRAIL_SPACING = 14;
+const TRAIL_SAMPLES = 256;
+
+type PathTable = { len: number; xs: Float32Array; ys: Float32Array };
+
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+/* Matches the approved cubic-bezier(.22, 1, .36, 1) to within ~1%. */
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 5);
+const stageProgress = (elapsed: number, [from, to]: readonly [number, number]) =>
+  clamp01((elapsed - from) / (to - from));
+
+export type SyncSample = {
+  /** null while settled between transactions. */
+  kind: "add" | "delete" | null;
+  synced: boolean;
+  /** ms of real time since THIS transaction began. */
+  elapsed: number;
+  mac: number;
+  beam: number;
+  cloud: number;
+  /** displayed seconds, truncated for presentation only. */
+  seconds: number;
+  /** trail head as a fraction of the connector; null when no trail is in flight. */
+  lowerHead: number | null;
+  upperHead: number | null;
+  done: boolean;
+};
+
+/**
+ * The whole visual as a pure function of REAL ELAPSED MILLISECONDS.
+ *
+ * The render loop does nothing but `sampleSyncAt(mode, performance.now() - t0)`
+ * and write the result to the DOM, so a transaction lasts 1800ms of wall clock
+ * by construction: `sinceStart` is real time, and the Cloud VM reaches its final
+ * value exactly when that argument reaches TRANSACTION_MS. Easing is applied to
+ * the returned values, never to the argument.
+ *
+ * Exported so the schedule can be checked directly with real numbers.
+ */
+export function sampleSyncAt(mode: "intro" | "loop", sinceStart: number): SyncSample {
+  const settled = (synced: boolean, done: boolean): SyncSample => ({
+    kind: null,
+    synced,
+    elapsed: TRANSACTION_MS,
+    mac: synced ? 1 : 0,
+    beam: synced ? 1 : 0,
+    cloud: synced ? 1 : 0,
+    seconds: TRANSACTION_MS / 1000,
+    lowerHead: null,
+    upperHead: null,
+    done,
+  });
+
+  const transaction = (adding: boolean, elapsed: number): SyncSample => {
+    const towards = (progress: number) => (adding ? progress : 1 - progress);
+    const trail = ([from, to]: readonly [number, number]) =>
+      elapsed < from ? null : (elapsed - from) / (to - from);
+    return {
+      kind: adding ? "add" : "delete",
+      synced: false,
+      elapsed,
+      mac: towards(easeOut(stageProgress(elapsed, MAC_CHANGE))),
+      beam: towards(easeOut(stageProgress(elapsed, BEAM_RECEIVE))),
+      cloud: towards(easeOut(stageProgress(elapsed, CLOUD_RECEIVE))),
+      seconds: Math.min(elapsed / 1000, TRANSACTION_MS / 1000),
+      lowerHead: trail(LOWER_TRAIL),
+      upperHead: trail(UPPER_TRAIL),
+      done: false,
+    };
+  };
+
+  if (mode === "intro") {
+    return sinceStart >= TRANSACTION_MS ? settled(true, true) : transaction(true, sinceStart);
+  }
+
+  // Each MacBook-originated change gets its own fresh 1.8s measurement; the
+  // modulo only schedules when the next one starts.
+  const cycle = ((sinceStart % LOOP_CYCLE_MS) + LOOP_CYCLE_MS) % LOOP_CYCLE_MS;
+  if (cycle < TRANSACTION_MS) return transaction(false, cycle);
+  if (cycle < TRANSACTION_MS + SETTLE_SHORT_MS) return settled(false, false);
+  if (cycle < TRANSACTION_MS * 2 + SETTLE_SHORT_MS) {
+    return transaction(true, cycle - TRANSACTION_MS - SETTLE_SHORT_MS);
+  }
+  return settled(true, false);
+}
+
+function tabulate(path: SVGPathElement): PathTable {
+  const len = path.getTotalLength();
+  const xs = new Float32Array(TRAIL_SAMPLES + 1);
+  const ys = new Float32Array(TRAIL_SAMPLES + 1);
+  for (let i = 0; i <= TRAIL_SAMPLES; i += 1) {
+    const point = path.getPointAtLength((len * i) / TRAIL_SAMPLES);
+    xs[i] = point.x;
+    ys[i] = point.y;
+  }
+  return { len, xs, ys };
+}
 
 export function SyncVisual() {
   const rootRef = useRef<SVGSVGElement>(null);
-  const [introStarted, setIntroStarted] = useState(false);
-  const [introPlaying, setIntroPlaying] = useState(false);
-  const [looping, setLooping] = useState(false);
-  const stopAfterCycle = useRef(false);
-  const isReplayReadyRef = useRef(false);
-  const introTimerRef = useRef<number | null>(null);
-  const replayFrameRef = useRef<number | null>(null);
+  const counterRef = useRef<SVGTextElement>(null);
+  const lowerPathRef = useRef<SVGPathElement>(null);
+  const upperPathRef = useRef<SVGPathElement>(null);
+  const lowerDotsRef = useRef<SVGRectElement[]>([]);
+  const upperDotsRef = useRef<SVGRectElement[]>([]);
+
+  const runRef = useRef<{ mode: "intro" | "loop"; t0: number } | null>(null);
+  const stopRequestedRef = useRef(false);
+  const introDoneRef = useRef(false);
+  const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const startIntro = () => {
-      setIntroStarted(true);
-      setLooping(false);
-      setIntroPlaying(true);
-      isReplayReadyRef.current = false;
-      introTimerRef.current = window.setTimeout(() => {
-        setIntroPlaying(false);
-        isReplayReadyRef.current = true;
-        introTimerRef.current = null;
-      }, 3000);
+    const lowerTable = lowerPathRef.current ? tabulate(lowerPathRef.current) : null;
+    const upperTable = upperPathRef.current ? tabulate(upperPathRef.current) : null;
+
+    const setVar = (name: string, value: number) =>
+      root.style.setProperty(name, String(value));
+
+    // The value stays continuous; only this label is quantised, and it truncates
+    // so the readout never claims a tenth that has not actually elapsed yet.
+    const showCount = (seconds: number) => {
+      const node = counterRef.current;
+      if (!node) return;
+      const label = `${(Math.floor(seconds * 10) / 10).toFixed(1)}s`;
+      if (node.textContent !== label) node.textContent = label;
     };
+
+    const hideTrail = (dots: SVGRectElement[]) => {
+      for (const dot of dots) dot.style.opacity = "0";
+    };
+
+    const drawTrail = (
+      dots: SVGRectElement[],
+      table: PathTable | null,
+      headFraction: number | null,
+      reversed: boolean,
+    ) => {
+      if (!table) return;
+      // Head reaches the destination exactly when that machine starts reacting;
+      // afterwards it keeps going so the tail flows out rather than blinking off.
+      const head = (headFraction ?? 0) * table.len;
+      for (let i = 0; i < dots.length; i += 1) {
+        const dot = dots[i];
+        const distance = head - i * TRAIL_SPACING;
+        if (headFraction === null || distance < 0 || distance > table.len || TRAIL_OPACITY[i] === 0) {
+          dot.style.opacity = "0";
+          continue;
+        }
+        // `distance` is measured along the direction of TRAVEL; map it onto the
+        // authored path, flipping when the path runs against the semantics.
+        const along = reversed ? table.len - distance : distance;
+        const t = clamp01(along / table.len) * TRAIL_SAMPLES;
+        const index = Math.min(TRAIL_SAMPLES - 1, Math.floor(t));
+        const f = t - index;
+        const x = table.xs[index] + (table.xs[index + 1] - table.xs[index]) * f;
+        const y = table.ys[index] + (table.ys[index + 1] - table.ys[index]) * f;
+        dot.setAttribute("transform", `translate(${x} ${y})`);
+        dot.style.opacity = String(TRAIL_OPACITY[i]);
+      }
+    };
+
+    const paint = (sample: SyncSample) => {
+      setVar("--mac-open", sample.mac);
+      setVar("--beam-open", sample.beam);
+      setVar("--cloud-open", sample.cloud);
+      showCount(sample.seconds);
+      // MacBook -> Beam runs against the authored path; Beam -> Cloud runs with it.
+      drawTrail(lowerDotsRef.current, lowerTable, sample.lowerHead, true);
+      drawTrail(upperDotsRef.current, upperTable, sample.upperHead, false);
+    };
+
+    const rest = () => {
+      runRef.current = null;
+      frameRef.current = null;
+      stopRequestedRef.current = false;
+      root.style.removeProperty("--mac-open");
+      root.style.removeProperty("--beam-open");
+      root.style.removeProperty("--cloud-open");
+      showCount(TRANSACTION_MS / 1000);
+      hideTrail(lowerDotsRef.current);
+      hideTrail(upperDotsRef.current);
+    };
+
+    const frame = (now: number) => {
+      const run = runRef.current;
+      if (!run) return;
+
+      // The ONLY input is real elapsed time.
+      const sample = sampleSyncAt(run.mode, now - run.t0);
+
+      if (sample.done) {
+        introDoneRef.current = true;
+        rest();
+        return;
+      }
+      // Release only on the synced settle: it is the resting state, so handing
+      // control back is invisible, and testing it on the frame itself means no
+      // timer can overshoot into the MacBook shrink that follows.
+      if (sample.kind === null && sample.synced && stopRequestedRef.current) {
+        rest();
+        return;
+      }
+
+      paint(sample);
+      frameRef.current = requestAnimationFrame(frame);
+    };
+
+    const start = (mode: "intro" | "loop") => {
+      stopRequestedRef.current = false;
+      runRef.current = { mode, t0: performance.now() };
+      if (frameRef.current === null) frameRef.current = requestAnimationFrame(frame);
+    };
+
+    startRef.current = start;
+    restRef.current = rest;
+
+    // Collapsed and waiting, so the intro reads as a build rather than a snap.
+    setVar("--mac-open", 0);
+    setVar("--beam-open", 0);
+    setVar("--cloud-open", 0);
+    showCount(0);
 
     let observer: IntersectionObserver | null = null;
     if ("IntersectionObserver" in window) {
@@ -41,61 +263,44 @@ export function SyncVisual() {
         ([entry]) => {
           if (!entry?.isIntersecting) return;
           observer?.disconnect();
-          startIntro();
+          start("intro");
         },
         { threshold: 0.35 },
       );
       observer.observe(root);
     } else {
-      startIntro();
+      start("intro");
     }
 
     return () => {
       observer?.disconnect();
-      if (introTimerRef.current !== null) window.clearTimeout(introTimerRef.current);
-      if (replayFrameRef.current !== null) window.cancelAnimationFrame(replayFrameRef.current);
-      isReplayReadyRef.current = false;
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+      runRef.current = null;
+      startRef.current = null;
+      restRef.current = null;
     };
   }, []);
+
+  const startRef = useRef<((mode: "intro" | "loop") => void) | null>(null);
+  const restRef = useRef<(() => void) | null>(null);
 
   function beginHover(event: PointerEvent<SVGSVGElement>) {
     if (
       event.pointerType !== "mouse" ||
-      !isReplayReadyRef.current ||
+      !introDoneRef.current ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) return;
-    stopAfterCycle.current = false;
-    setLooping(true);
+    stopRequestedRef.current = false;
+    if (runRef.current?.mode === "loop") return;
+    startRef.current?.("loop");
   }
 
   function endHover(event: PointerEvent<SVGSVGElement>) {
-    if (event.pointerType !== "mouse" || !isReplayReadyRef.current) return;
-    stopAfterCycle.current = true;
-  }
-
-  function replayOnce() {
-    if (
-      !isReplayReadyRef.current ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) return;
-    stopAfterCycle.current = true;
-    setLooping(false);
-    if (replayFrameRef.current !== null) window.cancelAnimationFrame(replayFrameRef.current);
-    replayFrameRef.current = window.requestAnimationFrame(() => {
-      setLooping(true);
-      replayFrameRef.current = null;
-    });
-  }
-
-  function handleKeyDown(event: KeyboardEvent<SVGSVGElement>) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    replayOnce();
-  }
-
-  function handleIteration(event: AnimationEvent<SVGSVGElement>) {
-    if (event.target !== event.currentTarget) return;
-    if (stopAfterCycle.current) setLooping(false);
+    if (event.pointerType !== "mouse") return;
+    // The frame loop lets the current transaction finish and releases on the
+    // synced settle, so exit never lands part-way through a state change.
+    stopRequestedRef.current = true;
   }
 
   return (
@@ -106,18 +311,9 @@ export function SyncVisual() {
   fill="none"
   xmlns="http://www.w3.org/2000/svg"
   role="img"
-  aria-label="Beam workspace syncing to a Cloud VM and MacBook Pro. Hover, tap, or press Enter to replay."
-  tabIndex={0}
-  data-intro={introPlaying ? "true" : "false"}
-  data-pending={introStarted ? "false" : "true"}
-  data-looping={looping ? "true" : "false"}
+  aria-label="A new file in the Beam workspace synchronising to a Cloud VM and a MacBook Pro, until all three machines match."
   onPointerEnter={beginHover}
   onPointerLeave={endHover}
-  onPointerDown={(event) => {
-    if (event.pointerType !== "mouse") replayOnce();
-  }}
-  onKeyDown={handleKeyDown}
-  onAnimationIteration={handleIteration}
   style={{
     display: "block",
     width: "100%",
@@ -126,152 +322,291 @@ export function SyncVisual() {
     aspectRatio: "809 / 692",
     overflow: "hidden",
     background: "#fafafa",
-    cursor: "pointer",
+    // Not a control: no hand cursor, nothing to click, nothing selectable.
+    cursor: "default",
+    userSelect: "none",
+    WebkitUserSelect: "none",
   }}
 >
 <style>{`
-  .sync-root [id^="NEW"] { fill: #0d76f2; }
+  /*
+   * Sync story: MacBook (source) -> Beam workspace -> Cloud VM.
+   *
+   * Panels genuinely hug their content. Each panel's open/closed state is a
+   * single animatable number; every geometry rule below is a static calc() that
+   * reads it, so one variable moves the card frame, the rows above, the rows
+   * below and the auth.ts row together as one real layout change.
+   *
+   * Collapse removes exactly one 44px row and is CENTRE-ANCHORED: the frame
+   * gains 22px of y and loses 44px of height, content above moves down 22px and
+   * content below moves up 22px. The panel's vertical centre never moves, so the
+   * topology stays put.
+   *
+   * Panels only ever shrink from their authored size, so the existing clipPaths
+   * stay oversized and never clip — no defs surgery required.
+   */
+  @property --beam-open { syntax: "<number>"; inherits: true; initial-value: 1; }
+  @property --cloud-open { syntax: "<number>"; inherits: true; initial-value: 1; }
+  @property --mac-open { syntax: "<number>"; inherits: true; initial-value: 1; }
 
-  .sync-root [id="Union"],
-  .sync-root [id="Union_2"],
-  .sync-root [id="Frame 2147260377"],
-  .sync-root [id="Frame 2147260385"],
-  .sync-root [id="Frame 2147260386"],
-  .sync-root [id="Frame 2147260431"],
-  .sync-root [id="Frame 2147260341"],
-  .sync-root [id="Frame 2147260341_2"],
-  .sync-root [id="Frame 2147260341_3"],
-  .sync-root [id="Frame 2147260345"],
-  .sync-root [id="Frame 2147260345_2"],
-  .sync-root [id="Frame 2147260345_3"] {
-    transform-box: fill-box;
-    transform-origin: center;
-    will-change: transform, opacity, filter;
+  .sync-root {
+    --intro-cycle: 1.8s;
+    --loop-cycle: 4.8s;
+    --row: 44px;
+    --half-row: 22px;
   }
 
-  .sync-root [id="Union"],
-  .sync-root [id="Union_2"] { transform-origin: left center; }
+  /*
+   * Panel grow/shrink curve: cubic-bezier(.22, 1, .36, 1), applied per segment
+   * inside the drive keyframes so each panel move eases while every hold stays a
+   * true hold: 40% of the height change in the first 10% of the stage, 86% by a
+   * third of it, settled at the end. That is the Clerk profile (51% @ 50ms,
+   * 90% @ 163ms of a nominal 500ms). Monotonic, so no overshoot and no bounce.
+   *
+   * The curve now lives in JS as easeOut(), applied to a stage progress that was
+   * itself sampled from the real clock — the values ease, the clock never does.
+   */
+
+  /* Collapsed and waiting for the build. Set from JS only. */
+
+  .sync-root [id^="NEW"] { fill: #0d76f2; }
+
+  /*
+   * Live transaction clock. The outlined label kept its "Synced everywhere ·"
+   * glyphs; only the number became live text. Measured against the original
+   * outlines, that number is TikTok Sans at 20px — figure height 14.76 (exact)
+   * and "1.8s" 35.47 wide against the outline's 35.52 — so the typography is
+   * the label's own, not a substitute.
+   *
+   * Its content is written from real elapsed ms each frame. It reads no
+   * animation and no propagation state; those read the same clock it does.
+   */
+  .sync-root [id="sync-counter"] {
+    font-family: "TikTok Sans", "TikTokSans", Inter, system-ui, sans-serif;
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+    fill: #0A0A0A;
+  }
+
   .sync-root [id="Union"],
   .sync-root [id="Union_2"] { display: none; }
 
-  .sync-root[data-pending="true"] [id="Frame 2147260385"] {
-    opacity: 0;
-    transform: translateX(-365px);
+  /*
+   * Panel drop shadow: Figma exported the ddddii shadow on the panel GROUP, so its
+   * SourceAlpha included the inner Dialog's own drop shadow. Those chains mask with
+   * feComposite operator="out" against hardAlpha (SourceAlpha x127, which makes even
+   * 1% alpha opaque), so the Dialog's soft shadow subtracted the panel's shadow. It
+   * happened to be harmless at the authored height and destroyed the shadow once the
+   * panel collapsed, which read as a pale rounded shape detached below the card.
+   * The filter now wraps the frame rect alone, outside the clip, so the shadow is cast
+   * by the panel shape only and is identical in both states. Measured deltas below the
+   * panel edge: short 40,26,21,17,14,11,9,7,5 - tall 41,26,20,17,14,11,9,7,5.
+   *
+   * Layout model, verified against the real SVG nesting:
+   *
+   *   Frame 21472604xx (panel)
+   *     [outer frame rect] [inner card rects]
+   *     Header_x
+   *     Frame 2147260221_x        <- FILE LIST CONTAINER (holds ~/project too)
+   *       rect h=236 / h=236.83       the file-list PLATE (white fill + grey ring)
+   *       Frame 2147260340_x        README.md
+   *       Frame 2147260341_x        auth.ts   <- the row that comes and goes
+   *       Frame 2147260342_x        utils.ts
+   *       Frame 2147260343_x        .env
+   *         Frame 2147260345_x        lock  <- NESTED inside the .env row
+   *
+   * Transforms therefore INHERIT. Collapsing removes one 44px row, centre-anchored:
+   *   every frame rect      y +22px, height -44px
+   *   file-list plate       height -44px  (no y: the container's +22px already
+   *                                       centre-anchors it, top +22 / bottom -22)
+   *   Header + list container   +22px   (everything above the removed row)
+   *   README                    none    (inherits the container's +22px)
+   *   auth.ts + NEW             fades   (no movement)
+   *   utils.ts and .env         -44px   (net -22px after the container's +22px)
+   *   lock                      none    (inherits from its .env row, so it stays attached)
+   */
+
+  /* ---------- BEAM workspace (left) ---------- */
+  .sync-root [id="Frame 2147260385"] rect[height="306.598"] {
+    y: calc(183.701px + (1 - var(--beam-open)) * var(--half-row));
+    height: calc(306.598px - (1 - var(--beam-open)) * var(--row));
   }
-  .sync-root[data-pending="true"] [id="Frame 2147260386"],
-  .sync-root[data-pending="true"] [id="Frame 2147260431"] {
-    opacity: .64;
+  .sync-root [id="Frame 2147260385"] rect[height="305.768"] {
+    y: calc(184.116px + (1 - var(--beam-open)) * var(--half-row));
+    height: calc(305.768px - (1 - var(--beam-open)) * var(--row));
   }
-  .sync-root[data-pending="true"] .sync-connector-track,
-  .sync-root[data-pending="true"] [id="Frame 2147260377"] {
-    opacity: 0;
+  .sync-root [id="Frame 2147260385"] rect[height="291.66"] {
+    y: calc(191.17px + (1 - var(--beam-open)) * var(--half-row));
+    height: calc(291.66px - (1 - var(--beam-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260385"] rect[height="290.83"] {
+    y: calc(191.585px + (1 - var(--beam-open)) * var(--half-row));
+    height: calc(290.83px - (1 - var(--beam-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260385"] rect[height="236"] {
+    height: calc(236px - (1 - var(--beam-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260385"] rect[height="236.83"] {
+    height: calc(236.83px - (1 - var(--beam-open)) * var(--row));
+  }
+  .sync-root [id="Header"],
+  .sync-root [id="Frame 2147260221"] {
+    transform: translateY(calc((1 - var(--beam-open)) * var(--half-row)));
+  }
+  .sync-root [id="Frame 2147260342"],
+  .sync-root [id="Frame 2147260343"] {
+    transform: translateY(calc((1 - var(--beam-open)) * var(--row) * -1));
+  }
+  /*
+   * auth.ts resolves in place: scale + opacity + blur, no entrance translate.
+   * NEW is a child of this row, so the badge is carried by the same state.
+   * The -22px cancels the file-list container's collapse shift, which was what
+   * made the row look like it slid up from below and back down on delete; the
+   * panel still reflows around it, the row itself just no longer travels.
+   */
+  .sync-root [id="Frame 2147260341"] {
+    opacity: var(--beam-open);
+    transform-box: fill-box;
+    transform-origin: center;
+    transform:
+      translateY(calc((1 - var(--beam-open)) * var(--half-row) * -1))
+      scale(calc(.96 + .04 * var(--beam-open)));
+    filter: blur(calc((1 - var(--beam-open)) * 3px));
   }
 
-  .sync-root[data-intro="true"] [id="Frame 2147260385"] { animation: syncIntroLeft 1.65s cubic-bezier(.22,1,.36,1) both; }
-  .sync-root[data-intro="true"] [id="Frame 2147260386"] { animation: syncIntroRightTop 2.8s cubic-bezier(.22,1,.36,1) both; }
-  .sync-root[data-intro="true"] [id="Frame 2147260431"] { animation: syncIntroRightBottom 2.8s cubic-bezier(.22,1,.36,1) both; }
-  .sync-root[data-intro="true"] [id="Union"],
-  .sync-root[data-intro="true"] [id="Union_2"] { animation: syncIntroConnector 1.65s cubic-bezier(.2,.78,.2,1) both; }
-  .sync-root[data-intro="true"] .sync-connector-track { animation: syncIntroConnector 1.65s cubic-bezier(.2,.78,.2,1) both; }
-  .sync-root[data-intro="true"] [id="Frame 2147260341"] { animation: syncIntroSource 1.65s ease both; }
-  .sync-root[data-intro="true"] [id="Frame 2147260377"] { animation: syncIntroStatus 2.8s ease both; }
-  .sync-root[data-intro="true"] [id="Frame 2147260345"],
-  .sync-root[data-intro="true"] [id="Frame 2147260345_2"],
-  .sync-root[data-intro="true"] [id="Frame 2147260345_3"] { animation: syncIntroLock 1.65s cubic-bezier(.2,.8,.2,1) both; }
+  /* ---------- CLOUD VM (right top) ---------- */
+  .sync-root [id="Frame 2147260386"] rect[height="306.598"] {
+    y: calc(21px + (1 - var(--cloud-open)) * var(--half-row));
+    height: calc(306.598px - (1 - var(--cloud-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260386"] rect[height="305.768"] {
+    y: calc(21.415px + (1 - var(--cloud-open)) * var(--half-row));
+    height: calc(305.768px - (1 - var(--cloud-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260386"] rect[height="291.66"] {
+    y: calc(28.4692px + (1 - var(--cloud-open)) * var(--half-row));
+    height: calc(291.66px - (1 - var(--cloud-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260386"] rect[height="290.83"] {
+    y: calc(28.8842px + (1 - var(--cloud-open)) * var(--half-row));
+    height: calc(290.83px - (1 - var(--cloud-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260386"] rect[height="236"] {
+    height: calc(236px - (1 - var(--cloud-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260386"] rect[height="236.83"] {
+    height: calc(236.83px - (1 - var(--cloud-open)) * var(--row));
+  }
+  .sync-root [id="Header_2"],
+  .sync-root [id="Frame 2147260221_2"] {
+    transform: translateY(calc((1 - var(--cloud-open)) * var(--half-row)));
+  }
+  .sync-root [id="Frame 2147260342_2"],
+  .sync-root [id="Frame 2147260343_2"] {
+    transform: translateY(calc((1 - var(--cloud-open)) * var(--row) * -1));
+  }
+  /*
+   * auth.ts resolves in place: scale + opacity + blur, no entrance translate.
+   * NEW is a child of this row, so the badge is carried by the same state.
+   * The -22px cancels the file-list container's collapse shift, which was what
+   * made the row look like it slid up from below and back down on delete; the
+   * panel still reflows around it, the row itself just no longer travels.
+   */
+  .sync-root [id="Frame 2147260341_2"] {
+    opacity: var(--cloud-open);
+    transform-box: fill-box;
+    transform-origin: center;
+    transform:
+      translateY(calc((1 - var(--cloud-open)) * var(--half-row) * -1))
+      scale(calc(.96 + .04 * var(--cloud-open)));
+    filter: blur(calc((1 - var(--cloud-open)) * 3px));
+  }
 
-  .sync-build {
-    pointer-events: none;
+  /* ---------- MACBOOK PRO (right bottom) — the source ---------- */
+  .sync-root [id="Frame 2147260431"] rect[height="306.598"] {
+    y: calc(363.701px + (1 - var(--mac-open)) * var(--half-row));
+    height: calc(306.598px - (1 - var(--mac-open)) * var(--row));
   }
-  .sync-build path {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    opacity: 0;
+  .sync-root [id="Frame 2147260431"] rect[height="305.768"] {
+    y: calc(364.116px + (1 - var(--mac-open)) * var(--half-row));
+    height: calc(305.768px - (1 - var(--mac-open)) * var(--row));
   }
-  .sync-root[data-intro="true"] .sync-build path {
-    animation: syncBuildLine 1.75s cubic-bezier(.3,.68,.25,1) both;
+  .sync-root [id="Frame 2147260431"] rect[height="291.66"] {
+    y: calc(371.17px + (1 - var(--mac-open)) * var(--half-row));
+    height: calc(291.66px - (1 - var(--mac-open)) * var(--row));
   }
-  .sync-root[data-looping="true"] { animation: syncCycleClock 3.6s linear infinite; }
-  .sync-root[data-looping="true"] [id="Frame 2147260385"] { animation: syncLoopLeftPanel 3.6s ease-in-out infinite both; }
-  .sync-root[data-looping="true"] [id="Frame 2147260386"] { animation: syncLoopTopPanel 3.6s ease-in-out infinite both; }
-  .sync-root[data-looping="true"] [id="Frame 2147260431"] { animation: syncLoopBottomPanel 3.6s ease-in-out infinite both; }
-  .sync-root[data-looping="true"] .sync-connector-track { animation: syncLoopConnector 3.6s ease infinite both; }
-  .sync-root[data-looping="true"] .sync-build path { animation: syncLoopBuild 3.6s cubic-bezier(.22,1,.36,1) infinite both; }
-  .sync-root[data-looping="true"] [id="Frame 2147260341"] { animation: syncLoopSource 3.6s ease infinite both; }
-  .sync-root[data-looping="true"] [id="Frame 2147260377"] { animation: syncLoopStatus 3.6s ease infinite both; }
-  .sync-root[data-looping="true"] [id="Frame 2147260345"],
-  .sync-root[data-looping="true"] [id="Frame 2147260345_2"],
-  .sync-root[data-looping="true"] [id="Frame 2147260345_3"] { animation: syncLoopLock 3.6s cubic-bezier(.2,.8,.2,1) infinite both; }
+  .sync-root [id="Frame 2147260431"] rect[height="290.83"] {
+    y: calc(371.585px + (1 - var(--mac-open)) * var(--half-row));
+    height: calc(290.83px - (1 - var(--mac-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260431"] rect[height="236"] {
+    height: calc(236px - (1 - var(--mac-open)) * var(--row));
+  }
+  .sync-root [id="Frame 2147260431"] rect[height="236.83"] {
+    height: calc(236.83px - (1 - var(--mac-open)) * var(--row));
+  }
+  .sync-root [id="Header_3"],
+  .sync-root [id="Frame 2147260221_3"] {
+    transform: translateY(calc((1 - var(--mac-open)) * var(--half-row)));
+  }
+  .sync-root [id="Frame 2147260342_3"],
+  .sync-root [id="Frame 2147260343_3"] {
+    transform: translateY(calc((1 - var(--mac-open)) * var(--row) * -1));
+  }
+  /*
+   * auth.ts resolves in place: scale + opacity + blur, no entrance translate.
+   * NEW is a child of this row, so the badge is carried by the same state.
+   * The -22px cancels the file-list container's collapse shift, which was what
+   * made the row look like it slid up from below and back down on delete; the
+   * panel still reflows around it, the row itself just no longer travels.
+   */
+  .sync-root [id="Frame 2147260341_3"] {
+    opacity: var(--mac-open);
+    transform-box: fill-box;
+    transform-origin: center;
+    transform:
+      translateY(calc((1 - var(--mac-open)) * var(--half-row) * -1))
+      scale(calc(.96 + .04 * var(--mac-open)));
+    filter: blur(calc((1 - var(--mac-open)) * 3px));
+  }
 
-  @keyframes syncCycleClock { from { opacity: .999; } to { opacity: 1; } }
-  @keyframes syncLoopLeftPanel {
-    0%, 10%, 100% { opacity: 1; transform: none; }
-    30%, 44% { opacity: 0; transform: translateX(-365px); }
-    68% { opacity: 1; transform: none; }
-  }
-  @keyframes syncLoopTopPanel {
-    0%, 12%, 100% { opacity: 1; transform: none; }
-    28%, 58% { opacity: .64; transform: none; }
-    76% { opacity: 1; transform: none; }
-  }
-  @keyframes syncLoopBottomPanel {
-    0%, 12%, 100% { opacity: 1; transform: none; }
-    30%, 64% { opacity: .64; transform: none; }
-    82% { opacity: 1; transform: none; }
-  }
-  @keyframes syncLoopConnector { 0%, 12%, 100% { opacity: 1; } 30%, 58% { opacity: 0; } 72% { opacity: 1; } }
-  @keyframes syncLoopBuild {
-    0%, 47% { opacity: 0; stroke-dashoffset: 1; }
-    50% { opacity: 1; stroke-dashoffset: 1; }
-    70% { opacity: 1; stroke-dashoffset: 0; }
-    78%, 100% { opacity: 0; stroke-dashoffset: 0; }
-  }
-  @keyframes syncBuildLine {
-    0%, 45% { opacity: 0; stroke-dashoffset: 1; }
-    48% { opacity: 1; stroke-dashoffset: 1; }
-    84% { opacity: 1; stroke-dashoffset: 0; }
-    96%, 100% { opacity: 0; stroke-dashoffset: 0; }
-  }
-  @keyframes syncIntroLeft {
-    0%, 8% { opacity: 0; transform: translateX(-365px); }
-    74%, 100% { opacity: 1; transform: none; }
-  }
-  @keyframes syncIntroRightTop {
-    0%, 52% { opacity: .64; transform: none; }
-    78%, 100% { opacity: 1; transform: none; }
-  }
-  @keyframes syncIntroRightBottom {
-    0%, 58% { opacity: .64; transform: none; }
-    84%, 100% { opacity: 1; transform: none; }
-  }
-  @keyframes syncIntroConnector {
-    0%, 70% { opacity: 0; transform: none; filter: none; }
-    84%, 100% { opacity: 1; transform: none; filter: none; }
-  }
-  @keyframes syncIntroSource { 0%, 100% { opacity: 1; transform: none; } }
-  @keyframes syncIntroStatus { 0%, 87% { opacity: 0; transform: translateY(4px); } 97%, 100% { opacity: 1; transform: none; } }
-  @keyframes syncIntroLock { 0%, 72% { opacity: .45; transform: scale(.9); } 85% { opacity: 1; transform: scale(1.1); } 94%, 100% { opacity: 1; transform: scale(1); } }
+  /* ---------- propagation packets ---------- */
 
-  @keyframes syncLoopSource {
-    0%, 10%, 100% { opacity: 1; filter: none; }
-    24% { opacity: .62; filter: saturate(.75); }
-    38% { opacity: 1; filter: saturate(1.18); }
-    48% { filter: none; }
-  }
-  @keyframes syncLoopStatus {
-    0%, 4%, 100% { opacity: 1; }
-    10%, 82% { opacity: 0; }
-    92% { opacity: 1; }
-  }
-  @keyframes syncLoopLock { 0%, 56%, 100% { opacity: 1; filter: none; } 70% { opacity: .72; filter: brightness(1.12); } 81% { opacity: 1; filter: none; } }
+  .sync-build { display: none; }
+
+  /*
+   * Dotted state trail. The connector paths below carry no stroke: they exist
+   * only as geometry for getPointAtLength, and the dots are placed along them
+   * from the real transaction clock. Compact, no glow, opacity falls off behind
+   * a clear leading edge so the direction of travel reads on its own.
+   */
+  .sync-trail-path { stroke: none; fill: none; }
+  .sync-trail rect { fill: #0D76F2; opacity: 0; }
+
+
+
+  /* ---------- keyframes ---------- */
+
+  /* First view. Mac 150ms, Beam 900ms, +300ms -> upper packet 1200ms, Cloud 1750ms. */
+
+
+  /*
+   * Hover loop. Both stories originate on the MacBook and propagate forward.
+   * ADD:    mac 2.9% | lower packet 6.7% | beam 17.3% | upper packet 23.1% | cloud 33.7%
+   * DELETE: mac 53.8% | lower packet 57.7% | beam 68.3% | upper packet 74% | cloud 84.6%
+   * The +0.3s overlap is 5.8% of a 5.2s cycle (17.3 -> 23.1, 68.3 -> 74).
+   */
 
   @media (prefers-reduced-motion: reduce) {
     .sync-root,
-    .sync-root * {
-      animation: none !important;
-      opacity: 1 !important;
-      transform: none !important;
+    .sync-root * { animation: none !important; }
+    /* Land directly on the synchronised result: every machine has auth.ts. */
+    .sync-root {
+      --beam-open: 1 !important;
+      --cloud-open: 1 !important;
+      --mac-open: 1 !important;
     }
-    .sync-root .sync-build { opacity: 0 !important; }
+    .sync-root .sync-trail rect { opacity: 0 !important; }
   }
 `}</style>
 <rect width="809" height="692" fill="#B2B2B2"/>
@@ -309,16 +644,28 @@ export function SyncVisual() {
 <path pathLength="1" d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528" stroke="white" strokeWidth="9" strokeLinecap="round" fill="none"/>
 <path pathLength="1" d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528" stroke="white" strokeWidth="9" strokeLinecap="round" fill="none"/>
 </g>
-<g id="Frame 2147260377">
+<g className="sync-trail" aria-hidden="true">
+<path ref={upperPathRef} className="sync-trail-path" d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528"/>
+<path ref={lowerPathRef} className="sync-trail-path" d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528"/>
+{TRAIL_OPACITY.map((_, i) => (
+<rect key={"lower-" + i} x={-TRAIL_SIZE[i] / 2} y={-TRAIL_SIZE[i] / 2} width={TRAIL_SIZE[i]} height={TRAIL_SIZE[i]} rx={TRAIL_SIZE[i] * 0.3} ref={(el) => { if (el) lowerDotsRef.current[i] = el; }} />
+))}
+{TRAIL_OPACITY.map((_, i) => (
+<rect key={"upper-" + i} x={-TRAIL_SIZE[i] / 2} y={-TRAIL_SIZE[i] / 2} width={TRAIL_SIZE[i]} height={TRAIL_SIZE[i]} rx={TRAIL_SIZE[i] * 0.3} ref={(el) => { if (el) upperDotsRef.current[i] = el; }} />
+))}
+</g><g id="Frame 2147260377">
 <g id="Frame" clipPath="url(#clip1_928_111777)">
 <path id="Vector" d="M88.5915 546.133C88.6955 546.672 88.75 547.229 88.75 547.799C88.75 552.632 84.8325 556.549 80 556.549C75.1675 556.549 71.25 552.632 71.25 547.799C71.25 542.967 75.1675 539.049 80 539.049C80.9332 539.049 81.8323 539.195 82.6757 539.466" stroke="#0A0A0A" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round"/>
 <path id="Vector_2" d="M76.6831 546.139L80.0164 550.723L88.3165 539.459" stroke="#0A0A0A" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round"/>
 </g>
-<path id="Synced everywhere &#194;&#183; 1.8s" d="M106.48 555.139C105.547 555.139 104.7 554.993 103.94 554.699C103.193 554.393 102.567 553.939 102.06 553.339C101.567 552.739 101.2 552.006 100.96 551.139L102.68 550.579C102.867 551.259 103.133 551.826 103.48 552.279C103.827 552.733 104.26 553.079 104.78 553.319C105.3 553.546 105.9 553.659 106.58 553.659C107.247 553.659 107.807 553.559 108.26 553.359C108.727 553.146 109.073 552.839 109.3 552.439C109.527 552.039 109.64 551.566 109.64 551.019C109.64 550.313 109.447 549.773 109.06 549.399C108.687 549.013 108.14 548.719 107.42 548.519L105.18 547.899C104.073 547.606 103.233 547.166 102.66 546.579C102.087 545.979 101.8 545.213 101.8 544.279C101.8 543.479 101.993 542.793 102.38 542.219C102.78 541.633 103.333 541.179 104.04 540.859C104.76 540.526 105.607 540.359 106.58 540.359C107.393 540.359 108.127 540.473 108.78 540.699C109.433 540.926 109.987 541.266 110.44 541.719C110.907 542.173 111.253 542.726 111.48 543.379L109.84 543.999C109.547 543.253 109.127 542.706 108.58 542.359C108.033 541.999 107.347 541.819 106.52 541.819C105.613 541.819 104.913 542.019 104.42 542.419C103.927 542.819 103.68 543.373 103.68 544.079C103.68 544.693 103.867 545.173 104.24 545.519C104.613 545.853 105.18 546.133 105.94 546.359L108.24 547.019C109.28 547.326 110.087 547.799 110.66 548.439C111.247 549.079 111.54 549.906 111.54 550.919C111.54 551.759 111.333 552.499 110.92 553.139C110.52 553.766 109.94 554.259 109.18 554.619C108.433 554.966 107.533 555.139 106.48 555.139ZM115.918 558.799L117.558 554.539L117.918 553.759L121.058 544.279H122.858L117.658 558.799H115.918ZM116.958 554.799L113.078 544.279H114.858L118.138 553.799H118.678V554.799H116.958ZM131.798 554.799V548.119C131.798 547.226 131.578 546.573 131.138 546.159C130.698 545.733 130.125 545.519 129.418 545.519C128.578 545.519 127.905 545.793 127.398 546.339C126.892 546.873 126.638 547.593 126.638 548.499V554.799H124.938V544.279H126.498V546.119H126.558C126.838 545.466 127.258 544.959 127.818 544.599C128.378 544.226 129.058 544.039 129.858 544.039C130.605 544.039 131.245 544.186 131.778 544.479C132.325 544.759 132.745 545.186 133.038 545.759C133.345 546.333 133.498 547.053 133.498 547.919V554.799H131.798ZM140.859 555.039C139.953 555.039 139.133 554.826 138.399 554.399C137.666 553.959 137.079 553.333 136.639 552.519C136.213 551.693 135.999 550.699 135.999 549.539C135.999 548.366 136.213 547.373 136.639 546.559C137.066 545.733 137.639 545.106 138.359 544.679C139.093 544.253 139.913 544.039 140.819 544.039C141.846 544.039 142.706 544.259 143.399 544.699C144.106 545.126 144.639 545.806 144.999 546.739L143.499 547.339C143.233 546.699 142.873 546.233 142.419 545.939C141.979 545.646 141.433 545.499 140.779 545.499C140.273 545.499 139.786 545.639 139.319 545.919C138.853 546.186 138.473 546.619 138.179 547.219C137.886 547.806 137.739 548.579 137.739 549.539C137.739 550.486 137.886 551.259 138.179 551.859C138.473 552.459 138.853 552.899 139.319 553.179C139.799 553.459 140.299 553.599 140.819 553.599C141.486 553.599 142.039 553.446 142.479 553.139C142.919 552.833 143.273 552.359 143.539 551.719L145.019 552.299C144.673 553.219 144.153 553.906 143.459 554.359C142.766 554.813 141.899 555.039 140.859 555.039ZM151.545 555.039C150.519 555.039 149.632 554.813 148.885 554.359C148.139 553.893 147.565 553.239 147.165 552.399C146.779 551.559 146.585 550.593 146.585 549.499C146.585 548.406 146.792 547.453 147.205 546.639C147.632 545.826 148.212 545.193 148.945 544.739C149.692 544.273 150.532 544.039 151.465 544.039C152.399 544.039 153.212 544.239 153.905 544.639C154.612 545.026 155.152 545.586 155.525 546.319C155.912 547.039 156.105 547.899 156.105 548.899C156.105 549.086 156.105 549.273 156.105 549.459C156.105 549.646 156.092 549.793 156.065 549.899H147.585V548.619H155.025L154.425 548.919C154.439 548.159 154.325 547.519 154.085 546.999C153.845 546.479 153.499 546.086 153.045 545.819C152.592 545.553 152.059 545.419 151.445 545.419C150.845 545.419 150.312 545.553 149.845 545.819C149.379 546.086 149.005 546.499 148.725 547.059C148.459 547.619 148.325 548.353 148.325 549.259V549.559C148.325 550.839 148.599 551.833 149.145 552.539C149.705 553.246 150.539 553.599 151.645 553.599C152.299 553.599 152.859 553.466 153.325 553.199C153.792 552.933 154.179 552.519 154.485 551.959L155.845 552.639C155.605 553.159 155.285 553.599 154.885 553.959C154.485 554.319 154.005 554.593 153.445 554.779C152.885 554.953 152.252 555.039 151.545 555.039ZM162.649 555.039C161.743 555.039 160.943 554.819 160.249 554.379C159.569 553.926 159.036 553.286 158.649 552.459C158.263 551.633 158.069 550.659 158.069 549.539C158.069 548.406 158.263 547.433 158.649 546.619C159.036 545.793 159.569 545.159 160.249 544.719C160.943 544.266 161.736 544.039 162.629 544.039C163.149 544.039 163.629 544.139 164.069 544.339C164.523 544.539 164.916 544.813 165.249 545.159C165.596 545.493 165.856 545.873 166.029 546.299H166.109V540.219H167.809V554.799H166.209V552.819H166.149C165.976 553.246 165.709 553.633 165.349 553.979C165.003 554.313 164.596 554.573 164.129 554.759C163.663 554.946 163.169 555.039 162.649 555.039ZM162.989 553.599C163.643 553.599 164.209 553.439 164.689 553.119C165.169 552.786 165.543 552.319 165.809 551.719C166.076 551.106 166.209 550.379 166.209 549.539C166.209 548.713 166.069 547.999 165.789 547.399C165.509 546.799 165.129 546.333 164.649 545.999C164.169 545.666 163.616 545.499 162.989 545.499C162.349 545.499 161.789 545.659 161.309 545.979C160.843 546.299 160.476 546.759 160.209 547.359C159.956 547.959 159.829 548.686 159.829 549.539C159.829 550.379 159.956 551.106 160.209 551.719C160.476 552.319 160.843 552.786 161.309 553.119C161.789 553.439 162.349 553.599 162.989 553.599ZM180.862 555.039C179.835 555.039 178.949 554.813 178.202 554.359C177.455 553.893 176.882 553.239 176.482 552.399C176.095 551.559 175.902 550.593 175.902 549.499C175.902 548.406 176.109 547.453 176.522 546.639C176.949 545.826 177.529 545.193 178.262 544.739C179.009 544.273 179.849 544.039 180.782 544.039C181.715 544.039 182.529 544.239 183.222 544.639C183.929 545.026 184.469 545.586 184.842 546.319C185.229 547.039 185.422 547.899 185.422 548.899C185.422 549.086 185.422 549.273 185.422 549.459C185.422 549.646 185.409 549.793 185.382 549.899H176.902V548.619H184.342L183.742 548.919C183.755 548.159 183.642 547.519 183.402 546.999C183.162 546.479 182.815 546.086 182.362 545.819C181.909 545.553 181.375 545.419 180.762 545.419C180.162 545.419 179.629 545.553 179.162 545.819C178.695 546.086 178.322 546.499 178.042 547.059C177.775 547.619 177.642 548.353 177.642 549.259V549.559C177.642 550.839 177.915 551.833 178.462 552.539C179.022 553.246 179.855 553.599 180.962 553.599C181.615 553.599 182.175 553.466 182.642 553.199C183.109 552.933 183.495 552.519 183.802 551.959L185.162 552.639C184.922 553.159 184.602 553.599 184.202 553.959C183.802 554.319 183.322 554.593 182.762 554.779C182.202 554.953 181.569 555.039 180.862 555.039ZM190.467 554.799L186.847 544.279H188.687L191.667 553.719H191.747L194.707 544.279H196.547L192.927 554.799H190.467ZM202.795 555.039C201.769 555.039 200.882 554.813 200.135 554.359C199.389 553.893 198.815 553.239 198.415 552.399C198.029 551.559 197.835 550.593 197.835 549.499C197.835 548.406 198.042 547.453 198.455 546.639C198.882 545.826 199.462 545.193 200.195 544.739C200.942 544.273 201.782 544.039 202.715 544.039C203.649 544.039 204.462 544.239 205.155 544.639C205.862 545.026 206.402 545.586 206.775 546.319C207.162 547.039 207.355 547.899 207.355 548.899C207.355 549.086 207.355 549.273 207.355 549.459C207.355 549.646 207.342 549.793 207.315 549.899H198.835V548.619H206.275L205.675 548.919C205.689 548.159 205.575 547.519 205.335 546.999C205.095 546.479 204.749 546.086 204.295 545.819C203.842 545.553 203.309 545.419 202.695 545.419C202.095 545.419 201.562 545.553 201.095 545.819C200.629 546.086 200.255 546.499 199.975 547.059C199.709 547.619 199.575 548.353 199.575 549.259V549.559C199.575 550.839 199.849 551.833 200.395 552.539C200.955 553.246 201.789 553.599 202.895 553.599C203.549 553.599 204.109 553.466 204.575 553.199C205.042 552.933 205.429 552.519 205.735 551.959L207.095 552.639C206.855 553.159 206.535 553.599 206.135 553.959C205.735 554.319 205.255 554.593 204.695 554.779C204.135 554.953 203.502 555.039 202.795 555.039ZM209.899 554.799V544.279H211.459V546.199H211.519C211.706 545.546 212.046 545.026 212.539 544.639C213.033 544.239 213.599 544.039 214.239 544.039C214.373 544.039 214.499 544.053 214.619 544.079C214.753 544.093 214.859 544.113 214.939 544.139V545.699C214.846 545.673 214.739 545.653 214.619 545.639C214.499 545.626 214.359 545.619 214.199 545.619C213.706 545.619 213.259 545.739 212.859 545.979C212.473 546.219 212.166 546.553 211.939 546.979C211.713 547.406 211.599 547.906 211.599 548.479V554.799H209.899ZM218.886 558.799L220.526 554.539L220.886 553.759L224.026 544.279H225.826L220.626 558.799H218.886ZM219.926 554.799L216.046 544.279H217.826L221.106 553.799H221.646V554.799H219.926ZM229.624 554.799L227.084 544.279H228.804L230.824 553.699H230.884L232.984 544.279H235.464L237.584 553.699H237.624L239.644 544.279H241.384L238.844 554.799H236.384L234.264 545.399H234.184L232.084 554.799H229.624ZM243.61 554.799V540.219H245.31V545.959H245.37C245.637 545.359 246.037 544.893 246.57 544.559C247.117 544.213 247.764 544.039 248.51 544.039C249.27 544.039 249.917 544.186 250.45 544.479C250.997 544.759 251.417 545.186 251.71 545.759C252.017 546.333 252.17 547.053 252.17 547.919V554.799H250.47V548.119C250.47 547.226 250.25 546.573 249.81 546.159C249.37 545.733 248.797 545.519 248.09 545.519C247.25 545.519 246.577 545.773 246.07 546.279C245.564 546.786 245.31 547.526 245.31 548.499V554.799H243.61ZM259.631 555.039C258.605 555.039 257.718 554.813 256.971 554.359C256.225 553.893 255.651 553.239 255.251 552.399C254.865 551.559 254.671 550.593 254.671 549.499C254.671 548.406 254.878 547.453 255.291 546.639C255.718 545.826 256.298 545.193 257.031 544.739C257.778 544.273 258.618 544.039 259.551 544.039C260.485 544.039 261.298 544.239 261.991 544.639C262.698 545.026 263.238 545.586 263.611 546.319C263.998 547.039 264.191 547.899 264.191 548.899C264.191 549.086 264.191 549.273 264.191 549.459C264.191 549.646 264.178 549.793 264.151 549.899H255.671V548.619H263.111L262.511 548.919C262.525 548.159 262.411 547.519 262.171 546.999C261.931 546.479 261.585 546.086 261.131 545.819C260.678 545.553 260.145 545.419 259.531 545.419C258.931 545.419 258.398 545.553 257.931 545.819C257.465 546.086 257.091 546.499 256.811 547.059C256.545 547.619 256.411 548.353 256.411 549.259V549.559C256.411 550.839 256.685 551.833 257.231 552.539C257.791 553.246 258.625 553.599 259.731 553.599C260.385 553.599 260.945 553.466 261.411 553.199C261.878 552.933 262.265 552.519 262.571 551.959L263.931 552.639C263.691 553.159 263.371 553.599 262.971 553.959C262.571 554.319 262.091 554.593 261.531 554.779C260.971 554.953 260.338 555.039 259.631 555.039ZM266.735 554.799V544.279H268.295V546.199H268.355C268.542 545.546 268.882 545.026 269.375 544.639C269.869 544.239 270.435 544.039 271.075 544.039C271.209 544.039 271.335 544.053 271.455 544.079C271.589 544.093 271.695 544.113 271.775 544.139V545.699C271.682 545.673 271.575 545.653 271.455 545.639C271.335 545.626 271.195 545.619 271.035 545.619C270.542 545.619 270.095 545.739 269.695 545.979C269.309 546.219 269.002 546.553 268.775 546.979C268.549 547.406 268.435 547.906 268.435 548.479V554.799H266.735ZM277.678 555.039C276.652 555.039 275.765 554.813 275.018 554.359C274.272 553.893 273.698 553.239 273.298 552.399C272.912 551.559 272.718 550.593 272.718 549.499C272.718 548.406 272.925 547.453 273.338 546.639C273.765 545.826 274.345 545.193 275.078 544.739C275.825 544.273 276.665 544.039 277.598 544.039C278.532 544.039 279.345 544.239 280.038 544.639C280.745 545.026 281.285 545.586 281.658 546.319C282.045 547.039 282.238 547.899 282.238 548.899C282.238 549.086 282.238 549.273 282.238 549.459C282.238 549.646 282.225 549.793 282.198 549.899H273.718V548.619H281.158L280.558 548.919C280.572 548.159 280.458 547.519 280.218 546.999C279.978 546.479 279.632 546.086 279.178 545.819C278.725 545.553 278.192 545.419 277.578 545.419C276.978 545.419 276.445 545.553 275.978 545.819C275.512 546.086 275.138 546.499 274.858 547.059C274.592 547.619 274.458 548.353 274.458 549.259V549.559C274.458 550.839 274.732 551.833 275.278 552.539C275.838 553.246 276.672 553.599 277.778 553.599C278.432 553.599 278.992 553.466 279.458 553.199C279.925 552.933 280.312 552.519 280.618 551.959L281.978 552.639C281.738 553.159 281.418 553.599 281.018 553.959C280.618 554.319 280.138 554.593 279.578 554.779C279.018 554.953 278.385 555.039 277.678 555.039ZM291.79 550.419C291.443 550.419 291.143 550.293 290.89 550.039C290.65 549.786 290.53 549.486 290.53 549.139C290.53 548.806 290.65 548.519 290.89 548.279C291.143 548.026 291.443 547.899 291.79 547.899C292.15 547.899 292.45 548.026 292.69 548.279C292.93 548.519 293.05 548.806 293.05 549.139C293.05 549.486 292.93 549.786 292.69 550.039C292.45 550.293 292.15 550.419 291.79 550.419ZM305.17 554.799V542.119H305.11L301.33 545.759V543.759L304.57 540.699H306.93V554.799H305.17ZM311.868 554.899C311.521 554.899 311.221 554.773 310.968 554.519C310.728 554.266 310.608 553.973 310.608 553.639C310.608 553.293 310.728 552.999 310.968 552.759C311.221 552.506 311.521 552.379 311.868 552.379C312.228 552.379 312.528 552.506 312.768 552.759C313.008 552.999 313.128 553.293 313.128 553.639C313.128 553.973 313.008 554.266 312.768 554.519C312.528 554.773 312.228 554.899 311.868 554.899ZM321.283 555.139C320.257 555.139 319.35 554.959 318.563 554.599C317.79 554.239 317.183 553.746 316.743 553.119C316.317 552.479 316.103 551.739 316.103 550.899C316.103 550.246 316.237 549.666 316.503 549.159C316.783 548.639 317.15 548.213 317.603 547.879C318.057 547.546 318.55 547.333 319.083 547.239V547.159C318.67 547.066 318.29 546.879 317.943 546.599C317.61 546.306 317.337 545.946 317.123 545.519C316.91 545.093 316.803 544.626 316.803 544.119C316.803 543.373 316.99 542.726 317.363 542.179C317.75 541.619 318.277 541.179 318.943 540.859C319.623 540.539 320.41 540.379 321.303 540.379C322.183 540.379 322.957 540.539 323.623 540.859C324.303 541.179 324.83 541.619 325.203 542.179C325.59 542.726 325.783 543.373 325.783 544.119C325.783 544.626 325.677 545.093 325.463 545.519C325.25 545.946 324.97 546.306 324.623 546.599C324.29 546.879 323.917 547.066 323.503 547.159V547.239C324.037 547.333 324.53 547.546 324.983 547.879C325.437 548.213 325.797 548.639 326.063 549.159C326.33 549.666 326.463 550.246 326.463 550.899C326.463 551.739 326.25 552.479 325.823 553.119C325.397 553.759 324.79 554.259 324.003 554.619C323.23 554.966 322.323 555.139 321.283 555.139ZM321.283 553.679C322.31 553.679 323.13 553.419 323.743 552.899C324.357 552.366 324.663 551.673 324.663 550.819C324.663 549.953 324.357 549.259 323.743 548.739C323.13 548.219 322.31 547.959 321.283 547.959C320.27 547.959 319.457 548.219 318.843 548.739C318.23 549.259 317.923 549.953 317.923 550.819C317.923 551.673 318.23 552.366 318.843 552.899C319.457 553.419 320.27 553.679 321.283 553.679ZM321.283 546.599C322.11 546.599 322.777 546.379 323.283 545.939C323.79 545.486 324.043 544.899 324.043 544.179C324.043 543.473 323.79 542.906 323.283 542.479C322.777 542.039 322.11 541.819 321.283 541.819C320.47 541.819 319.81 542.039 319.303 542.479C318.797 542.906 318.543 543.473 318.543 544.179C318.543 544.899 318.797 545.486 319.303 545.939C319.81 546.379 320.47 546.599 321.283 546.599ZM332.912 555.039C331.792 555.039 330.859 554.806 330.112 554.339C329.379 553.859 328.872 553.159 328.592 552.239L330.132 551.739C330.359 552.433 330.706 552.933 331.172 553.239C331.652 553.533 332.246 553.679 332.952 553.679C333.659 553.679 334.199 553.539 334.572 553.259C334.959 552.966 335.152 552.539 335.152 551.979C335.152 551.526 335.019 551.179 334.752 550.939C334.499 550.686 334.092 550.486 333.532 550.339L331.712 549.839C330.859 549.626 330.219 549.286 329.792 548.819C329.366 548.339 329.152 547.746 329.152 547.039C329.152 546.439 329.312 545.913 329.632 545.459C329.966 545.006 330.419 544.659 330.992 544.419C331.566 544.166 332.232 544.039 332.992 544.039C333.646 544.039 334.232 544.133 334.752 544.319C335.272 544.506 335.712 544.773 336.072 545.119C336.432 545.466 336.692 545.893 336.852 546.399L335.352 546.919C335.139 546.399 334.832 546.019 334.432 545.779C334.032 545.539 333.539 545.419 332.952 545.419C332.272 545.419 331.752 545.553 331.392 545.819C331.032 546.086 330.852 546.466 330.852 546.959C330.852 547.319 330.966 547.626 331.192 547.879C331.432 548.119 331.839 548.319 332.412 548.479L334.312 548.979C334.846 549.113 335.299 549.306 335.672 549.559C336.046 549.813 336.332 550.133 336.532 550.519C336.732 550.893 336.832 551.359 336.832 551.919C336.832 552.559 336.666 553.113 336.332 553.579C336.012 554.046 335.559 554.406 334.972 554.659C334.399 554.913 333.712 555.039 332.912 555.039Z" fill="#0A0A0A"/>
+<path id="Synced everywhere &#194;&#183;" d="M106.48 555.139C105.547 555.139 104.7 554.993 103.94 554.699C103.193 554.393 102.567 553.939 102.06 553.339C101.567 552.739 101.2 552.006 100.96 551.139L102.68 550.579C102.867 551.259 103.133 551.826 103.48 552.279C103.827 552.733 104.26 553.079 104.78 553.319C105.3 553.546 105.9 553.659 106.58 553.659C107.247 553.659 107.807 553.559 108.26 553.359C108.727 553.146 109.073 552.839 109.3 552.439C109.527 552.039 109.64 551.566 109.64 551.019C109.64 550.313 109.447 549.773 109.06 549.399C108.687 549.013 108.14 548.719 107.42 548.519L105.18 547.899C104.073 547.606 103.233 547.166 102.66 546.579C102.087 545.979 101.8 545.213 101.8 544.279C101.8 543.479 101.993 542.793 102.38 542.219C102.78 541.633 103.333 541.179 104.04 540.859C104.76 540.526 105.607 540.359 106.58 540.359C107.393 540.359 108.127 540.473 108.78 540.699C109.433 540.926 109.987 541.266 110.44 541.719C110.907 542.173 111.253 542.726 111.48 543.379L109.84 543.999C109.547 543.253 109.127 542.706 108.58 542.359C108.033 541.999 107.347 541.819 106.52 541.819C105.613 541.819 104.913 542.019 104.42 542.419C103.927 542.819 103.68 543.373 103.68 544.079C103.68 544.693 103.867 545.173 104.24 545.519C104.613 545.853 105.18 546.133 105.94 546.359L108.24 547.019C109.28 547.326 110.087 547.799 110.66 548.439C111.247 549.079 111.54 549.906 111.54 550.919C111.54 551.759 111.333 552.499 110.92 553.139C110.52 553.766 109.94 554.259 109.18 554.619C108.433 554.966 107.533 555.139 106.48 555.139ZM115.918 558.799L117.558 554.539L117.918 553.759L121.058 544.279H122.858L117.658 558.799H115.918ZM116.958 554.799L113.078 544.279H114.858L118.138 553.799H118.678V554.799H116.958ZM131.798 554.799V548.119C131.798 547.226 131.578 546.573 131.138 546.159C130.698 545.733 130.125 545.519 129.418 545.519C128.578 545.519 127.905 545.793 127.398 546.339C126.892 546.873 126.638 547.593 126.638 548.499V554.799H124.938V544.279H126.498V546.119H126.558C126.838 545.466 127.258 544.959 127.818 544.599C128.378 544.226 129.058 544.039 129.858 544.039C130.605 544.039 131.245 544.186 131.778 544.479C132.325 544.759 132.745 545.186 133.038 545.759C133.345 546.333 133.498 547.053 133.498 547.919V554.799H131.798ZM140.859 555.039C139.953 555.039 139.133 554.826 138.399 554.399C137.666 553.959 137.079 553.333 136.639 552.519C136.213 551.693 135.999 550.699 135.999 549.539C135.999 548.366 136.213 547.373 136.639 546.559C137.066 545.733 137.639 545.106 138.359 544.679C139.093 544.253 139.913 544.039 140.819 544.039C141.846 544.039 142.706 544.259 143.399 544.699C144.106 545.126 144.639 545.806 144.999 546.739L143.499 547.339C143.233 546.699 142.873 546.233 142.419 545.939C141.979 545.646 141.433 545.499 140.779 545.499C140.273 545.499 139.786 545.639 139.319 545.919C138.853 546.186 138.473 546.619 138.179 547.219C137.886 547.806 137.739 548.579 137.739 549.539C137.739 550.486 137.886 551.259 138.179 551.859C138.473 552.459 138.853 552.899 139.319 553.179C139.799 553.459 140.299 553.599 140.819 553.599C141.486 553.599 142.039 553.446 142.479 553.139C142.919 552.833 143.273 552.359 143.539 551.719L145.019 552.299C144.673 553.219 144.153 553.906 143.459 554.359C142.766 554.813 141.899 555.039 140.859 555.039ZM151.545 555.039C150.519 555.039 149.632 554.813 148.885 554.359C148.139 553.893 147.565 553.239 147.165 552.399C146.779 551.559 146.585 550.593 146.585 549.499C146.585 548.406 146.792 547.453 147.205 546.639C147.632 545.826 148.212 545.193 148.945 544.739C149.692 544.273 150.532 544.039 151.465 544.039C152.399 544.039 153.212 544.239 153.905 544.639C154.612 545.026 155.152 545.586 155.525 546.319C155.912 547.039 156.105 547.899 156.105 548.899C156.105 549.086 156.105 549.273 156.105 549.459C156.105 549.646 156.092 549.793 156.065 549.899H147.585V548.619H155.025L154.425 548.919C154.439 548.159 154.325 547.519 154.085 546.999C153.845 546.479 153.499 546.086 153.045 545.819C152.592 545.553 152.059 545.419 151.445 545.419C150.845 545.419 150.312 545.553 149.845 545.819C149.379 546.086 149.005 546.499 148.725 547.059C148.459 547.619 148.325 548.353 148.325 549.259V549.559C148.325 550.839 148.599 551.833 149.145 552.539C149.705 553.246 150.539 553.599 151.645 553.599C152.299 553.599 152.859 553.466 153.325 553.199C153.792 552.933 154.179 552.519 154.485 551.959L155.845 552.639C155.605 553.159 155.285 553.599 154.885 553.959C154.485 554.319 154.005 554.593 153.445 554.779C152.885 554.953 152.252 555.039 151.545 555.039ZM162.649 555.039C161.743 555.039 160.943 554.819 160.249 554.379C159.569 553.926 159.036 553.286 158.649 552.459C158.263 551.633 158.069 550.659 158.069 549.539C158.069 548.406 158.263 547.433 158.649 546.619C159.036 545.793 159.569 545.159 160.249 544.719C160.943 544.266 161.736 544.039 162.629 544.039C163.149 544.039 163.629 544.139 164.069 544.339C164.523 544.539 164.916 544.813 165.249 545.159C165.596 545.493 165.856 545.873 166.029 546.299H166.109V540.219H167.809V554.799H166.209V552.819H166.149C165.976 553.246 165.709 553.633 165.349 553.979C165.003 554.313 164.596 554.573 164.129 554.759C163.663 554.946 163.169 555.039 162.649 555.039ZM162.989 553.599C163.643 553.599 164.209 553.439 164.689 553.119C165.169 552.786 165.543 552.319 165.809 551.719C166.076 551.106 166.209 550.379 166.209 549.539C166.209 548.713 166.069 547.999 165.789 547.399C165.509 546.799 165.129 546.333 164.649 545.999C164.169 545.666 163.616 545.499 162.989 545.499C162.349 545.499 161.789 545.659 161.309 545.979C160.843 546.299 160.476 546.759 160.209 547.359C159.956 547.959 159.829 548.686 159.829 549.539C159.829 550.379 159.956 551.106 160.209 551.719C160.476 552.319 160.843 552.786 161.309 553.119C161.789 553.439 162.349 553.599 162.989 553.599ZM180.862 555.039C179.835 555.039 178.949 554.813 178.202 554.359C177.455 553.893 176.882 553.239 176.482 552.399C176.095 551.559 175.902 550.593 175.902 549.499C175.902 548.406 176.109 547.453 176.522 546.639C176.949 545.826 177.529 545.193 178.262 544.739C179.009 544.273 179.849 544.039 180.782 544.039C181.715 544.039 182.529 544.239 183.222 544.639C183.929 545.026 184.469 545.586 184.842 546.319C185.229 547.039 185.422 547.899 185.422 548.899C185.422 549.086 185.422 549.273 185.422 549.459C185.422 549.646 185.409 549.793 185.382 549.899H176.902V548.619H184.342L183.742 548.919C183.755 548.159 183.642 547.519 183.402 546.999C183.162 546.479 182.815 546.086 182.362 545.819C181.909 545.553 181.375 545.419 180.762 545.419C180.162 545.419 179.629 545.553 179.162 545.819C178.695 546.086 178.322 546.499 178.042 547.059C177.775 547.619 177.642 548.353 177.642 549.259V549.559C177.642 550.839 177.915 551.833 178.462 552.539C179.022 553.246 179.855 553.599 180.962 553.599C181.615 553.599 182.175 553.466 182.642 553.199C183.109 552.933 183.495 552.519 183.802 551.959L185.162 552.639C184.922 553.159 184.602 553.599 184.202 553.959C183.802 554.319 183.322 554.593 182.762 554.779C182.202 554.953 181.569 555.039 180.862 555.039ZM190.467 554.799L186.847 544.279H188.687L191.667 553.719H191.747L194.707 544.279H196.547L192.927 554.799H190.467ZM202.795 555.039C201.769 555.039 200.882 554.813 200.135 554.359C199.389 553.893 198.815 553.239 198.415 552.399C198.029 551.559 197.835 550.593 197.835 549.499C197.835 548.406 198.042 547.453 198.455 546.639C198.882 545.826 199.462 545.193 200.195 544.739C200.942 544.273 201.782 544.039 202.715 544.039C203.649 544.039 204.462 544.239 205.155 544.639C205.862 545.026 206.402 545.586 206.775 546.319C207.162 547.039 207.355 547.899 207.355 548.899C207.355 549.086 207.355 549.273 207.355 549.459C207.355 549.646 207.342 549.793 207.315 549.899H198.835V548.619H206.275L205.675 548.919C205.689 548.159 205.575 547.519 205.335 546.999C205.095 546.479 204.749 546.086 204.295 545.819C203.842 545.553 203.309 545.419 202.695 545.419C202.095 545.419 201.562 545.553 201.095 545.819C200.629 546.086 200.255 546.499 199.975 547.059C199.709 547.619 199.575 548.353 199.575 549.259V549.559C199.575 550.839 199.849 551.833 200.395 552.539C200.955 553.246 201.789 553.599 202.895 553.599C203.549 553.599 204.109 553.466 204.575 553.199C205.042 552.933 205.429 552.519 205.735 551.959L207.095 552.639C206.855 553.159 206.535 553.599 206.135 553.959C205.735 554.319 205.255 554.593 204.695 554.779C204.135 554.953 203.502 555.039 202.795 555.039ZM209.899 554.799V544.279H211.459V546.199H211.519C211.706 545.546 212.046 545.026 212.539 544.639C213.033 544.239 213.599 544.039 214.239 544.039C214.373 544.039 214.499 544.053 214.619 544.079C214.753 544.093 214.859 544.113 214.939 544.139V545.699C214.846 545.673 214.739 545.653 214.619 545.639C214.499 545.626 214.359 545.619 214.199 545.619C213.706 545.619 213.259 545.739 212.859 545.979C212.473 546.219 212.166 546.553 211.939 546.979C211.713 547.406 211.599 547.906 211.599 548.479V554.799H209.899ZM218.886 558.799L220.526 554.539L220.886 553.759L224.026 544.279H225.826L220.626 558.799H218.886ZM219.926 554.799L216.046 544.279H217.826L221.106 553.799H221.646V554.799H219.926ZM229.624 554.799L227.084 544.279H228.804L230.824 553.699H230.884L232.984 544.279H235.464L237.584 553.699H237.624L239.644 544.279H241.384L238.844 554.799H236.384L234.264 545.399H234.184L232.084 554.799H229.624ZM243.61 554.799V540.219H245.31V545.959H245.37C245.637 545.359 246.037 544.893 246.57 544.559C247.117 544.213 247.764 544.039 248.51 544.039C249.27 544.039 249.917 544.186 250.45 544.479C250.997 544.759 251.417 545.186 251.71 545.759C252.017 546.333 252.17 547.053 252.17 547.919V554.799H250.47V548.119C250.47 547.226 250.25 546.573 249.81 546.159C249.37 545.733 248.797 545.519 248.09 545.519C247.25 545.519 246.577 545.773 246.07 546.279C245.564 546.786 245.31 547.526 245.31 548.499V554.799H243.61ZM259.631 555.039C258.605 555.039 257.718 554.813 256.971 554.359C256.225 553.893 255.651 553.239 255.251 552.399C254.865 551.559 254.671 550.593 254.671 549.499C254.671 548.406 254.878 547.453 255.291 546.639C255.718 545.826 256.298 545.193 257.031 544.739C257.778 544.273 258.618 544.039 259.551 544.039C260.485 544.039 261.298 544.239 261.991 544.639C262.698 545.026 263.238 545.586 263.611 546.319C263.998 547.039 264.191 547.899 264.191 548.899C264.191 549.086 264.191 549.273 264.191 549.459C264.191 549.646 264.178 549.793 264.151 549.899H255.671V548.619H263.111L262.511 548.919C262.525 548.159 262.411 547.519 262.171 546.999C261.931 546.479 261.585 546.086 261.131 545.819C260.678 545.553 260.145 545.419 259.531 545.419C258.931 545.419 258.398 545.553 257.931 545.819C257.465 546.086 257.091 546.499 256.811 547.059C256.545 547.619 256.411 548.353 256.411 549.259V549.559C256.411 550.839 256.685 551.833 257.231 552.539C257.791 553.246 258.625 553.599 259.731 553.599C260.385 553.599 260.945 553.466 261.411 553.199C261.878 552.933 262.265 552.519 262.571 551.959L263.931 552.639C263.691 553.159 263.371 553.599 262.971 553.959C262.571 554.319 262.091 554.593 261.531 554.779C260.971 554.953 260.338 555.039 259.631 555.039ZM266.735 554.799V544.279H268.295V546.199H268.355C268.542 545.546 268.882 545.026 269.375 544.639C269.869 544.239 270.435 544.039 271.075 544.039C271.209 544.039 271.335 544.053 271.455 544.079C271.589 544.093 271.695 544.113 271.775 544.139V545.699C271.682 545.673 271.575 545.653 271.455 545.639C271.335 545.626 271.195 545.619 271.035 545.619C270.542 545.619 270.095 545.739 269.695 545.979C269.309 546.219 269.002 546.553 268.775 546.979C268.549 547.406 268.435 547.906 268.435 548.479V554.799H266.735ZM277.678 555.039C276.652 555.039 275.765 554.813 275.018 554.359C274.272 553.893 273.698 553.239 273.298 552.399C272.912 551.559 272.718 550.593 272.718 549.499C272.718 548.406 272.925 547.453 273.338 546.639C273.765 545.826 274.345 545.193 275.078 544.739C275.825 544.273 276.665 544.039 277.598 544.039C278.532 544.039 279.345 544.239 280.038 544.639C280.745 545.026 281.285 545.586 281.658 546.319C282.045 547.039 282.238 547.899 282.238 548.899C282.238 549.086 282.238 549.273 282.238 549.459C282.238 549.646 282.225 549.793 282.198 549.899H273.718V548.619H281.158L280.558 548.919C280.572 548.159 280.458 547.519 280.218 546.999C279.978 546.479 279.632 546.086 279.178 545.819C278.725 545.553 278.192 545.419 277.578 545.419C276.978 545.419 276.445 545.553 275.978 545.819C275.512 546.086 275.138 546.499 274.858 547.059C274.592 547.619 274.458 548.353 274.458 549.259V549.559C274.458 550.839 274.732 551.833 275.278 552.539C275.838 553.246 276.672 553.599 277.778 553.599C278.432 553.599 278.992 553.466 279.458 553.199C279.925 552.933 280.312 552.519 280.618 551.959L281.978 552.639C281.738 553.159 281.418 553.599 281.018 553.959C280.618 554.319 280.138 554.593 279.578 554.779C279.018 554.953 278.385 555.039 277.678 555.039ZM291.79 550.419C291.443 550.419 291.143 550.293 290.89 550.039C290.65 549.786 290.53 549.486 290.53 549.139C290.53 548.806 290.65 548.519 290.89 548.279C291.143 548.026 291.443 547.899 291.79 547.899C292.15 547.899 292.45 548.026 292.69 548.279C292.93 548.519 293.05 548.806 293.05 549.139C293.05 549.486 292.93 549.786 292.69 550.039C292.45 550.293 292.15 550.419 291.79 550.419Z" fill="#0A0A0A"/>
+<text ref={counterRef} id="sync-counter" x="301.33" y="554.8" aria-hidden="true">1.8s</text>
 </g>
-<g id="Frame 2147260385" filter="url(#filter0_ddddii_928_111777)">
-<g clipPath="url(#clip2_928_111777)">
+<g id="Frame 2147260385">
+<g filter="url(#filter0_ddddii_928_111777)">
 <rect x="59" y="183.701" width="290" height="306.598" rx="9.95902" fill="white"/>
+</g>
+<g clipPath="url(#clip2_928_111777)">
 <g id="Dialog" filter="url(#filter1_ddi_928_111777)">
 <g clipPath="url(#clip3_928_111777)">
 <rect x="66.4692" y="191.17" width="275.061" height="291.66" rx="3.31967" fill="#F5F5F5"/>
@@ -337,8 +684,8 @@ export function SyncVisual() {
 </g>
 </g>
 <g id="Frame 2147260221" filter="url(#filter2_i_928_111777)">
-<path d="M67.2993 249.319C67.2993 247.486 68.7856 246 70.619 246H337.381C339.215 246 340.701 247.486 340.701 249.319V480.34C340.701 481.257 339.958 482 339.041 482H68.9592C68.0425 482 67.2993 481.257 67.2993 480.34V249.319Z" fill="white"/>
-<path d="M337.381 245.585C339.444 245.585 341.116 247.257 341.116 249.319V480.34C341.116 481.485 340.187 482.415 339.042 482.415H68.9595C67.8136 482.415 66.8843 481.485 66.8843 480.34V249.319C66.8845 247.257 68.5563 245.585 70.6187 245.585H337.381Z" stroke="#C4C4C4" strokeWidth="0.829918"/>
+<rect x="67.2993" y="246" width="273.4017" height="236" rx="3.31967" fill="white"/>
+<rect x="66.8843" y="245.585" width="274.2317" height="236.83" rx="3.73463" fill="none" stroke="#C4C4C4" strokeWidth="0.829918"/>
 <path id="~/project" d="M91.1193 276.28C90.6527 276.28 90.2726 276.193 89.9793 276.02C89.6993 275.833 89.3593 275.5 88.9593 275.02C88.6927 274.686 88.4793 274.446 88.3193 274.3C88.1726 274.14 88.0393 274.04 87.9193 274C87.8126 273.96 87.686 273.94 87.5393 273.94C87.1926 273.94 86.926 274.12 86.7393 274.48C86.5526 274.84 86.4593 275.373 86.4593 276.08H84.8793C84.8793 274.986 85.1193 274.1 85.5993 273.42C86.0793 272.74 86.706 272.4 87.4793 272.4C87.986 272.4 88.386 272.5 88.6793 272.7C88.986 272.9 89.3127 273.226 89.6593 273.68C90.006 274.133 90.266 274.426 90.4393 274.56C90.626 274.68 90.846 274.74 91.0993 274.74C91.446 274.74 91.706 274.56 91.8793 274.2C92.066 273.826 92.1593 273.293 92.1593 272.6H93.7393C93.7393 273.693 93.4993 274.58 93.0193 275.26C92.5393 275.94 91.906 276.28 91.1193 276.28ZM97.4515 283.2L103.532 266H105.132L99.0515 283.2H97.4515ZM108.884 284V270.4H110.444L110.484 272.8L110.244 272.68C110.51 271.853 110.95 271.226 111.564 270.8C112.19 270.373 112.91 270.16 113.724 270.16C114.777 270.16 115.637 270.42 116.304 270.94C116.984 271.46 117.484 272.14 117.804 272.98C118.124 273.82 118.284 274.726 118.284 275.7C118.284 276.673 118.124 277.58 117.804 278.42C117.484 279.26 116.984 279.94 116.304 280.46C115.637 280.98 114.777 281.24 113.724 281.24C113.177 281.24 112.664 281.146 112.184 280.96C111.717 280.773 111.317 280.513 110.984 280.18C110.664 279.846 110.444 279.453 110.324 279L110.564 278.72V284H108.884ZM113.564 279.64C114.484 279.64 115.204 279.293 115.724 278.6C116.257 277.906 116.524 276.94 116.524 275.7C116.524 274.46 116.257 273.493 115.724 272.8C115.204 272.106 114.484 271.76 113.564 271.76C112.95 271.76 112.417 271.906 111.964 272.2C111.524 272.493 111.177 272.933 110.924 273.52C110.684 274.106 110.564 274.833 110.564 275.7C110.564 276.566 110.684 277.293 110.924 277.88C111.164 278.466 111.51 278.906 111.964 279.2C112.417 279.493 112.95 279.64 113.564 279.64ZM123.836 281V270.4H125.236L125.396 273.08L125.236 273.04C125.369 272.133 125.656 271.466 126.096 271.04C126.549 270.613 127.149 270.4 127.896 270.4H130.076V271.92H127.916C127.396 271.92 126.956 272.026 126.596 272.24C126.249 272.44 125.983 272.74 125.796 273.14C125.609 273.526 125.516 274.013 125.516 274.6V281H123.836ZM121.076 281V279.52H128.876V281H121.076ZM121.076 271.88V270.4H124.756V271.88H121.076ZM137.268 281.24C136.295 281.24 135.441 281.013 134.708 280.56C133.988 280.106 133.428 279.466 133.028 278.64C132.628 277.8 132.428 276.82 132.428 275.7C132.428 274.566 132.628 273.586 133.028 272.76C133.428 271.933 133.988 271.293 134.708 270.84C135.441 270.386 136.295 270.16 137.268 270.16C138.241 270.16 139.088 270.386 139.808 270.84C140.541 271.293 141.108 271.933 141.508 272.76C141.908 273.586 142.108 274.566 142.108 275.7C142.108 276.82 141.908 277.8 141.508 278.64C141.108 279.466 140.541 280.106 139.808 280.56C139.088 281.013 138.241 281.24 137.268 281.24ZM137.268 279.64C138.241 279.64 138.995 279.293 139.528 278.6C140.075 277.893 140.348 276.926 140.348 275.7C140.348 274.473 140.075 273.513 139.528 272.82C138.995 272.113 138.241 271.76 137.268 271.76C136.295 271.76 135.535 272.113 134.988 272.82C134.455 273.513 134.188 274.473 134.188 275.7C134.188 276.926 134.455 277.893 134.988 278.6C135.535 279.293 136.295 279.64 137.268 279.64ZM145.46 284V282.52H148.82C149.34 282.52 149.727 282.406 149.98 282.18C150.247 281.953 150.38 281.52 150.38 280.88V270.4H152.06V281C152.06 281.973 151.82 282.713 151.34 283.22C150.86 283.74 150.087 284 149.02 284H145.46ZM145.66 271.88V270.4H151.34V271.88H145.66ZM150.28 268.74V266.78H152.04V268.74H150.28ZM161.432 281.24C160.432 281.24 159.566 281.013 158.832 280.56C158.112 280.106 157.552 279.466 157.152 278.64C156.766 277.8 156.572 276.82 156.572 275.7C156.572 274.58 156.766 273.606 157.152 272.78C157.552 271.953 158.106 271.313 158.812 270.86C159.532 270.393 160.379 270.16 161.352 270.16C162.272 270.16 163.086 270.38 163.792 270.82C164.499 271.246 165.052 271.873 165.452 272.7C165.852 273.526 166.052 274.533 166.052 275.72V276.22H158.332C158.399 277.353 158.699 278.206 159.232 278.78C159.779 279.353 160.512 279.64 161.432 279.64C162.126 279.64 162.692 279.48 163.132 279.16C163.586 278.826 163.899 278.393 164.072 277.86L165.872 278C165.592 278.946 165.059 279.726 164.272 280.34C163.499 280.94 162.552 281.24 161.432 281.24ZM158.332 274.74H164.212C164.132 273.713 163.832 272.96 163.312 272.48C162.792 272 162.139 271.76 161.352 271.76C160.539 271.76 159.866 272.013 159.332 272.52C158.812 273.013 158.479 273.753 158.332 274.74ZM173.525 281.24C172.538 281.24 171.678 281.013 170.945 280.56C170.211 280.106 169.645 279.466 169.245 278.64C168.845 277.8 168.645 276.82 168.645 275.7C168.645 274.58 168.845 273.606 169.245 272.78C169.645 271.953 170.211 271.313 170.945 270.86C171.678 270.393 172.538 270.16 173.525 270.16C174.311 270.16 175.011 270.306 175.625 270.6C176.238 270.88 176.745 271.293 177.145 271.84C177.545 272.386 177.818 273.053 177.965 273.84L176.205 273.96C176.045 273.253 175.725 272.713 175.245 272.34C174.778 271.953 174.205 271.76 173.525 271.76C172.551 271.76 171.785 272.113 171.225 272.82C170.678 273.513 170.405 274.473 170.405 275.7C170.405 276.926 170.678 277.893 171.225 278.6C171.785 279.293 172.551 279.64 173.525 279.64C174.205 279.64 174.791 279.44 175.285 279.04C175.791 278.64 176.125 278.04 176.285 277.24L178.045 277.36C177.898 278.146 177.618 278.833 177.205 279.42C176.791 279.993 176.271 280.44 175.645 280.76C175.018 281.08 174.311 281.24 173.525 281.24ZM186.797 281C185.77 281 185.003 280.76 184.497 280.28C183.99 279.8 183.737 279.066 183.737 278.08V267.92H185.417V278.08C185.417 278.573 185.53 278.94 185.757 279.18C185.983 279.406 186.33 279.52 186.797 279.52H189.637V281H186.797ZM180.237 271.88V270.4H189.637V271.88H180.237Z" fill="black" fillOpacity="0.5"/>
 <g id="Frame 2147260340">
 <g id="Frame_3" clipPath="url(#clip5_928_111777)">
@@ -387,9 +734,11 @@ export function SyncVisual() {
 </g>
 <rect x="59.415" y="184.116" width="289.17" height="305.768" rx="9.54406" stroke="black" strokeOpacity="0.1" strokeWidth="0.829918"/>
 </g>
-<g id="Frame 2147260386" filter="url(#filter3_ddddii_928_111777)">
+<g id="Frame 2147260386">
+<g filter="url(#filter3_ddddii_928_111777)">
+<rect x="459" y="21" width="290" height="306.598" rx="9.959" fill="white"/>
+</g>
 <g clipPath="url(#clip10_928_111777)">
-<path d="M459 30.959C459 25.4588 463.459 21 468.959 21H739.041C744.541 21 749 25.4588 749 30.959V317.639C749 323.14 744.541 327.598 739.041 327.598H468.959C463.459 327.598 459 323.14 459 317.639V30.959Z" fill="white"/>
 <g id="Dialog_2" filter="url(#filter4_ddi_928_111777)">
 <g clipPath="url(#clip11_928_111777)">
 <rect x="466.469" y="28.4692" width="275.061" height="291.66" rx="3.31967" fill="#F5F5F5"/>
@@ -402,8 +751,8 @@ export function SyncVisual() {
 </g>
 </g>
 <g id="Frame 2147260221_2" filter="url(#filter5_i_928_111777)">
-<path d="M467.299 86.619C467.299 84.7856 468.785 83.2993 470.619 83.2993H737.381C739.214 83.2993 740.7 84.7856 740.7 86.619V317.639C740.7 318.556 739.957 319.299 739.041 319.299H468.959C468.042 319.299 467.299 318.556 467.299 317.639V86.619Z" fill="white"/>
-<path d="M737.381 82.8843C739.443 82.8843 741.115 84.5563 741.115 86.6187V317.639C741.115 318.785 740.187 319.714 739.041 319.714H468.959C467.813 319.714 466.884 318.785 466.884 317.639V86.6187C466.884 84.5563 468.556 82.8845 470.618 82.8843H737.381Z" stroke="#C4C4C4" strokeWidth="0.829918"/>
+<rect x="467.299" y="83.2993" width="273.401" height="236" rx="3.31967" fill="white"/>
+<rect x="466.884" y="82.8843" width="274.231" height="236.83" rx="3.73463" fill="none" stroke="#C4C4C4" strokeWidth="0.829918"/>
 <path id="~/project_2" d="M491.119 113.579C490.652 113.579 490.272 113.493 489.979 113.319C489.699 113.133 489.359 112.799 488.959 112.319C488.692 111.986 488.479 111.746 488.319 111.599C488.172 111.439 488.039 111.339 487.919 111.299C487.812 111.259 487.685 111.239 487.539 111.239C487.192 111.239 486.925 111.419 486.739 111.779C486.552 112.139 486.459 112.673 486.459 113.379H484.879C484.879 112.286 485.119 111.399 485.599 110.719C486.079 110.039 486.705 109.699 487.479 109.699C487.985 109.699 488.385 109.799 488.679 109.999C488.985 110.199 489.312 110.526 489.659 110.979C490.005 111.433 490.265 111.726 490.439 111.859C490.625 111.979 490.845 112.039 491.099 112.039C491.445 112.039 491.705 111.859 491.879 111.499C492.065 111.126 492.159 110.593 492.159 109.899H493.739C493.739 110.993 493.499 111.879 493.019 112.559C492.539 113.239 491.905 113.579 491.119 113.579ZM497.451 120.499L503.531 103.299H505.131L499.051 120.499H497.451ZM508.883 121.299V107.699H510.443L510.483 110.099L510.243 109.979C510.51 109.153 510.95 108.526 511.563 108.099C512.19 107.673 512.91 107.459 513.723 107.459C514.777 107.459 515.637 107.719 516.303 108.239C516.983 108.759 517.483 109.439 517.803 110.279C518.123 111.119 518.283 112.026 518.283 112.999C518.283 113.973 518.123 114.879 517.803 115.719C517.483 116.559 516.983 117.239 516.303 117.759C515.637 118.279 514.777 118.539 513.723 118.539C513.177 118.539 512.663 118.446 512.183 118.259C511.717 118.073 511.317 117.813 510.983 117.479C510.663 117.146 510.443 116.753 510.323 116.299L510.563 116.019V121.299H508.883ZM513.563 116.939C514.483 116.939 515.203 116.593 515.723 115.899C516.257 115.206 516.523 114.239 516.523 112.999C516.523 111.759 516.257 110.793 515.723 110.099C515.203 109.406 514.483 109.059 513.563 109.059C512.95 109.059 512.417 109.206 511.963 109.499C511.523 109.793 511.177 110.233 510.923 110.819C510.683 111.406 510.563 112.133 510.563 112.999C510.563 113.866 510.683 114.593 510.923 115.179C511.163 115.766 511.51 116.206 511.963 116.499C512.417 116.793 512.95 116.939 513.563 116.939ZM523.835 118.299V107.699H525.235L525.395 110.379L525.235 110.339C525.369 109.433 525.655 108.766 526.095 108.339C526.549 107.913 527.149 107.699 527.895 107.699H530.075V109.219H527.915C527.395 109.219 526.955 109.326 526.595 109.539C526.249 109.739 525.982 110.039 525.795 110.439C525.609 110.826 525.515 111.313 525.515 111.899V118.299H523.835ZM521.075 118.299V116.819H528.875V118.299H521.075ZM521.075 109.179V107.699H524.755V109.179H521.075ZM537.268 118.539C536.294 118.539 535.441 118.313 534.708 117.859C533.988 117.406 533.428 116.766 533.028 115.939C532.628 115.099 532.428 114.119 532.428 112.999C532.428 111.866 532.628 110.886 533.028 110.059C533.428 109.233 533.988 108.593 534.708 108.139C535.441 107.686 536.294 107.459 537.268 107.459C538.241 107.459 539.088 107.686 539.808 108.139C540.541 108.593 541.108 109.233 541.508 110.059C541.908 110.886 542.108 111.866 542.108 112.999C542.108 114.119 541.908 115.099 541.508 115.939C541.108 116.766 540.541 117.406 539.808 117.859C539.088 118.313 538.241 118.539 537.268 118.539ZM537.268 116.939C538.241 116.939 538.994 116.593 539.528 115.899C540.074 115.193 540.348 114.226 540.348 112.999C540.348 111.773 540.074 110.813 539.528 110.119C538.994 109.413 538.241 109.059 537.268 109.059C536.294 109.059 535.534 109.413 534.988 110.119C534.454 110.813 534.188 111.773 534.188 112.999C534.188 114.226 534.454 115.193 534.988 115.899C535.534 116.593 536.294 116.939 537.268 116.939ZM545.46 121.299V119.819H548.82C549.34 119.819 549.726 119.706 549.98 119.479C550.246 119.253 550.38 118.819 550.38 118.179V107.699H552.06V118.299C552.06 119.273 551.82 120.013 551.34 120.519C550.86 121.039 550.086 121.299 549.02 121.299H545.46ZM545.66 109.179V107.699H551.34V109.179H545.66ZM550.28 106.039V104.079H552.04V106.039H550.28ZM561.432 118.539C560.432 118.539 559.565 118.313 558.832 117.859C558.112 117.406 557.552 116.766 557.152 115.939C556.765 115.099 556.572 114.119 556.572 112.999C556.572 111.879 556.765 110.906 557.152 110.079C557.552 109.253 558.105 108.613 558.812 108.159C559.532 107.693 560.379 107.459 561.352 107.459C562.272 107.459 563.085 107.679 563.792 108.119C564.499 108.546 565.052 109.173 565.452 109.999C565.852 110.826 566.052 111.833 566.052 113.019V113.519H558.332C558.399 114.653 558.699 115.506 559.232 116.079C559.779 116.653 560.512 116.939 561.432 116.939C562.125 116.939 562.692 116.779 563.132 116.459C563.585 116.126 563.899 115.693 564.072 115.159L565.872 115.299C565.592 116.246 565.059 117.026 564.272 117.639C563.499 118.239 562.552 118.539 561.432 118.539ZM558.332 112.039H564.212C564.132 111.013 563.832 110.259 563.312 109.779C562.792 109.299 562.139 109.059 561.352 109.059C560.539 109.059 559.865 109.313 559.332 109.819C558.812 110.313 558.479 111.053 558.332 112.039ZM573.524 118.539C572.537 118.539 571.677 118.313 570.944 117.859C570.211 117.406 569.644 116.766 569.244 115.939C568.844 115.099 568.644 114.119 568.644 112.999C568.644 111.879 568.844 110.906 569.244 110.079C569.644 109.253 570.211 108.613 570.944 108.159C571.677 107.693 572.537 107.459 573.524 107.459C574.311 107.459 575.011 107.606 575.624 107.899C576.237 108.179 576.744 108.593 577.144 109.139C577.544 109.686 577.817 110.353 577.964 111.139L576.204 111.259C576.044 110.553 575.724 110.013 575.244 109.639C574.777 109.253 574.204 109.059 573.524 109.059C572.551 109.059 571.784 109.413 571.224 110.119C570.677 110.813 570.404 111.773 570.404 112.999C570.404 114.226 570.677 115.193 571.224 115.899C571.784 116.593 572.551 116.939 573.524 116.939C574.204 116.939 574.791 116.739 575.284 116.339C575.791 115.939 576.124 115.339 576.284 114.539L578.044 114.659C577.897 115.446 577.617 116.133 577.204 116.719C576.791 117.293 576.271 117.739 575.644 118.059C575.017 118.379 574.311 118.539 573.524 118.539ZM586.796 118.299C585.77 118.299 585.003 118.059 584.496 117.579C583.99 117.099 583.736 116.366 583.736 115.379V105.219H585.416V115.379C585.416 115.873 585.53 116.239 585.756 116.479C585.983 116.706 586.33 116.819 586.796 116.819H589.636V118.299H586.796ZM580.236 109.179V107.699H589.636V109.179H580.236Z" fill="black" fillOpacity="0.5"/>
 <g id="Frame 2147260340_2">
 <g id="Frame_9" clipPath="url(#clip13_928_111777)">
@@ -450,11 +799,13 @@ export function SyncVisual() {
 <rect x="466.884" y="28.8842" width="274.232" height="290.83" rx="2.90471" stroke="#C4C4C4" strokeWidth="0.829918"/>
 </g>
 </g>
-<path d="M468.959 21.415H739.041C744.312 21.4151 748.585 25.688 748.585 30.959V317.64C748.585 322.911 744.312 327.184 739.041 327.184H468.959C463.688 327.184 459.415 322.911 459.415 317.64V30.959C459.415 25.688 463.688 21.4151 468.959 21.415Z" stroke="black" strokeOpacity="0.1" strokeWidth="0.829918"/>
+<rect x="459.415" y="21.415" width="289.17" height="305.768" rx="9.54406" fill="none" stroke="black" strokeOpacity="0.1" strokeWidth="0.829918"/>
 </g>
-<g id="Frame 2147260431" filter="url(#filter6_ddddii_928_111777)">
+<g id="Frame 2147260431">
+<g filter="url(#filter6_ddddii_928_111777)">
+<rect x="459" y="363.701" width="290" height="306.598" rx="9.959" fill="white"/>
+</g>
 <g clipPath="url(#clip18_928_111777)">
-<path d="M459 373.66C459 368.159 463.459 363.701 468.959 363.701H739.041C744.541 363.701 749 368.159 749 373.66V660.34C749 665.84 744.541 670.299 739.041 670.299H468.959C463.459 670.299 459 665.84 459 660.34V373.66Z" fill="white"/>
 <g id="Dialog_3" filter="url(#filter7_ddi_928_111777)">
 <g clipPath="url(#clip19_928_111777)">
 <rect x="466.469" y="371.17" width="275.061" height="291.66" rx="3.31967" fill="#F5F5F5"/>
@@ -468,8 +819,8 @@ export function SyncVisual() {
 </g>
 </g>
 <g id="Frame 2147260221_3" filter="url(#filter8_i_928_111777)">
-<path d="M467.299 429.319C467.299 427.486 468.785 426 470.619 426H737.381C739.214 426 740.7 427.486 740.7 429.319V660.34C740.7 661.257 739.957 662 739.041 662H468.959C468.042 662 467.299 661.257 467.299 660.34V429.319Z" fill="white"/>
-<path d="M737.381 425.585C739.443 425.585 741.115 427.257 741.115 429.319V660.34C741.115 661.485 740.187 662.415 739.041 662.415H468.959C467.813 662.415 466.884 661.485 466.884 660.34V429.319C466.884 427.257 468.556 425.585 470.618 425.585H737.381Z" stroke="#C4C4C4" strokeWidth="0.829918"/>
+<rect x="467.299" y="426" width="273.401" height="236" rx="3.31967" fill="white"/>
+<rect x="466.884" y="425.585" width="274.231" height="236.83" rx="3.73463" fill="none" stroke="#C4C4C4" strokeWidth="0.829918"/>
 <path id="~/project_3" d="M491.119 456.28C490.652 456.28 490.272 456.193 489.979 456.02C489.699 455.833 489.359 455.5 488.959 455.02C488.692 454.686 488.479 454.446 488.319 454.3C488.172 454.14 488.039 454.04 487.919 454C487.812 453.96 487.685 453.94 487.539 453.94C487.192 453.94 486.925 454.12 486.739 454.48C486.552 454.84 486.459 455.373 486.459 456.08H484.879C484.879 454.986 485.119 454.1 485.599 453.42C486.079 452.74 486.705 452.4 487.479 452.4C487.985 452.4 488.385 452.5 488.679 452.7C488.985 452.9 489.312 453.226 489.659 453.68C490.005 454.133 490.265 454.426 490.439 454.56C490.625 454.68 490.845 454.74 491.099 454.74C491.445 454.74 491.705 454.56 491.879 454.2C492.065 453.826 492.159 453.293 492.159 452.6H493.739C493.739 453.693 493.499 454.58 493.019 455.26C492.539 455.94 491.905 456.28 491.119 456.28ZM497.451 463.2L503.531 446H505.131L499.051 463.2H497.451ZM508.883 464V450.4H510.443L510.483 452.8L510.243 452.68C510.51 451.853 510.95 451.226 511.563 450.8C512.19 450.373 512.91 450.16 513.723 450.16C514.777 450.16 515.637 450.42 516.303 450.94C516.983 451.46 517.483 452.14 517.803 452.98C518.123 453.82 518.283 454.726 518.283 455.7C518.283 456.673 518.123 457.58 517.803 458.42C517.483 459.26 516.983 459.94 516.303 460.46C515.637 460.98 514.777 461.24 513.723 461.24C513.177 461.24 512.663 461.146 512.183 460.96C511.717 460.773 511.317 460.513 510.983 460.18C510.663 459.846 510.443 459.453 510.323 459L510.563 458.72V464H508.883ZM513.563 459.64C514.483 459.64 515.203 459.293 515.723 458.6C516.257 457.906 516.523 456.94 516.523 455.7C516.523 454.46 516.257 453.493 515.723 452.8C515.203 452.106 514.483 451.76 513.563 451.76C512.95 451.76 512.417 451.906 511.963 452.2C511.523 452.493 511.177 452.933 510.923 453.52C510.683 454.106 510.563 454.833 510.563 455.7C510.563 456.566 510.683 457.293 510.923 457.88C511.163 458.466 511.51 458.906 511.963 459.2C512.417 459.493 512.95 459.64 513.563 459.64ZM523.835 461V450.4H525.235L525.395 453.08L525.235 453.04C525.369 452.133 525.655 451.466 526.095 451.04C526.549 450.613 527.149 450.4 527.895 450.4H530.075V451.92H527.915C527.395 451.92 526.955 452.026 526.595 452.24C526.249 452.44 525.982 452.74 525.795 453.14C525.609 453.526 525.515 454.013 525.515 454.6V461H523.835ZM521.075 461V459.52H528.875V461H521.075ZM521.075 451.88V450.4H524.755V451.88H521.075ZM537.268 461.24C536.294 461.24 535.441 461.013 534.708 460.56C533.988 460.106 533.428 459.466 533.028 458.64C532.628 457.8 532.428 456.82 532.428 455.7C532.428 454.566 532.628 453.586 533.028 452.76C533.428 451.933 533.988 451.293 534.708 450.84C535.441 450.386 536.294 450.16 537.268 450.16C538.241 450.16 539.088 450.386 539.808 450.84C540.541 451.293 541.108 451.933 541.508 452.76C541.908 453.586 542.108 454.566 542.108 455.7C542.108 456.82 541.908 457.8 541.508 458.64C541.108 459.466 540.541 460.106 539.808 460.56C539.088 461.013 538.241 461.24 537.268 461.24ZM537.268 459.64C538.241 459.64 538.994 459.293 539.528 458.6C540.074 457.893 540.348 456.926 540.348 455.7C540.348 454.473 540.074 453.513 539.528 452.82C538.994 452.113 538.241 451.76 537.268 451.76C536.294 451.76 535.534 452.113 534.988 452.82C534.454 453.513 534.188 454.473 534.188 455.7C534.188 456.926 534.454 457.893 534.988 458.6C535.534 459.293 536.294 459.64 537.268 459.64ZM545.46 464V462.52H548.82C549.34 462.52 549.726 462.406 549.98 462.18C550.246 461.953 550.38 461.52 550.38 460.88V450.4H552.06V461C552.06 461.973 551.82 462.713 551.34 463.22C550.86 463.74 550.086 464 549.02 464H545.46ZM545.66 451.88V450.4H551.34V451.88H545.66ZM550.28 448.74V446.78H552.04V448.74H550.28ZM561.432 461.24C560.432 461.24 559.565 461.013 558.832 460.56C558.112 460.106 557.552 459.466 557.152 458.64C556.765 457.8 556.572 456.82 556.572 455.7C556.572 454.58 556.765 453.606 557.152 452.78C557.552 451.953 558.105 451.313 558.812 450.86C559.532 450.393 560.379 450.16 561.352 450.16C562.272 450.16 563.085 450.38 563.792 450.82C564.499 451.246 565.052 451.873 565.452 452.7C565.852 453.526 566.052 454.533 566.052 455.72V456.22H558.332C558.399 457.353 558.699 458.206 559.232 458.78C559.779 459.353 560.512 459.64 561.432 459.64C562.125 459.64 562.692 459.48 563.132 459.16C563.585 458.826 563.899 458.393 564.072 457.86L565.872 458C565.592 458.946 565.059 459.726 564.272 460.34C563.499 460.94 562.552 461.24 561.432 461.24ZM558.332 454.74H564.212C564.132 453.713 563.832 452.96 563.312 452.48C562.792 452 562.139 451.76 561.352 451.76C560.539 451.76 559.865 452.013 559.332 452.52C558.812 453.013 558.479 453.753 558.332 454.74ZM573.524 461.24C572.537 461.24 571.677 461.013 570.944 460.56C570.211 460.106 569.644 459.466 569.244 458.64C568.844 457.8 568.644 456.82 568.644 455.7C568.644 454.58 568.844 453.606 569.244 452.78C569.644 451.953 570.211 451.313 570.944 450.86C571.677 450.393 572.537 450.16 573.524 450.16C574.311 450.16 575.011 450.306 575.624 450.6C576.237 450.88 576.744 451.293 577.144 451.84C577.544 452.386 577.817 453.053 577.964 453.84L576.204 453.96C576.044 453.253 575.724 452.713 575.244 452.34C574.777 451.953 574.204 451.76 573.524 451.76C572.551 451.76 571.784 452.113 571.224 452.82C570.677 453.513 570.404 454.473 570.404 455.7C570.404 456.926 570.677 457.893 571.224 458.6C571.784 459.293 572.551 459.64 573.524 459.64C574.204 459.64 574.791 459.44 575.284 459.04C575.791 458.64 576.124 458.04 576.284 457.24L578.044 457.36C577.897 458.146 577.617 458.833 577.204 459.42C576.791 459.993 576.271 460.44 575.644 460.76C575.017 461.08 574.311 461.24 573.524 461.24ZM586.796 461C585.77 461 585.003 460.76 584.496 460.28C583.99 459.8 583.736 459.066 583.736 458.08V447.92H585.416V458.08C585.416 458.573 585.53 458.94 585.756 459.18C585.983 459.406 586.33 459.52 586.796 459.52H589.636V461H586.796ZM580.236 451.88V450.4H589.636V451.88H580.236Z" fill="black" fillOpacity="0.5"/>
 <g id="Frame 2147260340_3">
 <g id="Frame_15" clipPath="url(#clip21_928_111777)">
@@ -516,7 +867,7 @@ export function SyncVisual() {
 <rect x="466.884" y="371.585" width="274.232" height="290.83" rx="2.90471" stroke="#C4C4C4" strokeWidth="0.829918"/>
 </g>
 </g>
-<path d="M468.959 364.116H739.041C744.312 364.116 748.585 368.389 748.585 373.66V660.34C748.585 665.611 744.312 669.884 739.041 669.884H468.959C463.688 669.884 459.415 665.611 459.415 660.34V373.66C459.415 368.389 463.688 364.116 468.959 364.116Z" stroke="black" strokeOpacity="0.1" strokeWidth="0.829918"/>
+<rect x="459.415" y="364.116" width="289.17" height="305.768" rx="9.54406" fill="none" stroke="black" strokeOpacity="0.1" strokeWidth="0.829918"/>
 </g>
 <rect id="Rectangle 60911" width="289" height="795" transform="matrix(-1 0 0 1 289 -36)" fill="url(#paint7_linear_928_111777)"/>
 <g id="Rectangle 60912" filter="url(#filter9_f_928_111777)">
