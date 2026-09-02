@@ -331,14 +331,18 @@ export default function ProblemSolution() {
             >
               <p className="max-w-[387px] text-center text-[12px] leading-[18px] text-text-primary">
                 <span className="sm:hidden">
-                  <span className="block">One unified directory, mirrored everywhere.</span>
-                  <span className="block">
+                  <span className="block whitespace-nowrap">
+                    One unified directory, mirrored everywhere.
+                  </span>
+                  <span className="block whitespace-nowrap">
                     Attach it to any machine and your workspace is just there.
                   </span>
-                  <span className="block">
+                  <span className="block whitespace-nowrap">
                     Files on demand, secrets included, and the same
                   </span>
-                  <span className="block">view for agents through CLI and MCP.</span>
+                  <span className="block whitespace-nowrap">
+                    view for agents through CLI and MCP.
+                  </span>
                 </span>
                 <span className="hidden sm:inline">{solutionCopy}</span>
               </p>
