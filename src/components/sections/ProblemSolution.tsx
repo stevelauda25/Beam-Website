@@ -227,19 +227,14 @@ export default function ProblemSolution() {
           end: () => (window.innerWidth < 1024 ? '+=125%' : '+=150%'),
           pin: true,
           pinSpacing: true,
+          // Scroll position IS transformation position. `scrub` follows the
+          // pointer and lands exactly where scrolling stopped; there is
+          // deliberately no `snap`, because snapping animates the scroll
+          // position itself to fixed points and takes control away from the
+          // user. Every intermediate progress value is a valid composition, so
+          // the incomplete-rest-state that snapping used to guard against can
+          // no longer occur.
           scrub: 0.18,
-          snap: reducedMotion
-            ? undefined
-            : {
-                // Directional scene stops prevent the pinned section from
-                // resting on an incomplete, blurred transformation.
-                snapTo: [0, 0.25, 0.65, 1],
-                directional: true,
-                duration: { min: 0.12, max: 0.3 },
-                delay: 0.04,
-                ease: 'power2.out',
-                inertia: false,
-              },
           anticipatePin: 1,
           fastScrollEnd: true,
           invalidateOnRefresh: true,

@@ -4,12 +4,24 @@
   --problem-scene-blur: 0cqw;
   --destination-problem-opacity: 1;
   --destination-solution-opacity: 0;
-  --solution-opacity: 0;
   --solution-scale: .84;
+  --logo-form: 0;
   --logo-scale: .26;
-  --command-opacity: 0;
+  --beam-response: 0;
+  --command-emphasis: 0;
   --command-y: .679cqw;
+  --pulse-progress: 0;
+  --pulse-opacity: 0;
+  --connector-settle: 0;
   --dot-field-opacity: 0;
+  /*
+   * Shared clock for the final-state laser loop. The laser's travel and Beam's
+   * reaction are BOTH derived from these two values, so changing the speed or
+   * the active fraction keeps them synchronised automatically — there are no
+   * independently guessed delays anywhere.
+   */
+  --laser-cycle: 1.15s;
+  --laser-travel: .74;
   position: relative;
   container-type: inline-size;
   width: min(100%, calc(40svh * 1178 / 350));
@@ -194,7 +206,16 @@
   color: #e51d31;
 }
 
+/*
+ * Kept self-running: an indeterminate spinner is a legitimate blocked/waiting
+ * indicator and `linear` is the correct vocabulary for it. It never drives the
+ * semantic progression, and it stops once the destination has resolved.
+ */
 .problemReadyState svg { animation: statusSpin 1.1s linear infinite; }
+
+.visual[data-phase='solution'] .problemReadyState svg {
+  animation-play-state: paused;
+}
 .readyState svg {
   width: 1.358cqw;
   height: 1.358cqw;
@@ -222,9 +243,13 @@
   transform-origin: center;
 }
 
+/*
+ * The scene no longer gates its children behind one shared opacity. logoDisc,
+ * command and dotField are driven independently so the command can lead the
+ * transformation and the logo can form as a consequence of arrival.
+ */
 .solutionScene {
   z-index: 3;
-  opacity: var(--solution-opacity);
   transform: scale(var(--solution-scale));
   transform-origin: center;
 }
@@ -254,11 +279,17 @@
   line-height: 1;
   white-space: nowrap;
   transform-origin: center;
-  animation: problemQueueStepped 9s cubic-bezier(.22, .61, .36, 1) infinite both paused;
+  animation: problemQueueStepped 5.4s cubic-bezier(.22, .61, .36, 1) infinite both paused;
   will-change: transform, opacity;
 }
 
-.visual[data-in-view='true'] .problemPill {
+/*
+ * The three friction pills share one position, so they can only be read in
+ * rotation. The cycle therefore runs ONLY at rest, where it makes State 1
+ * readable without waiting. The moment the transformation is engaged it
+ * freezes, so it never competes with the command or the travelling state.
+ */
+.visual[data-in-view='true'][data-transform='rest'] .problemPill {
   animation-play-state: running;
 }
 
@@ -278,11 +309,11 @@
 }
 
 .problemPillTwo {
-  animation-delay: -6s;
+  animation-delay: -3.6s;
 }
 
 .problemPillThree {
-  animation-delay: -3s;
+  animation-delay: -1.8s;
 }
 
 .dotField {
@@ -332,14 +363,25 @@
   border: .068cqw solid rgba(10, 10, 10, .045);
   border-radius: 50%;
   box-shadow: 0 0 .272cqw rgba(10, 10, 10, .025);
-  opacity: 0;
-  transform: translate3d(-50%, -50%, 0) scale(1);
-  animation: centerWave 3.9s cubic-bezier(.2, .64, .32, 1) infinite;
+  /*
+   * Repurposed from an infinite ambient loop into Beam's reception response:
+   * quiet, then a bounded reaction as the travelling state arrives, then settle.
+   * Three rings give the reaction layered depth without a self-running clock.
+   */
+  opacity: calc(var(--beam-response) * .55);
+  transform: translate3d(-50%, -50%, 0) scale(calc(1 + var(--beam-response) * 1.5));
   will-change: transform, opacity;
 }
 
-.waveRing:nth-child(2) { animation-delay: -1.3s; }
-.waveRing:nth-child(3) { animation-delay: -2.6s; }
+.waveRing:nth-of-type(2) {
+  opacity: calc(var(--beam-response) * .32);
+  transform: translate3d(-50%, -50%, 0) scale(calc(1 + var(--beam-response) * 2.15));
+}
+
+.waveRing:nth-of-type(3) {
+  opacity: calc(var(--beam-response) * .16);
+  transform: translate3d(-50%, -50%, 0) scale(calc(1 + var(--beam-response) * 2.8));
+}
 
 .logoDisc {
   position: absolute;
@@ -360,6 +402,7 @@
     0 .272cqw .543cqw -.272cqw rgba(0, 0, 0, .08),
     -.272cqw -.272cqw 1.358cqw rgba(87, 87, 96, .12),
     inset 0 .068cqw .136cqw rgba(255, 255, 255, .6);
+  opacity: var(--logo-form);
   transform: scale(var(--logo-scale));
 }
 
@@ -378,8 +421,10 @@
   border: .068cqw solid rgba(255, 255, 255, .85);
   border-radius: 50%;
   content: '';
-  opacity: 0;
-  animation: logoPulse 3.6s 1.25s cubic-bezier(.16, 1, .3, 1) infinite;
+  /* Repurposed from perpetual breathing into the logo's response to receiving
+     the travelling state. */
+  opacity: calc(var(--beam-response) * .7);
+  transform: scale(calc(.82 + var(--beam-response) * .36));
 }
 
 .logo {
@@ -387,7 +432,11 @@
   z-index: 1;
   width: 3.736cqw;
   height: 3.736cqw;
-  animation: beamShimmer 3.6s 1.1s ease-in-out infinite;
+  /* Repurposed from a decorative loop into reinforcement of state transfer:
+     the mark brightens as it receives, then settles. */
+  filter: brightness(calc(1 + var(--beam-response) * .18))
+    contrast(calc(1 + var(--beam-response) * .06));
+  transform: scale(calc(1 + var(--beam-response) * .035));
 }
 
 .command {
@@ -415,10 +464,24 @@
   letter-spacing: -.02cqw;
   line-height: 1;
   white-space: nowrap;
-  opacity: var(--command-opacity);
+  opacity: var(--command-emphasis);
   transform: translateY(var(--command-y));
 }
 
+/*
+ * The connector is a quiet rail carrying ONE identifiable travelling state.
+ *
+ * Every part of it is a pure function of --pulse-progress / --connector-settle,
+ * so it scrubs and reverses exactly with scroll. There is no marquee, no
+ * repeating stream of segments, and no timer driving its semantic position.
+ *
+ * Geometry is unchanged: the rail still spans the same coordinates and still
+ * tucks behind both cards (z-index 0 vs cards at 2), so the state departs from
+ * under the source and is absorbed under the destination.
+ *
+ * `overflow` is no longer hidden so the travelling head can carry a halo that
+ * reads at the rail's 0.204cqw height. The rail's own geometry is untouched.
+ */
 .connector {
   position: absolute;
   z-index: 0;
@@ -426,25 +489,103 @@
   left: 26.18cqw;
   width: 46.927cqw;
   height: .204cqw;
-  overflow: hidden;
   background: #e5e5e5;
 }
 
-.connector::after {
+/* The trail: the path already traversed, drawn behind the head. */
+.connector::before {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 4.55cqw,
-    #171717 4.55cqw 7.28cqw,
-    transparent 7.28cqw 11.45cqw
-  );
-  background-position: 0 0;
-  background-size: 11.45cqw 100%;
-  animation: connectorFlow 2.2s linear infinite;
+  background: #171717;
   content: '';
+  opacity: calc(.35 + var(--connector-settle) * .65);
   pointer-events: none;
-  will-change: background-position;
+  transform: scaleX(max(var(--pulse-progress), var(--connector-settle)));
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+/* The travelling head: one state, positioned directly by scroll progress. */
+.connector::after {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2.4cqw;
+  height: .475cqw;
+  border-radius: .238cqw;
+  background: #0a0a0a;
+  box-shadow:
+    0 0 .543cqw rgba(10, 10, 10, .28),
+    0 0 1.358cqw rgba(255, 255, 255, .9);
+  content: '';
+  opacity: var(--pulse-opacity);
+  pointer-events: none;
+  transform: translateX(calc(var(--pulse-progress) * 46.927cqw))
+    translate(-50%, -50%);
+  will-change: transform, opacity;
+}
+
+/*
+ * Ambient final-state laser.
+ *
+ * Deliberately time-based rather than scroll-bound: by the time it appears the
+ * semantic journey is already complete, so it determines no product state. It
+ * exists only to give the settled Solution connector some quiet life.
+ *
+ * Default is inert. The animation is applied ONLY by the
+ * [data-connector='settled'] rule below, so scrubbing back out of State 2
+ * removes it outright — no lingering half-travelled highlight, and no way for
+ * it to interfere with reverse scrubbing of the semantic transform.
+ */
+.connectorLaser {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 0;
+  width: 12cqw;
+  height: .204cqw;
+  border-radius: .102cqw;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, .28) 30%,
+    rgba(255, 255, 255, .72) 62%,
+    rgba(255, 255, 255, .98) 84%,
+    rgba(255, 255, 255, .6) 94%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(0) translate(-50%, -50%);
+  will-change: transform, opacity;
+}
+
+.visual[data-connector='settled'] .connectorLaser {
+  animation: connectorLaser var(--laser-cycle) linear infinite;
+}
+
+/* One bright pass, then a quiet gap — not a conveyor belt. */
+/*
+ * Travel occupies 0%-74% of the cycle (`--laser-travel`) at a LINEAR rate, so
+ * the streak sits exactly on the Beam mark at 37% — half of the active span.
+ * That crossing time is what the dot-field pulse is derived from in
+ * SolutionVisual.tsx, so the two cannot drift.
+ */
+@keyframes connectorLaser {
+  0% {
+    opacity: 0;
+    transform: translateX(0) translate(-50%, -50%);
+  }
+  5% { opacity: .92; }
+  64% { opacity: .92; }
+  74% {
+    opacity: 0;
+    transform: translateX(46.927cqw) translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(46.927cqw) translate(-50%, -50%);
+  }
 }
 
 @keyframes cardEnterLeft {
@@ -465,24 +606,6 @@
 @keyframes readySettle {
   from { opacity: 0; transform: translateY(.543cqw) scale(.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes logoPulse {
-  0%, 50% { opacity: 0; transform: scale(.82); }
-  72% { opacity: .72; }
-  100% { opacity: 0; transform: scale(1.18); }
-}
-
-@keyframes beamShimmer {
-  0%, 100% { filter: brightness(1) contrast(1); transform: scale(1); }
-  50% { filter: brightness(1.14) contrast(1.04); transform: scale(1.025); }
-}
-
-@keyframes centerWave {
-  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.92); }
-  10% { opacity: .82; }
-  72% { opacity: .28; }
-  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(2.95); }
 }
 
 @keyframes statusSpin { to { transform: rotate(360deg); } }
@@ -509,13 +632,16 @@
   }
 }
 
-@keyframes connectorFlow { to { background-position: 11.45cqw 0; } }
-
 @media (prefers-reduced-motion: reduce) {
   .visual *,
   .visual *::before,
   .visual *::after {
     animation: none !important;
+  }
+
+  /* Nothing travels across the screen; the path steps between states instead. */
+  .connector::after {
+    display: none;
   }
 
   .problemPill {
