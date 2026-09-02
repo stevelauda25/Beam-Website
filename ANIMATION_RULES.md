@@ -1,6 +1,6 @@
 # Beam Website Animation Rules
 
-**Status:** Working agreement · Branch `feat/beam-animation-polish` · Baseline commit `6822f72`
+**Status:** Working agreement · Branch `feat/beam-animation-polish` · Implementation facts verified against `06880ba`
 
 ## Purpose of this document
 
@@ -118,6 +118,10 @@ Beam's core proposition: one workspace that exists identically across local mach
 The visual is a live product surface rather than a narrative sequence. The only causality the content supports is local interaction: `user action (upload / open / create folder) → workspace updates → file available`.
 
 Note: the headline's differentiator — **"Everywhere"** — currently has no state sequence represented in the visual at all.
+
+**Recorded current implementation fact (verified at `06880ba`).** The Hero now contains an `AgentPromptButton`: a copy-to-clipboard control carrying the Beam agent prompt, whose copied state resets after approximately 1,800ms, alongside Claude, Replit, and OpenAI agent icons.
+
+This is recorded as a current implementation fact only. It may be relevant to the Clerk command-line hero benchmark (§4.0, §4.1), but **that observation is not yet a Hero motion requirement** — Steve has given no Hero feedback, and the Hero motion requirement below is unchanged.
 
 ### Motion Requirement
 Motion must make it obvious that **the same workspace, with the same contents, is present in more than one environment** — not merely that Beam stores files. "One workspace" and "everywhere" must read as a single idea before the visitor scrolls.
@@ -340,6 +344,10 @@ Which means:
 
 This observation is useful context. **Do not prescribe the final implementation yet.**
 
+**Recorded current breakpoint behavior (verified at `06880ba`).** The GSAP pinned Problem / Solution scene now runs **across all breakpoints**; the earlier desktop-only gate and its static mobile fallback have been removed. Under 1024px it still uses the shorter scroll range (`+=125%` vs `+=150%`). The problem features are now presented as a swipeable snap carousel on mobile.
+
+This is a factual record only. It does not change the decision that Problem / Solution's scroll-driven storytelling remains allowed — see §6.
+
 ---
 
 ## Sync — One directory, every machine
@@ -427,6 +435,21 @@ COMPOSITION ALREADY VISIBLE
 > "The animation at the footer looks promising. But the ripple blast feels weird. Need to be tweaked or removed altogether."
 
 **Requirement:** preserve the promising overall direction. The ripple may be substantially reduced, reworked, or removed entirely — removal is explicitly pre-authorised. It must not compete with the CTA.
+
+**Recorded current implementation state (verified at `06880ba`).**
+
+The **ripple is unchanged** and Steve's feedback remains fully applicable: it is still driven through the Web Animations API on a `footerPulse` element, with the same timings — `delay` 380ms on a fresh pulse / 0ms when interrupting, `duration` 1,500ms fresh / 1,180ms interrupting, `cubic-bezier(0.2, 0.7, 0.2, 1)`, and a 360ms exit on `cubic-bezier(0.22, 0.61, 0.36, 1)`. The canvas dot-field, its `requestAnimationFrame` loop, and the `IntersectionObserver` (`rootMargin: '120px'`) are all still present.
+
+The **CSS intro choreography has changed.** The footer's keyframe set is now four bloom-style keyframes:
+
+- `footerShadowBloom`
+- `footerGlowBloom`
+- `footerIconLightBloom`
+- `footerTileHighlightBloom`
+
+The earlier gate-opening intro and dot-wave keyframes no longer exist.
+
+The footer also now has a **`pointerup` touch interaction path** that activates the interaction and auto-resets after approximately 2,600ms, with the reduced-motion guard still in place. **This applies to the Footer only and must not be generalized to other sections.**
 
 ---
 
@@ -973,7 +996,7 @@ Guardrails, not choreography. Final animation design is not specified here excep
 | 5 | **Which On-Demand timing is the canonical tempo** — whether the count-up or the ready state sets the correct pace. | Deciding which value to change |
 | 6 | **Whether the Multi-tenancy sticky visual internally changes state across all three steps.** Structure implies it; not observed. | Treating it as a verified state-transformation reference |
 | 7 | **Whether Steve's silence on Hero and Pricing means approval or omission.** | Prioritising Hero work |
-| 8 | **Whether mobile is in scope.** Problem/Solution and On-Demand currently have no mobile equivalent of their key animations. | Scoping breakpoint behavior |
+| 8 | **Whether mobile is in scope.** As of `06880ba` the Problem/Solution pinned scene runs on all breakpoints (shorter range under 1024px, features as a mobile carousel); On-Demand's mobile behavior has not been re-verified. | Scoping breakpoint behavior |
 | 9 | **Whether DialKit or any live-tuning harness may be introduced.** Not installed; installation not approved. | Tooling for tuning |
 | 10 | **How to resolve two animation libraries** (framer-motion 13.1.1 and gsap 3.15.0), given GSAP cannot produce springs. | Library strategy |
 
