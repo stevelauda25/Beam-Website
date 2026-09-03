@@ -156,7 +156,7 @@ export default function OnDemand() {
   };
 
   const textHeader = (
-    <div className="flex w-full max-w-[500px] flex-col gap-[10px]">
+    <div className="relative z-10 flex w-full max-w-[500px] flex-col gap-[10px]">
       <SectionLabel label="On demand files" />
       <h2 className="text-section font-normal text-text-primary">
         The whole tree, a fraction of the disk

@@ -16,7 +16,7 @@ export default function Agents() {
 
         <FadeIn
           delay={0.1}
-          className="flex w-full items-center pt-6 sm:max-w-[640px] sm:pt-8 min-[744px]:w-[680px] lg:w-[631px] lg:max-w-none lg:pr-[131px] lg:pl-0 lg:pt-0"
+          className="relative z-10 flex w-full items-center pt-6 sm:max-w-[640px] sm:pt-8 min-[744px]:w-[680px] lg:w-[631px] lg:max-w-none lg:pr-[131px] lg:pl-0 lg:pt-0"
         >
           <div className="flex w-full flex-col gap-6 min-[744px]:gap-8 lg:gap-[130px]">
             <div className="flex max-w-[500px] flex-col gap-[10px] min-[744px]:mx-auto min-[744px]:items-center min-[744px]:text-center lg:mx-0 lg:items-start lg:text-left">
