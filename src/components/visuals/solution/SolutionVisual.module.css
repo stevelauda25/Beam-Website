@@ -21,6 +21,15 @@
    */
   --laser-cycle: 1.15s;
   --laser-travel: .74;
+  /*
+   * Rail geometry, single-sourced. The rail, the failed attempt's collision
+   * point and the ambient laser's travel all derive from these two values, so
+   * widening the composition overrides them once rather than touching four
+   * literals that could drift apart.
+   */
+  --connector-left: 26.18cqw;
+  --connector-span: 46.927cqw;
+  --pill-left: 40.917cqw;
   position: relative;
   container-type: inline-size;
   width: min(100%, calc(40svh * 1178 / 350));
@@ -256,7 +265,7 @@
 .problemPill {
   position: absolute;
   top: 13.056cqw;
-  left: 40.917cqw;
+  left: var(--pill-left);
   width: 18.268cqw;
   height: 3.497cqw;
   opacity: var(--pill-opacity, 1);
@@ -361,7 +370,10 @@
    * the failure wave and returns it to nothing. One field, two contexts — the
    * resting State 1 composition is unchanged.
    */
-  opacity: max(var(--dot-field-opacity), var(--failure-field, 0));
+  opacity: max(
+    var(--dot-field-opacity),
+    calc(var(--failure-field, 0) * var(--failure-presence, 1))
+  );
   pointer-events: none;
   /* Was inherited from .solutionScene before the field became its own layer. */
   transform: scale(var(--solution-scale));
@@ -527,8 +539,8 @@
   position: absolute;
   z-index: 0;
   top: 14.992cqw;
-  left: 26.18cqw;
-  width: 46.927cqw;
+  left: var(--connector-left);
+  width: var(--connector-span);
   height: .204cqw;
   background: #e5e5e5;
 }
@@ -537,10 +549,10 @@
  * State 1's failed attempt, in the connector's own ink so it reads as the line
  * itself trying to reach across rather than as a separate travelling object.
  *
- * The endpoint is `40.917cqw - 26.18cqw` — the pill's left edge minus the
- * connector's origin — so it is derived from the same authored values as the
- * layout. There is no normalised constant to drift, and the collision stays
- * exact at every container width.
+ * The endpoint is `--pill-left` minus `--connector-left` — the same variables the
+ * layout itself uses — so the collision stays exact at every container width AND
+ * follows the composition automatically when it widens. There is no normalised
+ * constant to drift and nothing to update in two places.
  */
 .attemptLaser {
   position: absolute;
@@ -556,15 +568,24 @@
     rgba(23, 23, 23, .62) 82%,
     #171717 100%
   );
-  opacity: var(--attempt-opacity, 0);
+  /*
+   * Autoplay decides the frame; scroll decides whether the frame may be seen.
+   * The laser sits in `.connector`, which survives into State 2, so without this
+   * multiplier a frozen mid-travel streak stayed visible over the solution.
+   */
+  opacity: calc(var(--attempt-opacity, 0) * var(--failure-presence, 1));
   pointer-events: none;
   /*
    * `-100%` puts the streak's RIGHT edge — its leading edge — on the travel
-   * position, so at head 1 it lands exactly on `40.917cqw - 26.18cqw`: the
-   * pill's left edge. It stops there and never crosses into the pill.
+   * position, so at head 1 it lands exactly on `--pill-left` minus
+   * `--connector-left`: the pill's left edge. It stops there and never crosses
+   * into the pill, and it follows the composition when that widens.
    */
   transform: translateX(
-      calc(var(--attempt-head, 0) * (40.917cqw - 26.18cqw) - 100%)
+      calc(
+        var(--attempt-head, 0) * (var(--pill-left) - var(--connector-left)) -
+          100%
+      )
     )
     translateY(-50%);
   will-change: transform, opacity;
@@ -659,11 +680,11 @@
   64% { opacity: .92; }
   74% {
     opacity: 0;
-    transform: translateX(46.927cqw) translate(-50%, -50%);
+    transform: translateX(var(--connector-span)) translate(-50%, -50%);
   }
   100% {
     opacity: 0;
-    transform: translateX(46.927cqw) translate(-50%, -50%);
+    transform: translateX(var(--connector-span)) translate(-50%, -50%);
   }
 }
 
@@ -688,6 +709,42 @@
 }
 
 @keyframes statusSpin { to { transform: rotate(360deg); } }
+
+/*
+ * Desktop composition. The panels move OUT to the content-grid edges; nothing is
+ * scaled and nothing is resized. `.visual` fills the 1178px content column on a
+ * desktop, so 0cqw and 100cqw are that column's edges and the panels' outer
+ * edges land exactly on them.
+ *
+ * The rail keeps its tuck under both cards (7.538cqw under the left, 6.791cqw
+ * under the right), so the state still departs from beneath the source and is
+ * absorbed beneath the destination.
+ *
+ * The overrides target DESCENDANTS, not `.visual` itself: an element with
+ * `container-type` establishes a query container for its children, and cannot
+ * be styled by a query against itself. Redefining the two rail variables on
+ * `.connector` is enough — `.attemptLaser` and `.connectorLaser` are its
+ * children and inherit them, so the collision point and the ambient laser's
+ * travel follow automatically.
+ *
+ * A container query rather than a media query, because the visual's width
+ * depends on viewport HEIGHT too (the `40svh` cap), and because it keeps the
+ * Motion Lab preview honest.
+ */
+@container (min-width: 900px) {
+  .leftCard {
+    left: 0cqw;
+  }
+
+  .rightCard {
+    left: 76.299cqw;
+  }
+
+  .connector {
+    --connector-left: 16.163cqw;
+    --connector-span: 66.927cqw;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .visual *,

@@ -25,6 +25,30 @@ const segment = (value: number, start: number, end: number) =>
   clamp((value - start) / (end - start));
 const smooth = (value: number) => value * value * (3 - 2 * value);
 
+/*
+ * STATE 1 TRANSIENT PRESENCE — owned by SCROLL, not by the autoplay clock.
+ *
+ * The autoplay decides WHICH failure frame is showing. Scroll decides WHETHER
+ * State 1 is still allowed on screen at all. Keeping those separate is what the
+ * bug came from violating: the clock froze mid-travel and the laser, which lives
+ * in `.connector` rather than in the scroll-faded `.problemScene`, had no other
+ * opacity source and simply stayed.
+ *
+ * Every State-1-only transient is now multiplied by this, so it leaves with the
+ * Problem state instead of outliving it.
+ *
+ * The window ends exactly where the autoplay clock freezes (see the `story`
+ * threshold below). That alignment matters in BOTH directions: the clock runs
+ * for precisely as long as the transient is visible, so a frozen frame can never
+ * be seen fading out on the way into State 2, nor fading in on the way back.
+ */
+const FAILURE_EXIT_FROM = 0.02;
+const FAILURE_EXIT_TO = 0.1;
+
+export function failurePresenceFor(progress: number) {
+  return 1 - smooth(segment(clamp(progress), FAILURE_EXIT_FROM, FAILURE_EXIT_TO));
+}
+
 /** Rail position of the Beam mark. */
 const BEAM_MIDPOINT = 0.5;
 
@@ -117,6 +141,7 @@ export function setSolutionVisualProgress(
     set('--attempt-head', 0);
     set('--attempt-opacity', 0);
     set('--failure-field', 0);
+    set('--failure-presence', 0);
 
     visual.dataset.transform = rawProgress < 0.06 ? 'rest' : 'active';
     // No autoplay under reduced motion — the failure rests on its outcome.
@@ -147,6 +172,9 @@ export function setSolutionVisualProgress(
   // holding — State 2 lands settled instead of waiting for the pin to release.
   const connectorSettle = smooth(segment(rawProgress, 0.78, 0.99));
 
+  // Scroll's verdict on whether State 1 may still be seen.
+  set('--failure-presence', failurePresenceFor(rawProgress));
+
   set('--problem-scene-opacity', 1 - friction);
   set('--problem-scene-scale', 1 - friction * 0.74);
   set('--problem-scene-blur', `${friction * 0.136}cqw`);
@@ -175,7 +203,13 @@ export function setSolutionVisualProgress(
    * loop freezes on its current frame the moment the transformation engages, so
    * leaving and re-entering State 1 never resets or teleports it.
    */
-  visual.dataset.story = rawProgress < 0.06 ? 'failing' : 'transforming';
+  /*
+   * Deliberately the same boundary as FAILURE_EXIT_TO. The clock is allowed to
+   * run for exactly as long as the transient can be seen, so there is never a
+   * visible frozen frame in either scroll direction.
+   */
+  visual.dataset.story =
+    rawProgress < FAILURE_EXIT_TO ? 'failing' : 'transforming';
   // Gates the ambient final-state laser. It may only run once the connector has
   // substantially resolved into State 2; scrubbing back out removes the
   // animation entirely, so it can never interfere with the semantic transform.
@@ -203,25 +237,89 @@ export function setSolutionVisualProgress(
  * individual attempt. `cycle` only advances while the story is active, so
  * pausing freezes the exact frame and resuming continues from it.
  */
-const ROUND_MS = 1400;
-const FAILURE_LOOP_MS = ROUND_MS * 3;
 /** Next pill arrives while the failed one is still leaving. */
 const ENTER_MS = 240;
 /** A beat of stable gray before the attempt sets off. */
 const REST_MS = 120;
-const LASER_MS = 380;
-/** Everything downstream is measured from this instant. */
-const IMPACT_AT = REST_MS + LASER_MS;
 const SWEEP_MS = 260;
 /*
  * Long enough for the centred wave to reach the field's rim (390ms) and decay
- * (300ms). This moves no beat: the round is still REST+LASER+SWEEP+HOLD+EXIT,
- * and the wave simply finishes underneath the pill's exit.
+ * (300ms). The wave simply finishes underneath the pill's exit.
  */
 const PULSE_MS = 760;
 const HOLD_MS = 220;
-const EXIT_AT = IMPACT_AT + SWEEP_MS + HOLD_MS;
 const EXIT_MS = 300;
+/** Quiet beat between a pill leaving and the next round starting. */
+const TAIL_MS = 120;
+
+/*
+ * The attempt's SPEED is the approved quantity, not its duration.
+ *
+ * It was tuned at 380ms across 14.737cqw — the gap between the pill's leading
+ * edge and the rail's origin in the original composition. Widening the scene
+ * stretches that gap, so holding 380ms would silently make the failed attempt
+ * fly. The duration is derived from the measured distance at that same
+ * velocity, and the round grows to fit it.
+ *
+ * Every beat AFTER impact keeps its own duration. Only the travel changes.
+ */
+const BASE_LASER_MS = 380;
+const BASE_ATTEMPT_CQW = 40.917 - 26.18;
+
+export type FailureTiming = {
+  laserMs: number;
+  impactAt: number;
+  exitAt: number;
+  roundMs: number;
+  loopMs: number;
+};
+
+export function failureTiming(laserMs = BASE_LASER_MS): FailureTiming {
+  const impactAt = REST_MS + laserMs;
+  const exitAt = impactAt + SWEEP_MS + HOLD_MS;
+  const roundMs = exitAt + EXIT_MS + TAIL_MS;
+  return { laserMs, impactAt, exitAt, roundMs, loopMs: roundMs * 3 };
+}
+
+/**
+ * Live horizontal geometry, read from computed styles rather than bounding
+ * rects so the scene's own scale transform cannot distort it.
+ *
+ * Returns the attempt distance (which sets the laser's duration) and the rail
+ * position where the streak clears the source card (which sets the dot field's
+ * anticipation). Both were previously constants baked from one composition;
+ * measuring them keeps both correct at every breakpoint.
+ */
+function readSceneGeometry(visual: HTMLElement) {
+  const value = (selector: string, prop: string) => {
+    const node = visual.querySelector(selector);
+    return node
+      ? Number.parseFloat(getComputedStyle(node).getPropertyValue(prop))
+      : NaN;
+  };
+
+  const width = visual.clientWidth;
+  const connectorLeft = value(`.${styles.connector}`, 'left');
+  const connectorWidth = value(`.${styles.connector}`, 'width');
+  const pillLeft = value(`.${styles.problemPill}`, 'left');
+  const cardLeft = value(`.${styles.leftCard}`, 'left');
+  const cardWidth = value(`.${styles.leftCard}`, 'width');
+
+  if (
+    !width ||
+    !connectorWidth ||
+    [connectorLeft, pillLeft, cardLeft, cardWidth].some(Number.isNaN)
+  ) {
+    return null;
+  }
+
+  return {
+    attemptCqw: ((pillLeft - connectorLeft) / width) * 100,
+    /** Rail position at which the streak clears the source card. */
+    cardRail: (cardLeft + cardWidth - connectorLeft) / connectorWidth,
+  };
+}
+
 /** Matches the slide distance the queue used before, in cqw. */
 const PILL_SLIDE = 4.35;
 
@@ -303,41 +401,43 @@ const impulse = (t: number) => {
  *
  * Exported for that reason.
  */
-export function sampleFailureAt(time: number): FailureFrame {
-  const cycle = ((time % FAILURE_LOOP_MS) + FAILURE_LOOP_MS) % FAILURE_LOOP_MS;
+export function sampleFailureAt(
+  time: number,
+  timing: FailureTiming = failureTiming(),
+): FailureFrame {
+  const { impactAt, exitAt, roundMs, loopMs } = timing;
+  const cycle = ((time % loopMs) + loopMs) % loopMs;
   const pills: FailureFrame['pills'] = [];
   let laserHead = 0;
   let laserOpacity = 0;
   let impactAge: number | null = null;
 
   for (let index = 0; index < 3; index += 1) {
-    const local =
-      (((cycle - index * ROUND_MS) % FAILURE_LOOP_MS) + FAILURE_LOOP_MS) %
-      FAILURE_LOOP_MS;
+    const local = (((cycle - index * roundMs) % loopMs) + loopMs) % loopMs;
 
     let opacity = 0;
     let offset = 0;
     let coverage = 0;
 
-    if (local >= FAILURE_LOOP_MS - ENTER_MS) {
+    if (local >= loopMs - ENTER_MS) {
       // Sliding in from above while the previous pill is still leaving.
-      const entering = smooth((local - (FAILURE_LOOP_MS - ENTER_MS)) / ENTER_MS);
+      const entering = smooth((local - (loopMs - ENTER_MS)) / ENTER_MS);
       opacity = entering;
       offset = (1 - entering) * -PILL_SLIDE;
-    } else if (local <= EXIT_AT + EXIT_MS) {
-      const exiting = smooth(segment(local, EXIT_AT, EXIT_AT + EXIT_MS));
+    } else if (local <= exitAt + EXIT_MS) {
+      const exiting = smooth(segment(local, exitAt, exitAt + EXIT_MS));
       opacity = 1 - exiting;
       offset = exiting * PILL_SLIDE;
-      coverage = segment(local, IMPACT_AT, IMPACT_AT + SWEEP_MS);
+      coverage = segment(local, impactAt, impactAt + SWEEP_MS);
 
       // Only the pill currently under attack owns the laser and the impact.
-      if (local < IMPACT_AT) {
-        laserHead = segment(local, REST_MS, IMPACT_AT);
+      if (local < impactAt) {
+        laserHead = segment(local, REST_MS, impactAt);
         laserOpacity =
           segment(local, REST_MS, REST_MS + 40) *
-          (1 - segment(local, IMPACT_AT - 30, IMPACT_AT));
-      } else if (local <= IMPACT_AT + PULSE_MS) {
-        impactAge = local - IMPACT_AT;
+          (1 - segment(local, impactAt - 30, impactAt));
+      } else if (local <= impactAt + PULSE_MS) {
+        impactAge = local - impactAt;
       }
     }
 
@@ -469,6 +569,8 @@ export const SolutionVisual = forwardRef<
    * its red wave, so the two cannot describe different moments.
    */
   const failureImpactRef = useRef<number | null>(null);
+  /** Scroll-owned visibility of every State 1 transient. */
+  const failurePresenceRef = useRef(1);
 
   const setRefs = (node: HTMLDivElement | null) => {
     localRef.current = node;
@@ -477,6 +579,7 @@ export const SolutionVisual = forwardRef<
   };
 
   useLayoutEffect(() => {
+    failurePresenceRef.current = reducedMotion ? 0 : failurePresenceFor(progress);
     if (localRef.current) {
       setSolutionVisualProgress(localRef.current, progress, reducedMotion);
     }
@@ -490,12 +593,25 @@ export const SolutionVisual = forwardRef<
     let cycle = 0;
     let last = performance.now();
     let inView = false;
+    /*
+     * Derived from the live composition, so the attempt keeps its approved
+     * velocity whether the scene is at its narrow or widened geometry.
+     */
+    let timing = failureTiming();
+    const remeasure = () => {
+      const geometry = readSceneGeometry(visual);
+      if (!geometry) return;
+      timing = failureTiming(
+        BASE_LASER_MS * (geometry.attemptCqw / BASE_ATTEMPT_CQW),
+      );
+    };
+    remeasure();
 
     const set = (name: string, value: string | number) =>
       visual.style.setProperty(name, String(value));
 
     const apply = (time: number) => {
-      const frameState = sampleFailureAt(time);
+      const frameState = sampleFailureAt(time, timing);
 
       frameState.pills.forEach((pill, index) => {
         set(`--f${index + 1}-opacity`, pill.opacity.toFixed(4));
@@ -518,7 +634,7 @@ export const SolutionVisual = forwardRef<
     const tick = (now: number) => {
       const active = inView && visual.dataset.story === 'failing';
       if (active) {
-        cycle = (cycle + (now - last)) % FAILURE_LOOP_MS;
+        cycle = (cycle + (now - last)) % timing.loopMs;
         apply(cycle);
       }
       // `last` always advances, so a pause never banks elapsed time and the
@@ -535,11 +651,17 @@ export const SolutionVisual = forwardRef<
     );
     observer.observe(visual);
 
+    // The composition widens at a container breakpoint, so the attempt distance
+    // can change without a remount.
+    const resize = new ResizeObserver(remeasure);
+    resize.observe(visual);
+
     apply(0);
     frame = window.requestAnimationFrame(tick);
 
     return () => {
       observer.disconnect();
+      resize.disconnect();
       window.cancelAnimationFrame(frame);
       failureImpactRef.current = null;
     };
@@ -602,11 +724,20 @@ export const SolutionVisual = forwardRef<
     const dotOnsetMs = FIELD_ONSET_MS;
     /**
      * Where along the rail Beam starts to sense the laser — halfway between the
-     * point the streak clears the source card (rail 0.1606, from the card and
-     * rail geometry) and the Beam mark itself. Reacting only on contact read as
-     * delayed; anticipating from here makes the field feel connected.
+     * point the streak clears the source card and the Beam mark itself. Reacting
+     * only on contact read as delayed; anticipating from here makes the field
+     * feel connected.
+     *
+     * MEASURED, not assumed: that card-clearing rail was 0.1606 in the original
+     * composition and 0.1126 in the widened one, so a constant would have gone
+     * stale the moment the panels moved.
      */
-    const triggerRail = 0.33;
+    let triggerRail = 0.33;
+    const remeasureTrigger = () => {
+      const geometry = readSceneGeometry(visual);
+      if (geometry) triggerRail = (geometry.cardRail + BEAM_MIDPOINT) / 2;
+    };
+    remeasureTrigger();
 
     /*
      * State 1's failure wave uses the same motion language as Beam's success
@@ -676,10 +807,15 @@ export const SolutionVisual = forwardRef<
       context.clearRect(0, 0, fieldSize, fieldSize);
 
       const reaction = animate ? laserReaction() : null;
+      /*
+       * Gated on scroll-owned presence rather than on `data-story`. A hard cut at
+       * the story boundary would have popped the wave off mid-flight, and a stale
+       * impact age could otherwise redraw red dots once State 2 revealed the
+       * field again.
+       */
+      const failurePresence = animate ? failurePresenceRef.current : 0;
       const failureAge =
-        animate && visual.dataset.story === 'failing'
-          ? failureImpactRef.current
-          : null;
+        failurePresence > 0.001 ? failureImpactRef.current : null;
 
       if (strength <= 0.006 && failureAge === null) return;
 
@@ -716,7 +852,9 @@ export const SolutionVisual = forwardRef<
          * louder: peak alpha at the centre is unchanged.
          */
         const red =
-          failureDotResponse(dot.distance, failureAge) * Math.sqrt(dot.falloff);
+          failureDotResponse(dot.distance, failureAge) *
+          Math.sqrt(dot.falloff) *
+          failurePresence;
         if (red < 0.012) continue;
 
         context.fillStyle = `rgba(${FAILURE_RED}, ${Math.min(0.72, red).toFixed(3)})`;
@@ -770,11 +908,14 @@ export const SolutionVisual = forwardRef<
       { threshold: 0.08 },
     );
     visibilityObserver.observe(visual);
+    const geometryObserver = new ResizeObserver(remeasureTrigger);
+    geometryObserver.observe(visual);
     syncPhase();
 
     return () => {
       phaseObserver.disconnect();
       visibilityObserver.disconnect();
+      geometryObserver.disconnect();
       delete visual.dataset.inView;
       if (frame) window.cancelAnimationFrame(frame);
     };
