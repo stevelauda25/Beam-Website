@@ -24,19 +24,23 @@ export default function ShareHost() {
               <h2 className="text-section font-normal text-text-primary">
                 From drop to deploy
               </h2>
-              <p className="text-[14px] leading-[20px] text-text-primary">
+              <p className="max-w-[440px] text-[14px] leading-[20px] text-text-primary">
                 <span className="sm:hidden">
                   <span className="block">
                     Every file in Beam is one step from being live
                   </span>
                   <span className="block">
-                    on the internet: a share link for a teammate, or a full
+                    on the internet:
+                  </span>
+                  <span className="block">
+                    a share link for a teammate, or a full
                   </span>
                   <span className="block">deploy on your own domain.</span>
                 </span>
                 <span className="hidden sm:inline">
-                  Every file in Beam is one step from being live on the internet: a
-                  share link for a teammate, or a full deploy on your own domain.
+                  Every file in Beam is one step from being live on the internet:
+                  <br />
+                  a share link for a teammate, or a full deploy on your own domain.
                 </span>
               </p>
             </div>

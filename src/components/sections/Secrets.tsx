@@ -6,17 +6,17 @@ import toggleActive from '../../assets/icons/common/toggle-active.svg';
 
 const features = [
   {
-    className: 'lg:w-[301px]',
+    className: 'lg:w-[340px]',
     title:
       'Encrypted at rest with AES-256-GCM,\nnever stored in snapshots, chunks, or logs',
   },
   {
-    className: 'lg:w-[358px]',
+    className: 'lg:w-[385px]',
     title:
       'Scoped to org, workspace, and profile (dev,\nstaging, prod), so a token only unlocks what it needs',
   },
   {
-    className: 'lg:w-[325px]',
+    className: 'lg:w-[385px]',
     title:
       'Every read is audit-logged, and rotating a key\nreaches every live workspace in under 30 seconds',
   },

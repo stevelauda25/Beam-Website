@@ -25,7 +25,7 @@ export default function PricingCard({
   return (
     <div
       data-pricing-card
-      className={`flex min-w-0 flex-col items-start overflow-hidden rounded-[2.83px] px-3 min-[744px]:px-0 lg:px-3 ${
+      className={`flex min-w-0 flex-col items-start overflow-visible rounded-[2.83px] px-3 min-[744px]:px-0 lg:px-3 ${
         recommended
           ? 'lg:w-[277.25px] lg:shrink-0'
           : 'lg:flex-1'
@@ -78,7 +78,10 @@ export default function PricingCard({
         </div>
       </div>
 
-      <Button variant="pricing">
+      <Button
+        variant="primary"
+        className="dark-button-interaction mt-3 h-[34px] w-full !px-[14px] !py-0 !leading-none whitespace-nowrap"
+      >
         {cta}
       </Button>
     </div>

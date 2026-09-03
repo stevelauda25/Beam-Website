@@ -21,14 +21,14 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <a
             href="#"
-            className="text-[14px] font-normal leading-[20px] text-[#353331] transition hover:text-text-primary"
+            className="inline-flex items-center justify-center rounded-full px-[14px] py-2 text-[14px] font-normal leading-none text-[#353331] transition-colors hover:bg-[#f0f0f0] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-secondary focus-visible:ring-offset-2 min-[744px]:h-[30px] min-[744px]:py-0 lg:h-auto lg:py-2"
           >
             Signup
           </a>
           <Button
             variant="secondary"
             href="#"
-            className="!px-[14px] !leading-none whitespace-nowrap min-[744px]:!h-[30px] min-[744px]:!py-0 lg:!h-auto lg:!py-2"
+            className="light-button-interaction !px-[14px] !leading-none whitespace-nowrap min-[744px]:!h-[30px] min-[744px]:!py-0 lg:!h-auto lg:!py-2"
           >
             Login
           </Button>

@@ -25,9 +25,11 @@ export default function Sync() {
                 One directory, every machine
               </h2>
               <p className="text-[14px] leading-[20px] text-text-primary">
-                Edit on your laptop and pick up on another machine in seconds. Beam
-                keeps your workspace live and in sync without commits, pushes, or
-                manual copies.
+                Edit on your laptop and pick up on another machine in seconds.
+                <br />
+                Beam keeps your workspace live and in sync without commits,
+                <br />
+                pushes, or manual copies.
               </p>
             </div>
 

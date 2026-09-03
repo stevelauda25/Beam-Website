@@ -163,8 +163,11 @@ export default function OnDemand() {
       </h2>
       <p className="text-[14px] leading-[20px] text-text-primary">
         Beam keeps lightweight refs to every file and downloads contents only when
-        something actually reads them. You conserve disk space on laptops and small
-        sandboxes, while the full file system stays browsable and searchable.
+        something actually reads them. You conserve disk space
+        <br />
+        on laptops and small sandboxes, while the full file
+        <br />
+        system stays browsable and searchable.
       </p>
     </div>
   );

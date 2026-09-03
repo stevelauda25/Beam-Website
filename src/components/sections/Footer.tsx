@@ -45,9 +45,10 @@ export default function Footer() {
           >
             <div>
               <Button
-                variant="dark"
+                variant="secondary"
                 icon
                 href="#"
+                className="light-button-interaction !px-[14px] !leading-none whitespace-nowrap"
               >
                 Get Started
               </Button>

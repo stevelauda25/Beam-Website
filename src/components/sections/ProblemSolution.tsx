@@ -42,9 +42,6 @@ const problemFeatures = [
   },
 ];
 
-const solutionCopy =
-  'One unified directory, mirrored everywhere. Attach it to any machine and your workspace is just there. Files on demand, secrets included, and the same view for agents through CLI and MCP.';
-
 function ProblemDetails() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [activeFeature, setActiveFeature] = useState(0);
@@ -325,21 +322,18 @@ export default function ProblemSolution() {
               className="invisible absolute inset-x-0 top-0 flex justify-center will-change-[transform,filter,opacity]"
             >
               <p className="max-w-[387px] text-center text-[14px] leading-[20px] text-text-primary">
-                <span className="sm:hidden">
-                  <span className="block whitespace-nowrap">
-                    One unified directory, mirrored everywhere.
-                  </span>
-                  <span className="block whitespace-nowrap">
-                    Attach it to any machine and your workspace is just there.
-                  </span>
-                  <span className="block whitespace-nowrap">
-                    Files on demand, secrets included, and the same
-                  </span>
-                  <span className="block whitespace-nowrap">
-                    view for agents through CLI and MCP.
-                  </span>
+                <span className="block whitespace-nowrap">
+                  One unified directory, mirrored everywhere.
                 </span>
-                <span className="hidden sm:inline">{solutionCopy}</span>
+                <span className="block whitespace-nowrap">
+                  Attach it to any machine and your workspace is just there.
+                </span>
+                <span className="block whitespace-nowrap">
+                  Files on demand, secrets included, and the same
+                </span>
+                <span className="block whitespace-nowrap">
+                  view for agents through CLI and MCP.
+                </span>
               </p>
             </div>
           </div>
