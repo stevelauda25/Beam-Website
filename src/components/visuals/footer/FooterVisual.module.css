@@ -394,6 +394,20 @@
     aspect-ratio: auto;
   }
 
+  .gate {
+    top: -34px;
+    width: calc(50% + 20px);
+    height: 260px;
+  }
+
+  .gateLeft {
+    left: -20px;
+  }
+
+  .gateRight {
+    right: -20px;
+  }
+
   .centerTile,
   .activeTileShadow {
     width: clamp(72px, 9cqw, 88px);

@@ -21,7 +21,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <a
             href="#"
-            className="inline-flex items-center justify-center rounded-full px-[14px] py-2 text-[14px] font-normal leading-none text-[#353331] transition-colors hover:bg-[#f0f0f0] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-secondary focus-visible:ring-offset-2 min-[744px]:h-[30px] min-[744px]:py-0 lg:h-auto lg:py-2"
+            className="flat-light-button-interaction inline-flex items-center justify-center rounded-full px-[14px] py-2 text-[14px] font-normal leading-none text-[#353331] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-secondary focus-visible:ring-offset-2 min-[744px]:h-[30px] min-[744px]:py-0 lg:h-auto lg:py-2"
           >
             Signup
           </a>

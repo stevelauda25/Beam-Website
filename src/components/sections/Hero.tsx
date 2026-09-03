@@ -154,7 +154,7 @@ export default function Hero() {
           <Button
             variant="primary"
             href="#"
-            className="dark-button-interaction h-[34px] min-w-0 flex-1 !px-[14px] !py-0 !leading-none whitespace-nowrap lg:flex-none"
+            className="dark-button-interaction h-[34px] min-w-0 flex-none !px-[14px] !py-0 !leading-none whitespace-nowrap"
           >
             Start free
           </Button>

@@ -121,6 +121,23 @@ body {
   transition-duration: 90ms;
 }
 
+.flat-light-button-interaction {
+  background: transparent;
+  transition:
+    background-color 180ms ease-out,
+    transform 100ms ease-out;
+}
+
+.flat-light-button-interaction:hover {
+  background-color: #f0f0f0;
+}
+
+.flat-light-button-interaction:active {
+  background-color: #e8e8e8;
+  transform: translateY(1px);
+  transition-duration: 90ms;
+}
+
 .dark-button-interaction {
   opacity: 1 !important;
   transition:

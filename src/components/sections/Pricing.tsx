@@ -139,7 +139,7 @@ export default function Pricing() {
             role="region"
             aria-label="Pricing plans"
             aria-roledescription="carousel"
-            className="-mx-5 flex w-[calc(100%+40px)] snap-x snap-mandatory items-stretch gap-3 overflow-x-auto px-8 pb-2 [scroll-padding-inline:32px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:w-full sm:grid-cols-2 sm:gap-8 sm:overflow-visible sm:px-0 sm:pb-0 lg:flex lg:items-end lg:gap-3"
+            className="-mx-5 flex w-[calc(100%+40px)] snap-x snap-mandatory items-stretch gap-3 overflow-x-auto px-8 pb-2 [scroll-padding-inline:32px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:w-full sm:grid-cols-2 sm:gap-x-8 sm:gap-y-12 sm:overflow-visible sm:px-0 sm:pb-0 lg:flex lg:items-end lg:gap-3"
           >
             {plans.map((plan, index) => (
               <Fragment key={plan.name}>

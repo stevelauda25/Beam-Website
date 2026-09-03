@@ -25,7 +25,7 @@ export default function PricingCard({
   return (
     <div
       data-pricing-card
-      className={`flex min-w-0 flex-col items-start overflow-visible rounded-[2.83px] px-3 min-[744px]:px-0 lg:px-3 ${
+      className={`flex h-full min-w-0 flex-col items-start overflow-visible rounded-[2.83px] px-3 min-[744px]:px-0 lg:h-auto lg:px-3 ${
         recommended
           ? 'lg:w-[277.25px] lg:shrink-0'
           : 'lg:flex-1'
@@ -54,11 +54,7 @@ export default function PricingCard({
         </div>
       </div>
 
-      <div
-        className={`flex w-full flex-col pt-3 ${
-          recommended ? 'min-h-[194px] pb-5' : 'min-h-[193px]'
-        }`}
-      >
+      <div className="flex min-h-[193px] w-full flex-1 flex-col pt-3 sm:min-h-[205px] sm:pb-6 lg:min-h-[193px] lg:pb-0">
         <div className="flex w-full flex-col gap-1.5">
           <span className="text-[12px] leading-[18px] text-text-muted">Include:</span>
           {features.map((feature) => (
