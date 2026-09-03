@@ -3,8 +3,8 @@ import Button from '../ui/Button';
 
 export default function Navbar() {
   return (
-    <nav className="w-full bg-[#fafafa] px-5 py-3 sm:px-8 lg:px-[132px]">
-      <div className="mx-auto flex max-w-[1176px] items-center justify-between">
+    <nav className="fixed inset-x-0 top-0 z-50 w-full bg-[#fafafa]/95 px-5 py-3 backdrop-blur-sm sm:px-8 min-[744px]:h-[52px] min-[744px]:py-0 lg:h-auto lg:px-[132px] lg:py-3">
+      <div className="mx-auto flex h-full max-w-[1176px] items-center justify-between min-[744px]:w-[680px] lg:w-full">
         <a href="#" className="flex items-center gap-[5px]">
           <img
             src={beamLogo}
@@ -21,14 +21,14 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <a
             href="#"
-            className="text-[14px] font-normal leading-[20px] text-[#353331] transition hover:text-text-primary"
+            className="flat-light-button-interaction inline-flex items-center justify-center rounded-full px-[14px] py-2 text-[14px] font-normal leading-none text-[#353331] hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-secondary focus-visible:ring-offset-2 min-[744px]:h-[30px] min-[744px]:py-0 lg:h-auto lg:py-2"
           >
             Signup
           </a>
           <Button
             variant="secondary"
             href="#"
-            className="!px-[14px] !leading-none whitespace-nowrap"
+            className="light-button-interaction !px-[14px] !leading-none whitespace-nowrap min-[744px]:!h-[30px] min-[744px]:!py-0 lg:!h-auto lg:!py-2"
           >
             Login
           </Button>

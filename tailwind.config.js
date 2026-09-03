@@ -10,6 +10,13 @@ export default {
     '!./src/dev/**',
   ],
   theme: {
+    screens: {
+      sm: '640px',
+      md: '768px',
+      lg: '1200px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       fontFamily: {
         sans: ['"TikTok Sans"', '"TikTokSans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],

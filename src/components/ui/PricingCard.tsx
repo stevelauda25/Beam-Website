@@ -25,13 +25,13 @@ export default function PricingCard({
   return (
     <div
       data-pricing-card
-      className={`flex min-w-0 flex-col items-start overflow-hidden rounded-[2.83px] px-3 ${
+      className={`flex h-full min-w-0 flex-col items-start overflow-visible rounded-[2.83px] px-3 min-[744px]:px-0 lg:h-auto lg:px-3 ${
         recommended
           ? 'lg:w-[277.25px] lg:shrink-0'
           : 'lg:flex-1'
       } ${className}`}
     >
-      <div className="flex w-full flex-col justify-center text-[12px] leading-[18px]">
+      <div className="flex w-full flex-col justify-center text-[14px] leading-[20px]">
         <div className="flex items-center justify-between">
           <span className="text-text-primary">{name}</span>
           {recommended && (
@@ -54,11 +54,7 @@ export default function PricingCard({
         </div>
       </div>
 
-      <div
-        className={`flex w-full flex-col pt-3 ${
-          recommended ? 'min-h-[194px] pb-5' : 'min-h-[193px]'
-        }`}
-      >
+      <div className="flex min-h-[193px] w-full flex-1 flex-col pt-3 sm:min-h-[205px] sm:pb-6 lg:min-h-[193px] lg:pb-0">
         <div className="flex w-full flex-col gap-1.5">
           <span className="text-[12px] leading-[18px] text-text-muted">Include:</span>
           {features.map((feature) => (
@@ -70,7 +66,7 @@ export default function PricingCard({
                 width={12}
                 height={12}
               />
-              <span className="text-[12px] leading-[18px] text-text-primary lg:whitespace-nowrap">
+              <span className="text-[14px] leading-[20px] text-text-primary lg:whitespace-nowrap">
                 {feature}
               </span>
             </div>
@@ -78,7 +74,10 @@ export default function PricingCard({
         </div>
       </div>
 
-      <Button variant="pricing">
+      <Button
+        variant="primary"
+        className="dark-button-interaction mt-3 h-[34px] w-full !px-[14px] !py-0 !leading-none whitespace-nowrap"
+      >
         {cta}
       </Button>
     </div>

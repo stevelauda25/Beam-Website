@@ -24,7 +24,7 @@ export default function FeatureItem({
           <img src={icon} alt="" className="max-h-full max-w-full" />
         </div>
       </div>
-      <div className="flex flex-col text-[12px] leading-[20px]">
+      <div className="flex flex-col text-[14px] leading-[20px]">
         <span className="whitespace-pre-line font-normal text-text-primary">
           {title}
         </span>

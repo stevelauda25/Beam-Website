@@ -44,14 +44,27 @@ export default function OnDemand() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return window.innerWidth >= 1024;
+    return window.innerWidth >= 1200;
+  });
+  const [isTablet, setIsTablet] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= 744 && window.innerWidth < 1200;
   });
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    const desktopMq = window.matchMedia('(min-width: 1200px)');
+    const tabletMq = window.matchMedia('(min-width: 744px) and (max-width: 1199px)');
+    const syncLayout = () => {
+      setIsDesktop(desktopMq.matches);
+      setIsTablet(tabletMq.matches);
+    };
+
+    desktopMq.addEventListener('change', syncLayout);
+    tabletMq.addEventListener('change', syncLayout);
+    return () => {
+      desktopMq.removeEventListener('change', syncLayout);
+      tabletMq.removeEventListener('change', syncLayout);
+    };
   }, []);
 
   useEffect(() => {
@@ -69,7 +82,7 @@ export default function OnDemand() {
         start: 'top top',
         end: () => {
           if (window.innerWidth < 640) return '+=140%';
-          if (window.innerWidth < 1024) return '+=160%';
+          if (window.innerWidth < 1200) return '+=160%';
           return '+=200%';
         },
         pin: true,
@@ -143,15 +156,18 @@ export default function OnDemand() {
   };
 
   const textHeader = (
-    <div className="flex max-w-[500px] flex-col gap-[10px]">
+    <div className="relative z-10 flex w-full max-w-[500px] flex-col gap-[10px]">
       <SectionLabel label="On demand files" />
       <h2 className="text-section font-normal text-text-primary">
         The whole tree, a fraction of the disk
       </h2>
-      <p className="text-[12px] leading-[18px] text-text-primary">
+      <p className="text-[14px] leading-[20px] text-text-primary">
         Beam keeps lightweight refs to every file and downloads contents only when
-        something actually reads them. You conserve disk space on laptops and small
-        sandboxes, while the full file system stays browsable and searchable.
+        something actually reads them. You conserve disk space
+        <br />
+        on laptops and small sandboxes, while the full file
+        <br />
+        system stays browsable and searchable.
       </p>
     </div>
   );
@@ -193,7 +209,7 @@ export default function OnDemand() {
             height={12}
           />
         </div>
-        <div className="flex flex-col text-[12px] leading-[20px]">
+        <div className="flex flex-col text-[14px] leading-[20px]">
           <button
             type="button"
             onClick={() => scrollToItem(index)}
@@ -228,11 +244,13 @@ export default function OnDemand() {
 
   const keyVisual = (
     <div
-      className="relative aspect-[809/692] max-w-full"
+      className="relative aspect-[809/692] max-w-full min-[744px]:-mb-16 lg:mb-0"
       style={{
         width: isDesktop
           ? 'min(809px, 56vw, 116svh)'
-          : 'min(400px, 90vw, 42svh)',
+          : isTablet
+            ? '520px'
+            : 'min(400px, 90vw, 42svh)',
       }}
     >
       <AnimatePresence mode="sync" initial={false}>
@@ -261,7 +279,7 @@ export default function OnDemand() {
   );
 
   const subheaderList = (
-    <div className="flex max-w-[500px] flex-col gap-3">
+    <div className="flex w-full max-w-[500px] flex-col gap-3">
       {items.map((_, index) => renderItem(index, index === activeIndex))}
     </div>
   );
@@ -282,7 +300,7 @@ export default function OnDemand() {
   );
 
   const mobileContent = (
-    <div className="mx-auto flex h-full w-full max-w-[500px] flex-col items-start justify-start gap-6 overflow-x-hidden px-5 pt-12">
+    <div className="mx-auto flex h-full w-full max-w-[500px] flex-col items-start justify-start gap-6 overflow-x-hidden px-5 pt-12 sm:max-w-[640px] sm:px-8 sm:pt-16 min-[744px]:w-[680px] min-[744px]:max-w-none min-[744px]:-translate-y-12 min-[744px]:items-center min-[744px]:justify-center min-[744px]:gap-8 min-[744px]:px-0 min-[744px]:pt-0 lg:translate-y-0 lg:justify-start">
       {keyVisual}
       {textHeader}
       {subheaderList}

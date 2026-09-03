@@ -11,7 +11,7 @@ import Footer from '../components/sections/Footer';
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-x-clip bg-canvas">
+    <main className="min-h-screen overflow-x-clip bg-canvas pt-[43px] min-[744px]:pt-[52px] lg:pt-[43px]">
       <Navbar />
       <Hero />
       <ProblemSolution />
