@@ -42,12 +42,24 @@
 
 .leftCard,
 .rightCard {
+  /*
+   * Single-sourced card geometry.
+   *
+   * `scale` grows the card about its centre WITHOUT changing its layout box, so
+   * the rendered edges sit --card-overhang outside the box on each side. Any
+   * position that needs to align a card's visible edge has to account for that;
+   * deriving it here means the width and the scale can only be changed in one
+   * place and the positions follow.
+   */
+  --card-width: 23.701cqw;
+  --card-scale: 1.12;
+  --card-overhang: calc(var(--card-width) * (var(--card-scale) - 1) / 2);
   position: absolute;
   z-index: 2;
   top: 3.421cqw;
-  width: 23.701cqw;
+  width: var(--card-width);
   height: 22.842cqw;
-  scale: 1.12;
+  scale: var(--card-scale);
 }
 
 .leftCard {
@@ -736,12 +748,20 @@
  * Motion Lab preview honest.
  */
 @container (min-width: 900px) {
+  /*
+   * Wide desktop pushes the cards out to the content-column edges. They are
+   * positioned by their RENDERED edges, not their layout boxes: `left: 0` put
+   * the layout box on the boundary and left the scaled card hanging 1.422cqw
+   * past it on each side, which the container's `overflow: hidden` then cut off.
+   * Insetting by --card-overhang lands the visible edges exactly on 0 and 100cqw
+   * — the same intent the literals were reaching for, minus the clipping.
+   */
   .leftCard {
-    left: 0cqw;
+    left: var(--card-overhang);
   }
 
   .rightCard {
-    left: 76.299cqw;
+    left: calc(100cqw - var(--card-width) - var(--card-overhang));
   }
 
   .connector {
