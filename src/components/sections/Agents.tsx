@@ -8,7 +8,7 @@ export default function Agents() {
   return (
     <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-16 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center min-[744px]:w-[680px] lg:w-full lg:flex-row lg:items-stretch">
-        <FadeIn className="w-full sm:max-w-[640px] min-[744px]:w-[520px] lg:w-[809px] lg:max-w-none">
+        <FadeIn className="w-full sm:max-w-[640px] min-[744px]:-mb-16 min-[744px]:w-[520px] lg:mb-0 lg:w-[809px] lg:max-w-none">
           <div className="aspect-[809/520] w-full overflow-hidden [&>div]:h-full [&>div]:w-full [&_svg]:h-auto [&_svg]:w-full min-[744px]:aspect-[809/692] min-[744px]:overflow-visible min-[744px]:[&_svg]:h-full">
             <AgentVisual />
           </div>

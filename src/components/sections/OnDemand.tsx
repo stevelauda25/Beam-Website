@@ -244,7 +244,7 @@ export default function OnDemand() {
 
   const keyVisual = (
     <div
-      className="relative aspect-[809/692] max-w-full"
+      className="relative aspect-[809/692] max-w-full min-[744px]:-mb-16 lg:mb-0"
       style={{
         width: isDesktop
           ? 'min(809px, 56vw, 116svh)'
@@ -300,7 +300,7 @@ export default function OnDemand() {
   );
 
   const mobileContent = (
-    <div className="mx-auto flex h-full w-full max-w-[500px] flex-col items-start justify-start gap-6 overflow-x-hidden px-5 pt-12 sm:max-w-[640px] sm:px-8 sm:pt-16 min-[744px]:w-[680px] min-[744px]:max-w-none min-[744px]:items-center min-[744px]:justify-center min-[744px]:gap-8 min-[744px]:px-0 min-[744px]:pt-0 lg:justify-start">
+    <div className="mx-auto flex h-full w-full max-w-[500px] flex-col items-start justify-start gap-6 overflow-x-hidden px-5 pt-12 sm:max-w-[640px] sm:px-8 sm:pt-16 min-[744px]:w-[680px] min-[744px]:max-w-none min-[744px]:-translate-y-12 min-[744px]:items-center min-[744px]:justify-center min-[744px]:gap-8 min-[744px]:px-0 min-[744px]:pt-0 lg:translate-y-0 lg:justify-start">
       {keyVisual}
       {textHeader}
       {subheaderList}
