@@ -15,7 +15,6 @@ import type { ReactNode } from 'react';
 import ProblemSolution from '../../components/sections/ProblemSolution';
 import OnDemand from '../../components/sections/OnDemand';
 import { SolutionVisual } from '../../components/visuals/solution/SolutionVisual';
-import { SyncVisual } from '../../components/visuals/sync/SyncVisual';
 import { OnDemandVisual } from '../../components/visuals/on-demand/OnDemandVisual';
 import { OnDemandVisual2 } from '../../components/visuals/on-demand/OnDemandVisual2';
 import { OnDemandVisual3 } from '../../components/visuals/on-demand/OnDemandVisual3';
@@ -26,6 +25,7 @@ import { FooterVisual } from '../../components/visuals/footer/FooterVisual';
 
 // Lab-only. Not a production component.
 import { DialKitProof } from './proof/DialKitProof';
+import { SyncTrailTuning } from './tuning/SyncTrailTuning';
 
 export type HarnessKind = 'isolated' | 'scroll' | 'proof';
 export type StageTheme = 'light' | 'dark';
@@ -146,8 +146,8 @@ const entries: LabEntry[] = [
     sizing: 'intrinsic',
     intrinsicWidth: 809,
     notes:
-      'Intro plays once on first intersection, then parks. Hover (mouse) loops; Enter/Space replays. Use Replay to remount and re-watch the intro.',
-    render: () => <SyncVisual />,
+      'Intro plays once on first intersection, then parks. Hover (mouse) loops. Four trail dials are wired live: Trail Length, Dot Scale, Glow Intensity and Glow Radius. All four are multipliers over the baked production profile, so 1.00x is what the homepage renders, and Reset to production returns there. Tuning and the Lock Tuning switch persist in localStorage across entry switches, remounts and refreshes; locking removes the four dials from the panel so they cannot be edited. Timing, the 1.8s transaction, connector and direction are fixed and out of reach from the panel.',
+    render: () => <SyncTrailTuning />,
   },
   {
     id: 'on-demand-1',
