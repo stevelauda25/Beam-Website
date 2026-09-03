@@ -310,6 +310,10 @@ Motion must make it obvious that **running one command results in an attached, r
 
 This is the corrected, authoritative mapping. Feedback is scoped exactly as Steve gave it.
 
+**Two rounds of feedback exist.** The original Slack thread, and the **huddle round of 2026-09-03**. Where they conflict, the huddle round wins and is marked `HUDDLE 2026-09-03 — AUTHORITATIVE` inline. Everything not contradicted by the huddle remains in force.
+
+The huddle round is materially different in kind: the Slack thread was mostly *reactions* ("too slow", "weird and raw"), whereas the huddle gives **prescriptive, checkable behavior** for several sections. Treat huddle items as acceptance criteria, not as sentiment to interpret.
+
 ## Global
 
 > "All the animations are not polished at all."
@@ -348,6 +352,52 @@ This observation is useful context. **Do not prescribe the final implementation 
 
 This is a factual record only. It does not change the decision that Problem / Solution's scroll-driven storytelling remains allowed — see §6.
 
+### HUDDLE 2026-09-03 — AUTHORITATIVE
+
+Steve specified the behavior of **both** scroll states. This supersedes any earlier reading that both states should express a completed source → travel → arrival connection.
+
+#### State 1 — "Your workflow breaks between environments"
+
+This state represents a **FAILED process** and must not read as a successful one.
+
+| # | Acceptance criterion |
+|---|---|
+| PS1 | Pills start in a **neutral / gray** state. No pill shows an active colour before it has been reached. |
+| PS2 | The laser beam **must not complete the connection.** It travels approximately **halfway** and stops. |
+| PS3 | Where the incomplete beam reaches / impacts the relevant pills, those pills change **gray → red**. |
+| PS4 | The impact produces a **localized ripple / impact reaction** at the point of contact. Localized — not a full-scene event. |
+| PS5 | After turning red, the pills **slide out** and are **replaced by the next pills**. |
+| PS6 | The slide-replacement must read as **repeated workflow failure / friction**, not as successful progression to a next step. |
+
+Required semantic reading:
+
+```
+attempted workflow
+→ incomplete connection
+→ failure / error state
+→ repeated replacement / friction
+```
+
+**Must NOT happen:** the beam must never visually reach the destination in this state. Do not let the replacement cadence read as a successful pipeline advancing.
+
+#### State 2 — "One workspace. Every environment"
+
+| # | Acceptance criterion |
+|---|---|
+| PS7 | **Remove the black pills** currently used as helper elements to show line movement. |
+| PS8 | The connector / beam animation itself carries the motion and the progression. |
+| PS9 | Do not add helper objects when the main connector already explains the movement. |
+
+Required semantic reading:
+
+```
+successful Beam state
+→ clear direct connection
+→ no redundant motion indicator
+```
+
+**Relationship to the earlier "beam lasers like Clerk" note:** that item (§8 #1) remains unresolved as to *which* Clerk animation Steve meant, but it is **no longer blocking**. The huddle specifies the required behavior directly, so implementation proceeds from PS1–PS9; Clerk stays a motion-quality reference only.
+
 ---
 
 ## Sync — One directory, every machine
@@ -358,6 +408,28 @@ This is a factual record only. It does not change the decision that Problem / So
 
 **Do not invent what Steve specifically disliked.** He gave no reason, no reference, and no direction. His screenshot shows a static frame. The reason remains **partially unresolved** — see §8.
 
+### HUDDLE 2026-09-03 — AUTHORITATIVE
+
+**The "weird and raw" complaint is now closed.** The rebuilt Sync motion is FOUNDER APPROVED and shipped to `main`. §8 #2 no longer blocks anything.
+
+**Locked — do not revisit without new direction:** the semantic direction `MacBook Pro → Beam Workspace → Cloud VM` for **both** ADD and DELETE; the 1800ms real-clock transaction; the linear counter; hug-content panel geometry; the non-clickable interaction affordance.
+
+**The remaining ask is the dotted trail only.** Refine its treatment toward Clerk's motion quality.
+
+| # | Acceptance criterion |
+|---|---|
+| SY1 | Cleaner, more even **dot spacing**. |
+| SY2 | Smoother **path-following** — no visible stepping along the geometry. |
+| SY3 | Stronger **leading-edge clarity**; the head must read as the front of the propagation. |
+| SY4 | More natural **fading tail**, resolving to zero rather than cutting off. |
+| SY5 | Better **consistency through curves and bends** — spacing and opacity must not distort at corners. |
+| SY6 | A more refined **futuristic / data-propagation** feel. |
+| SY7 | **Restrained** glow / luminance. Subtle, localized. |
+
+**Must NOT happen:** no solid pill, no continuous laser, no full-path marquee. The trail must remain **localized, directional, smooth, precise**, and must continue to communicate **state propagation / synchronization** — never *energy beam* or decorative movement.
+
+**Clerk scope reminder:** Clerk is a **motion-quality** benchmark here. Do not import Clerk's colours, layout, visual design, or branding. See §4.0.
+
 ---
 
 ## On-Demand — The whole tree, a fraction of the disk
@@ -367,6 +439,42 @@ This is a factual record only. It does not change the decision that Problem / So
 His attached reference is Clerk's **"Pixel-perfect UIs, embedded in minutes"** component gallery.
 
 **Requirement:** state progression must feel like one continuous surface rather than disconnected visual swaps.
+
+### HUDDLE 2026-09-03 — AUTHORITATIVE
+
+Steve resolved *how* the seamlessness should be achieved. This section is **ONE CONTINUOUS VISUAL STORY** told with **ONE PERSISTENT PANEL**.
+
+```
+ONE persistent panel
+→ continuous transformation
+→ three product points
+```
+
+not
+
+```
+three disconnected animations
+```
+
+**Object permanence is the governing principle here.** The three points are not separate scenes. Do not replace the panel with a different object when the same object can transform into the next state.
+
+| # | Point | Acceptance criterion |
+|---|---|---|
+| OD1 | all three | The **same panel / object persists** across all three points. It transforms; it is not swapped out. |
+| OD2 | *Everything appears instantly* | Repo and files must **not** all reveal at the same instant. They reveal **sequentially, in quick succession**. |
+| OD3 | *Everything appears instantly* | The sequence must still feel **almost instant overall**. The stagger buys readability, not duration. |
+| OD4 | *Contents load on demand* | The **same panel continues** from the previous state: it **moves upward**, **scales down**, and reveals / transitions into the "On your disk …" state or information. |
+| OD5 | *Built for huge repos* | The **same panel** transitions / **zooms again** into the next visual state. |
+
+Desired feel for OD2/OD3:
+
+```
+repo / file reveal
+→ rapid sequential progression
+→ full tree visible quickly
+```
+
+**Must NOT happen:** everything popping simultaneously; **or** a slow staggered reveal. Both fail this criterion — it is a narrow target between the two.
 
 ---
 
@@ -401,6 +509,21 @@ Scoped to the third On-Demand visual (`OnDemandVisual3`).
 
 **Do not reduce this feedback to duration alone.** Current loop: `HALF_CYCLE_DURATION_MS = 5200`, full loop 10,400ms.
 
+### HUDDLE 2026-09-03 — AUTHORITATIVE — SUPERSEDES THE ABOVE
+
+**This overrides the two-requirement reading.** In the huddle Steve stated the **current animation concept / choreography is already acceptable**. The comprehension objection is withdrawn.
+
+**The primary change is SPEED.**
+
+| # | Acceptance criterion |
+|---|---|
+| AG1 | Same story, same visual meaning. |
+| AG2 | **Faster pacing** — speed up the overall animation. |
+| AG3 | Less waiting; quicker time to a readable result. |
+| AG4 | Use **Clerk's perceived speed** as the quality reference (§4.1 nominal ≠ perceived, §4.2). |
+
+**Do NOT redesign the entire sequence** unless a technical issue requires it. The earlier guardrail *"do not treat this as a duration problem only"* and *"the three guarantees must become separately legible"* are **no longer requirements**; they may still be applied opportunistically where they cost nothing, but they must not justify a rebuild.
+
 ---
 
 ## Share & Host — From drop to deploy
@@ -408,6 +531,26 @@ Scoped to the third On-Demand visual (`OnDemandVisual3`).
 > "The animation here is incredibly slow, so slow. Refer to how fast the animation is at Clerk website."
 
 **Requirement:** use Clerk's perceived speed as the PRIMARY benchmark. The visitor should understand the meaningful action and result within normal section dwell time. Current cycle: 12,000ms.
+
+### HUDDLE 2026-09-03 — AUTHORITATIVE
+
+Speed is confirmed, and a **causal colour rule** is added.
+
+| # | Acceptance criterion |
+|---|---|
+| SH1 | Speed up the overall animation. |
+| SH2 | Pills begin **GRAY** while not yet connected. |
+| SH3 | When the connection **reaches** a pill, that pill changes to its **active colour**. |
+| SH4 | The colour change must be **causally triggered by the connection arriving** — not by an independent timer or a decorative cycle. |
+
+State logic:
+
+```
+DISCONNECTED = gray
+CONNECTED    = active colour
+```
+
+**Must NOT happen:** **do not show active colour before connection.** The section must communicate `connection progression → state activation`, never decorative colour cycling.
 
 ---
 
@@ -427,6 +570,31 @@ COMPOSITION ALREADY VISIBLE
 ```
 
 **Do not reintroduce a large UI reveal before the terminal action.**
+
+### HUDDLE 2026-09-03 — AUTHORITATIVE
+
+Reconfirmed and tightened. This **overrides any previous reveal-intro interpretation** anywhere in this document.
+
+| # | Acceptance criterion |
+|---|---|
+| SE1 | At the beginning, supporting visual elements are **already visible**. |
+| SE2 | Do **not** introduce the visual by progressively revealing all supporting elements. |
+| SE3 | The main animation focus is **TERMINAL TYPING**. |
+| SE4 | The animation **autoplays**. |
+| SE5 | The animation **auto-loops**. |
+
+Core motion structure:
+
+```
+stable composition
+→ terminal typing
+→ readable result
+→ loop
+```
+
+**Must NOT happen:** any reveal choreography wrapped around the terminal. If an element does not need to appear, it is already there.
+
+**Note on §6 Looping & Replay:** that rule prefers sequences that settle over sequences that loop. Steve has explicitly required auto-loop here, so **Secrets is an authorised exception**. The loop must still rest on a chosen hero frame, pause off-screen, and stay interruptible.
 
 ---
 
@@ -745,6 +913,33 @@ One trigger produces one focal movement and one readable result. When several th
 
 Motion must show cause and effect. A state change should have a visible origin, a visible transition, and a visible resolution. Ambient activity is not a substitute for a readable event.
 
+## Neutral-before-activation — the 2026-09-03 huddle pattern
+
+Steve's huddle round is internally consistent. The pattern behind it, stated once so it does not have to be rediscovered per section:
+
+1. **State should be visually neutral BEFORE activation.** Gray is the honest default. An element that has not been reached has no business showing an active colour.
+2. **Colour / state changes happen because of a visible causal event** — something arrived. Not because a timer elapsed.
+3. **Failed processes must not visually complete.** If the story is breakage, the connection stops short. A completed-looking animation contradicts the copy beside it.
+4. **Successful processes must clearly complete.** The converse holds; do not hedge a success state.
+5. **Persistent objects transform rather than being replaced** wherever the same object can carry the next state. Object permanence over scene-swapping.
+6. **Remove redundant helper motion.** If the primary element already explains the movement, a second indicator is noise.
+7. **A section that already communicates correctly is usually sped up, not redesigned.** Redesign needs a comprehension failure or a technical reason.
+8. **Motion communicates `cause → state change → result`.**
+
+This does not replace the Beam sequence — it is how each beat inside it is judged:
+
+```
+STABLE COMPOSITION
+→ IMMEDIATE RESPONSE
+→ FOCUSED MOTION SEQUENCE
+→ CLEAR RESULT / STATE
+→ QUIET SETTLE
+```
+
+And it does not replace the standing question asked of every animation:
+
+> **"What is this animation communicating?"**
+
 ## Rest State
 
 **Every looping, autoplay, or sequenced explanatory visual must have a deliberately chosen rest / result state that remains meaningful when motion is not running.** The rest state is what most visitors and reviewers see. Never rest on frame 0 of a loop, and never rest mid-transformation.
@@ -895,7 +1090,9 @@ Guardrails, not choreography. Final animation design is not specified here excep
 
 **Emil support:** object permanence; `linear` belongs to constant/ambient motion; line-drawing via `stroke-dashoffset` as a connector technique; performance — `background-position` is a paint-tier property and `will-change` should follow observed jank, not precede it.
 
-**Must NOT happen:** do not remove the scroll-driven concept — it is not the feedback target. Do not destabilise the machine-card endpoints. Do not let the connector keep running independently of the section's causal sequence.
+**Huddle 2026-09-03 (authoritative):** State 1 is a FAILED process — pills start gray, the beam travels only ~halfway, impact turns pills gray → red with a localized ripple, then red pills slide out and are replaced (PS1–PS6). State 2 removes the black helper pills; the connector alone carries the motion (PS7–PS9).
+
+**Must NOT happen:** do not remove the scroll-driven concept — it is not the feedback target. Do not destabilise the machine-card endpoints. Do not let the connector keep running independently of the section's causal sequence. **Do not let State 1's beam reach the destination**, and do not let its replacement cadence read as successful progression.
 
 ---
 
@@ -903,13 +1100,15 @@ Guardrails, not choreography. Final animation design is not specified here excep
 
 **Must remain understandable:** a change made on one machine arrives on the others by itself, secrets included.
 
-**Steve constraint:** *"weird and raw"* — both rest state and motion must feel intentional. **Reason unresolved; do not invent one.**
+**Steve constraint:** *"weird and raw"* — **CLOSED.** The rebuilt motion is FOUNDER APPROVED and live on `main`.
+
+**Huddle 2026-09-03 (authoritative):** the only open ask is dotted-trail refinement toward Clerk's motion quality — spacing, path-following, leading-edge clarity, tail falloff, consistency through bends, restrained luminance (SY1–SY7). Semantics, the 1800ms real-clock transaction, the linear counter, hug geometry and the non-clickable affordance are LOCKED.
 
 **Clerk benchmark:** stable composition legible at rest; relationships established by stable geometry before motion.
 
 **Emil support:** choose a deliberate hero/rest frame rather than resting on frame 0; object permanence for propagation; interruptibility.
 
-**Must NOT happen:** do not assume the complaint is about motion speed. Do not leave a visitor who returns to the section with a frozen, meaningless frame. Do not leave replay available only to mouse users. **Confirm the reason with Steve before committing to a rebuild direction.**
+**Must NOT happen:** do not regress the approved semantics or timing model. Do not leave a visitor who returns to the section with a frozen, meaningless frame. Do not leave replay available only to mouse users. No solid pill, no continuous laser, no full-path marquee, no Clerk colours or branding.
 
 ---
 
@@ -923,7 +1122,9 @@ Guardrails, not choreography. Final animation design is not specified here excep
 
 **Emil support:** duration proportional to how much changed; cohesion — sub-animations share one timing feel; crossfade with a small directional hint and light blur rather than a heavy swap; avoid two competing focal events.
 
-**Must NOT happen:** demonstrations must not begin mid-cycle when the visitor arrives. The list and the visual must not both claim attention on every step change. Do not treat the existing pin/scrub structure as fixed.
+**Huddle 2026-09-03 (authoritative):** ONE persistent panel transforms across all three points (OD1). *Everything appears instantly* reveals sequentially in quick succession while still feeling almost instant (OD2–OD3). *Contents load on demand* moves the same panel up and scales it down into the "On your disk …" state (OD4). *Built for huge repos* zooms the same panel again (OD5).
+
+**Must NOT happen:** demonstrations must not begin mid-cycle when the visitor arrives. The list and the visual must not both claim attention on every step change. Do not treat the existing pin/scrub structure as fixed. **Do not build three disconnected animations, and do not swap in a new panel where the existing one can transform.** Do not reveal everything simultaneously, and do not make the stagger slow.
 
 ---
 
@@ -931,13 +1132,15 @@ Guardrails, not choreography. Final animation design is not specified here excep
 
 **Must remain understandable:** an agent operates on the same real workspace, bounded by a scope the user granted, and what it did is recorded.
 
-**Steve constraint:** *"I am not sure what's going on here, the animation is very very slow."* — **both** comprehension and perceived speed must improve.
+**Steve constraint:** *"I am not sure what's going on here, the animation is very very slow."* — **superseded.**
+
+**Huddle 2026-09-03 (authoritative):** the concept and choreography are **acceptable as-is**. The primary change is **SPEED** (AG1–AG4): same story, same meaning, faster pacing, less waiting, quicker readable result, Clerk's perceived speed as reference.
 
 **Clerk benchmark:** one card / one feature / one concrete artefact — abstract guarantees shown as the evidence they produce; discrete one-shot state steps rather than one continuous timeline.
 
 **Emil support:** stagger varied by importance (six confirmations one percentage point apart is textbook uniform stagger); one focal beat at a time; interruptibility; purpose gate.
 
-**Must NOT happen:** do not treat this as a duration problem only. Do not leave the three distinct guarantees expressed as one undifferentiated cluster of fades. Note the implementation risk: this visual's CSS targets Figma-generated ids and raw path prefixes, so changes fail silently — verify visually, not just by build success.
+**Must NOT happen:** **do not redesign the sequence** unless a technical issue requires it. Note the implementation risk: this visual's CSS targets Figma-generated ids and raw path prefixes, so changes fail silently — verify visually, not just by build success.
 
 ---
 
@@ -947,11 +1150,13 @@ Guardrails, not choreography. Final animation design is not specified here excep
 
 **Steve constraint:** *"incredibly slow, so slow. Refer to how fast the animation is at Clerk website."*
 
+**Huddle 2026-09-03 (authoritative):** speed up the overall animation, and add causal colour state — pills begin GRAY while unconnected and switch to their active colour **only when the connection reaches them** (SH1–SH4).
+
 **Clerk benchmark:** perceived speed — meaningful displacement early, quiet settle; nothing on Clerk runs a 12-second semantic cycle.
 
 **Emil support:** exits shorter than entries; easing-first before shortening; one focal movement per trigger.
 
-**Must NOT happen:** the two branches must not compete inside one cycle such that following one means missing the other. Perceived duration must not contradict the "instantly" and "under 30 seconds" claims beside it. Do not simply shorten the existing timeline without strengthening the curve — that yields fast but flat motion.
+**Must NOT happen:** the two branches must not compete inside one cycle such that following one means missing the other. Perceived duration must not contradict the "instantly" and "under 30 seconds" claims beside it. Do not simply shorten the existing timeline without strengthening the curve — that yields fast but flat motion. **Do not show a pill in its active colour before the connection has reached it**, and do not drive colour from a timer independent of the connector.
 
 ---
 
@@ -960,6 +1165,8 @@ Guardrails, not choreography. Final animation design is not specified here excep
 **Must remain understandable:** secrets arrive with the workspace and become available to the running application, without ever being committed or copied.
 
 **Steve constraint:** explicit and prescriptive — composition visible at all times; terminal typing is the intro animation; no element-revealing opening.
+
+**Huddle 2026-09-03 (authoritative):** reconfirmed, plus the animation must **autoplay** and **auto-loop** (SE1–SE5). This is an authorised exception to §6 Looping & Replay's preference for settling.
 
 **Clerk benchmark:** command-line focal element with the interface already established; `terminal-cursor-blink` confirms terminal typing as a legitimate primitive.
 
@@ -989,16 +1196,19 @@ Guardrails, not choreography. Final animation design is not specified here excep
 
 | # | Unresolved item | Blocks |
 |---|---|---|
-| 1 | **The exact Clerk animation Steve personally meant by "beam lasers."** The screenshot narrows it to Clerk's dark feature-card grid; the travelling-highlight observed manually is a CANDIDATE, not a confirmed match. | Committing to a final Problem/Solution connector direction |
-| 2 | **The exact reason Sync reads as "weird and raw."** No reason, reference, or direction was given. A resting-state hypothesis exists but is unverified. | Choosing a Sync rebuild direction |
-| 3 | **The exact target duration for Agents.** "Very very slow" without a target. | Fixing a numeric budget for Agents |
-| 4 | **The exact target duration for Share & Host.** "Incredibly slow" with Clerk named generally, not a specific section. | Fixing a numeric budget for Share & Host |
+| 1 | ~~**The exact Clerk animation Steve personally meant by "beam lasers."**~~ Still not identified, but **NO LONGER BLOCKING** — the huddle of 2026-09-03 specifies Problem/Solution behavior directly (PS1–PS9). Clerk remains a motion-quality reference only. | Nothing. Implement from PS1–PS9 |
+| 2 | ~~**The exact reason Sync reads as "weird and raw."**~~ **CLOSED.** The rebuilt Sync motion is FOUNDER APPROVED and shipped. Only dotted-trail refinement remains (SY1–SY7). | Nothing |
+| 3 | **The exact target duration for Agents.** Still no number. Scope is now narrowed to speed only (AG1–AG4); the concept is accepted. Clerk's perceived-speed profile is the reference in the absence of a figure. | Fixing a numeric budget for Agents |
+| 4 | **The exact target duration for Share & Host.** Still no number. The gray → active causal rule (SH2–SH4) is specified; the duration is not. | Fixing a numeric budget for Share & Host |
 | 5 | **Which On-Demand timing is the canonical tempo** — whether the count-up or the ready state sets the correct pace. | Deciding which value to change |
 | 6 | **Whether the Multi-tenancy sticky visual internally changes state across all three steps.** Structure implies it; not observed. | Treating it as a verified state-transformation reference |
 | 7 | **Whether Steve's silence on Hero and Pricing means approval or omission.** | Prioritising Hero work |
 | 8 | **Whether mobile is in scope.** As of `06880ba` the Problem/Solution pinned scene runs on all breakpoints (shorter range under 1024px, features as a mobile carousel); On-Demand's mobile behavior has not been re-verified. | Scoping breakpoint behavior |
-| 9 | **Whether DialKit or any live-tuning harness may be introduced.** Not installed; installation not approved. | Tooling for tuning |
+| 9 | ~~**Whether DialKit or any live-tuning harness may be introduced.**~~ **CLOSED.** DialKit is installed as a devDependency and lives in the dev-only Motion Lab; it is not wired to any production visual and is excluded from the production bundle. | Nothing |
 | 10 | **How to resolve two animation libraries** (framer-motion 13.1.1 and gsap 3.15.0), given GSAP cannot produce springs. | Library strategy |
+| 11 | **Which pills State 1 replaces, and how many replacement rounds run before the scroll state ends.** The huddle specifies the behavior (gray → red → slide out → replaced) but not the count or the loop condition. | Fixing State 1's replacement cadence |
+| 12 | **How far "approximately halfway" is, precisely.** No figure given for where the failed beam stops. | Locking State 1's beam travel distance |
+| 13 | **Whether the On-Demand persistent panel must survive across the existing pin/scrub boundaries** or may re-mount between them while appearing continuous. | Choosing the On-Demand implementation strategy |
 
 ---
 
@@ -1038,13 +1248,13 @@ MOTION QA AGAINST CLERK QUALITY + STEVE FEEDBACK
 
 | Beam Section | Steve Feedback | Beam Meaning | Primary Clerk Benchmark / Pattern | Emil Supporting Principle | Refinement Direction |
 |---|---|---|---|---|---|
-| **Problem / Solution** | "The beam lasers, need to make it like Clerk" | Three manual setup steps replaced by one mount that arrives ready | **CANDIDATE — likely relevant, exact Steve reference not independently confirmed.** Travelling-state: stable source → stable path → travelling state → destination resolves | Object permanence; `linear` is ambient vocabulary; `stroke-dashoffset` line-drawing; composite-only properties | Current infinite repeating connector should evolve toward readable source → travel → arrival causality, using Clerk's travelling-state behavior as the primary experiential benchmark **(CANDIDATE — not independently confirmed as Steve's exact reference; confirm before locking direction)**, with Emil's object-permanence and performance guidance supporting implementation. Scroll-driven concept retained. |
-| **Sync** | "This looks really weird and raw" | An edit on one machine arrives on the others by itself | Stable composition legible at rest; relationship established by geometry before motion | Deliberate hero/rest frame; object permanence; interruptibility | Raise both the resting composition and the motion to an intentional standard, and make propagation — not just connection — readable. **Direction pending clarification from Steve on what specifically reads as raw.** |
-| **On-Demand — seamless transition** | "Make the transition seamless like this section at Clerk" | The full tree is present as references; opening a file fetches it | Component gallery as a stable frame whose interior changes; Multi-tenancy persistent sticky surface at ~640px per step | Cohesion — one timing feel; crossfade with directional hint and light blur; one focal event | Move from disconnected visual swaps toward one continuous surface whose interior transforms, with each demonstration beginning when the visitor arrives at it. Existing pin/scrub structure is open to rebuild. |
+| **Problem / Solution** | "The beam lasers, need to make it like Clerk" | Three manual setup steps replaced by one mount that arrives ready | **CANDIDATE — likely relevant, exact Steve reference not independently confirmed.** Travelling-state: stable source → stable path → travelling state → destination resolves | Object permanence; `linear` is ambient vocabulary; `stroke-dashoffset` line-drawing; composite-only properties | **HUDDLE 2026-09-03 supersedes the open-ended direction.** State 1 is a FAILED process: gray pills, beam stops ~halfway, impact turns pills red with a localized ripple, red pills slide out and are replaced — reading as repeated friction, never as a completed connection. State 2 drops the black helper pills and lets the connector alone carry the motion. Scroll-driven concept retained. |
+| **Sync** | "This looks really weird and raw" | An edit on one machine arrives on the others by itself | Stable composition legible at rest; relationship established by geometry before motion | Deliberate hero/rest frame; object permanence; interruptibility | **SHIPPED AND APPROVED.** MacBook → Beam → Cloud for both ADD and DELETE, 1800ms real-clock transaction, linear 0.0 → 1.8 counter, hug-content panels, non-clickable. **Remaining ask:** refine the dotted trail toward Clerk's motion quality — spacing, path-following, leading-edge clarity, tail falloff, consistency through bends, restrained luminance. Motion quality only; no Clerk colours or branding. |
+| **On-Demand — seamless transition** | "Make the transition seamless like this section at Clerk" | The full tree is present as references; opening a file fetches it | Component gallery as a stable frame whose interior changes; Multi-tenancy persistent sticky surface at ~640px per step | Cohesion — one timing feel; crossfade with directional hint and light blur; one focal event | **HUDDLE 2026-09-03:** ONE persistent panel transforms across all three points. *Everything appears instantly* reveals sequentially in quick succession yet still feels almost instant; *Contents load on demand* moves that same panel up and scales it down; *Built for huge repos* zooms it again. Object permanence over scene-swapping. Existing pin/scrub structure is open to rebuild. |
 | **On-Demand — Built for huge repos timing** | "The ready in 1.2s is too slow compared to the number animation above it" | Large repos mount without filling local disk | Perceived speed — meaningful displacement early, no dead interval | Duration proportional to how much changed; sub-animations share one timing feel | Bind the count-up and the result state into one coherent sequence and eliminate the ≈880ms dead interval, so the result reads as the conclusion of the count rather than a separate later event. |
-| **Agents** | "I am not sure what's going on here, the animation is very very slow" | An agent works on the real workspace, scope-bounded and audited | One card / one feature / one concrete artefact; discrete one-shot state steps | Stagger varied by importance; one focal beat; purpose gate; interruptibility | Refinement should prioritize time-to-understanding, one focal causal beat at a time, and a readable result rather than merely shortening a 10.4s timeline. The three guarantees must become separately legible. |
-| **Share & Host** | "Incredibly slow, so slow. Refer to how fast the animation is at Clerk website" | One file becomes a link or a live site in a single step | Perceived speed; nothing on Clerk runs a 12s semantic cycle | Easing-first before shortening; exits shorter than entries; one focal movement per trigger | Compress time-to-main-idea so the meaningful action and result land within normal dwell, and stop the two branches competing within one cycle — strengthening the curve rather than only cutting duration. |
-| **Secrets** | "Should not start by revealing the elements… focus on the terminal typing as the intro" | Secrets travel with the workspace and leave no trace | Command-line focal element with interface already established; `terminal-cursor-blink` primitive | One entrance per container; `linear` + `steps()` for typing; reduced-motion jump-don't-tween | Keep the composition established first, then terminal typing becomes the semantic trigger, directly following Steve's instruction and matching Clerk's stable-composition interaction pattern. |
+| **Agents** | "I am not sure what's going on here, the animation is very very slow" | An agent works on the real workspace, scope-bounded and audited | One card / one feature / one concrete artefact; discrete one-shot state steps | Stagger varied by importance; one focal beat; purpose gate; interruptibility | **HUDDLE 2026-09-03 supersedes the comprehension requirement.** The concept and choreography are accepted; the primary change is **SPEED** — same story, same meaning, faster pacing, less waiting, quicker readable result, with Clerk's perceived speed as the reference. Do not redesign the sequence unless a technical issue requires it. |
+| **Share & Host** | "Incredibly slow, so slow. Refer to how fast the animation is at Clerk website" | One file becomes a link or a live site in a single step | Perceived speed; nothing on Clerk runs a 12s semantic cycle | Easing-first before shortening; exits shorter than entries; one focal movement per trigger | Compress time-to-main-idea so the meaningful action and result land within normal dwell, and stop the two branches competing within one cycle — strengthening the curve rather than only cutting duration. **HUDDLE 2026-09-03 adds causal colour:** pills begin GRAY while unconnected and switch to their active colour only when the connection reaches them. Never active before connection. |
+| **Secrets** | "Should not start by revealing the elements… focus on the terminal typing as the intro" | Secrets travel with the workspace and leave no trace | Command-line focal element with interface already established; `terminal-cursor-blink` primitive | One entrance per container; `linear` + `steps()` for typing; reduced-motion jump-don't-tween | Keep the composition established first, then terminal typing becomes the semantic trigger, directly following Steve's instruction and matching Clerk's stable-composition interaction pattern. **HUDDLE 2026-09-03 adds:** supporting elements already visible at the start, and the animation must **autoplay and auto-loop** — an authorised exception to the preference for settling. |
 | **Footer** | "Looks promising. But the ripple blast feels weird — tweaked or removed altogether" | One command results in an attached, ready workspace | Single ambient loop, slow, faint, eventless; no pointer-reactive ambient near conversion | Purpose gate; reduced motion removes decorative motion; press/hover feedback on the CTA | Preserve the approved/promising direction while removing or heavily subordinating the ripple event so ambient motion no longer competes with the CTA, and let the attach confirmation read as a consequence of the command. |
 
 ---
@@ -1066,4 +1276,4 @@ Beam motion is successful when:
 
 ---
 
-*This document synthesizes: the Beam product-context and current-motion audit; Steve's Slack feedback (authoritative corrected scope); the Clerk technical benchmark (homepage + four product pages, direct inspection); the Clerk experiential benchmark (manual screen recordings); and the Emil Kowalski / animations.dev craft standards installed at user level.*
+*This document synthesizes: the Beam product-context and current-motion audit; Steve's Slack feedback (authoritative corrected scope); **Steve's huddle round of 2026-09-03 (latest authoritative section direction, marked `HUDDLE 2026-09-03` inline)**; the Clerk technical benchmark (homepage + four product pages, direct inspection); the Clerk experiential benchmark (manual screen recordings); and the Emil Kowalski / animations.dev craft standards installed at user level.*
