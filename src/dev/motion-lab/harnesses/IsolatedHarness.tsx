@@ -15,12 +15,18 @@
  *                nested SVGs — doing so stretches icons inside cards and
  *                clips their text.
  *
+ * Logical vs visible width: the stage is laid out at the preset / production
+ * width (so container queries and `cqw` resolve as on the homepage) and then
+ * visually scaled down by FittedStage to fit the preview column. The lab's own
+ * chrome never changes which breakpoint the visual is in.
+ *
  * Replay is a harness-level remount via `key`. No production animation logic is
  * touched to make this work.
  */
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import styles from '../MotionLab.module.css';
 import type { SizingMode, StageTheme } from '../registry';
+import { FittedStage } from './FittedStage';
 
 type IsolatedHarnessProps = {
   /** Bumped by the lab to force a remount of the production subtree. */
@@ -34,6 +40,8 @@ type IsolatedHarnessProps = {
   aspect?: string;
   children: ReactNode;
 };
+
+type Fit = { scale: number; available: number; logical: number };
 
 export function IsolatedHarness({
   replayKey,
@@ -54,23 +62,52 @@ export function IsolatedHarness({
         : width;
 
   const isFill = sizing === 'fill';
+  const [fit, setFit] = useState<Fit | null>(null);
+
+  const stageNode = (
+    <div
+      className={`${styles.stage} ${stage === 'dark' ? styles.stageDark : ''}`}
+      style={{ width: canvasWidth ? `${canvasWidth}px` : '100%' }}
+    >
+      <div
+        className={styles.stageInner}
+        style={isFill && aspect ? { aspectRatio: aspect } : undefined}
+      >
+        {/* key remounts the real component so one-shot sequences replay */}
+        <div key={replayKey} className={styles.mountPoint} data-sizing={sizing}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className={styles.hoverGutter}>
-      <div
-        className={`${styles.stage} ${stage === 'dark' ? styles.stageDark : ''}`}
-        style={{ width: canvasWidth ? `${canvasWidth}px` : '100%' }}
-      >
-        <div
-          className={styles.stageInner}
-          style={isFill && aspect ? { aspectRatio: aspect } : undefined}
-        >
-          {/* key remounts the real component so one-shot sequences replay */}
-          <div key={replayKey} className={styles.mountPoint} data-sizing={sizing}>
-            {children}
-          </div>
-        </div>
-      </div>
+      {canvasWidth ? (
+        <>
+          <FittedStage logicalWidth={canvasWidth} onFit={setFit}>
+            {stageNode}
+          </FittedStage>
+          <p className={styles.fitReadout}>
+            canvas <span className={styles.mono}>{canvasWidth}px</span> logical
+            {fit && fit.scale < 1 ? (
+              <>
+                {' '}
+                · shown at <span className={styles.mono}>{fit.scale.toFixed(3)}×</span> to fit{' '}
+                <span className={styles.mono}>{Math.round(fit.available)}px</span> — layout,
+                container queries and <span className={styles.mono}>cqw</span> still resolve at
+                the logical width
+              </>
+            ) : (
+              <> · shown at <span className={styles.mono}>1.000×</span></>
+            )}
+          </p>
+        </>
+      ) : (
+        // Fluid preset with no production parent width: the stage IS the column,
+        // so there is nothing to fit.
+        stageNode
+      )}
     </div>
   );
 }

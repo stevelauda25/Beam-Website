@@ -1,47 +1,102 @@
 /**
- * Scroll harness — DEV ONLY.
+ * Scroll harness — DEV ONLY. The OUTER, scaled presentation of a scroll entry.
  *
- * Renders the REAL production section and lets it drive off real window scroll.
- * Beam's scroll sections use GSAP ScrollTrigger against the default scroller
- * (the window), so the only honest way to isolate them is to put the real
- * section alone on a scrolling page with spacers before and after — which is
- * exactly what this does. Nothing about the pin, scrub or snap is simulated.
+ * Separates LOGICAL SCROLL LAYOUT from VISUAL PRESENTATION SCALE:
  *
- * Deliberately NOT done: wrapping the section in an inner scroll container.
- * That would require passing a `scroller` option into production ScrollTrigger
- * config, i.e. changing production code to suit the lab. Out of scope.
+ *  - Logical layer: a same-origin iframe sized to the preset's logical viewport
+ *    (e.g. 1440×900). It loads this same lab route with `?frame=1`, which
+ *    renders only ScrollFrame + the real production section. Inside it the
+ *    section sees a real 1440px window: `window.innerWidth`, matchMedia, `svh`,
+ *    the 1178px content column, the `@container (min-width: 900px)` desktop
+ *    geometry, and GSAP ScrollTrigger's `position: fixed` pin against its own
+ *    default scroller. All measurements are self-consistent because they all
+ *    live in the same unscaled document.
  *
- * Known limitation: because these sections read `window.innerWidth` (and
- * matchMedia) rather than their container, the lab's width presets do NOT
- * change their breakpoint behaviour. The lab surfaces that warning in the UI.
+ *  - Presentation layer: FittedStage scales the iframe ELEMENT uniformly
+ *    (scale = min(1, availableWidth / logicalWidth)) and reserves the scaled
+ *    footprint, so the whole logical viewport is visible in the centre column
+ *    with the sidebar left and the DialKit panel right. A transform on the
+ *    iframe element is invisible to the document inside it — fixed positioning
+ *    in the inner document is relative to the inner viewport, not to any
+ *    ancestor of the iframe. The production section is never transformed.
+ *
+ * Why not transform-scale the section in place: a transformed ancestor becomes
+ * the containing block for `position: fixed`, so the pin would stick to the
+ * wrapper and scroll away; and with `pinType: "transform"` (which would also be
+ * a production change) the pin's translateY is applied in unscaled px inside a
+ * scaled context, so the section drifts at (1 − scale) per scrolled px. `zoom`
+ * mixes zoomed getBoundingClientRect values with unzoomed CSS px in
+ * ScrollTrigger's maths. None of these can be made correct from src/dev.
+ *
+ * Replay remounts the iframe via `key`, which reloads the inner document and
+ * restarts the sequence from its real starting position.
+ *
+ * Known limitation: DialKit panels live in this outer document and cannot reach
+ * components inside the frame. Tuning is wired on isolated entries.
  */
-import { useEffect, type ReactNode } from 'react';
+import { useState } from 'react';
 import styles from '../MotionLab.module.css';
+import { FittedStage } from './FittedStage';
+
+export type LogicalViewport = { width: number; height: number };
 
 type ScrollHarnessProps = {
   replayKey: number;
-  children: ReactNode;
+  entryId: string;
+  viewport: LogicalViewport;
 };
 
-export function ScrollHarness({ replayKey, children }: ScrollHarnessProps) {
-  // Scroll to the top whenever the harness remounts so the sequence is watched
-  // from its real starting position rather than mid-pin.
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [replayKey]);
+type Fit = { scale: number; available: number; logical: number };
+
+export function frameSrc(entryId: string) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('entry', entryId);
+  url.searchParams.set('frame', '1');
+  return url.toString();
+}
+
+export function ScrollHarness({ replayKey, entryId, viewport }: ScrollHarnessProps) {
+  const [fit, setFit] = useState<Fit | null>(null);
 
   return (
-    <div key={replayKey} className={styles.scrollHarness}>
-      <div className={styles.scrollSpacer}>
-        <span>scroll down — section entry</span>
-      </div>
-
-      {/* The real production section, driven by real window scroll. */}
-      {children}
-
-      <div className={styles.scrollSpacer}>
-        <span>section exit — pin released</span>
-      </div>
+    <div className={styles.hoverGutter}>
+      <FittedStage
+        logicalWidth={viewport.width}
+        logicalHeight={viewport.height}
+        onFit={setFit}
+      >
+        <div
+          className={styles.viewportFrame}
+          style={{ width: viewport.width, height: viewport.height }}
+        >
+          <iframe
+            key={replayKey}
+            className={styles.viewportIframe}
+            src={frameSrc(entryId)}
+            title={`${entryId} — logical viewport`}
+          />
+        </div>
+      </FittedStage>
+      <p className={styles.fitReadout}>
+        viewport{' '}
+        <span className={styles.mono}>
+          {viewport.width}×{viewport.height}px
+        </span>{' '}
+        logical
+        {fit && fit.scale < 1 ? (
+          <>
+            {' '}
+            · shown at <span className={styles.mono}>{fit.scale.toFixed(3)}×</span> to fit{' '}
+            <span className={styles.mono}>{Math.round(fit.available)}px</span>
+          </>
+        ) : (
+          <> · shown at <span className={styles.mono}>1.000×</span></>
+        )}{' '}
+        — <span className={styles.mono}>innerWidth</span>, matchMedia,{' '}
+        <span className={styles.mono}>svh</span> and the ScrollTrigger pin all resolve inside
+        this viewport. Scroll with the pointer over the stage.
+      </p>
     </div>
   );
 }

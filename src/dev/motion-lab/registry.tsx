@@ -125,8 +125,15 @@ const entries: LabEntry[] = [
     componentName: 'ProblemSolution',
     path: 'src/components/sections/ProblemSolution.tsx',
     kind: 'scroll',
+    /*
+     * Scroll entries run inside an iframe sized to the preset's logical viewport
+     * and the iframe is scaled to fit the centre column. Desktop 1440×900 gives
+     * the 1178px content column that SolutionVisual's `@container (min-width:
+     * 900px)` desktop geometry needs. Transform-scaling the pinned section in
+     * place would break the ScrollTrigger pin — see ScrollHarness.
+     */
     notes:
-      'The real production section, including its GSAP ScrollTrigger pin, scrub and snap. Driven by real window scroll.',
+      'The real production section, including its GSAP ScrollTrigger pin and scrub, driven by real window scroll inside a logical desktop viewport. The viewport is scaled to fit the stage; the section itself is never transformed. Scroll with the pointer over the stage.',
     render: () => <ProblemSolution />,
   },
   {

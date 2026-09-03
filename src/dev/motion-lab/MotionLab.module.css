@@ -125,13 +125,12 @@
 
 /*
  * The DialKit panel must never squeeze the preview into a narrower layout than
- * production. The preview keeps its production canvas width and the column
- * scrolls horizontally instead of letting the component reflow internally.
+ * production. Isolated stages keep their logical canvas width and are visually
+ * scaled to fit by FittedStage; scroll sections run in a logical-viewport iframe
+ * that is scaled the same way (see ScrollHarness).
+ * Nothing overflows, so nothing is clipped or scrolled sideways here.
  */
-.previewColumn {
-  min-width: 0;
-  overflow-x: auto;
-}
+.previewColumn { min-width: 0; }
 
 .panelColumn {
   position: sticky;
@@ -333,14 +332,45 @@
 /* ---- isolated stage ---- */
 
 /* Generous gutter so the pointer can enter/leave the visual naturally. */
-.hoverGutter {
-  display: flex;
-  justify-content: center;
-  padding: 48px 24px;
+.hoverGutter { padding: 48px 24px; }
+
+/*
+ * FittedStage: logical size vs visible size.
+ *
+ * .fitFrame    measures the width available to the stage.
+ * .fitReserve  reserves the SCALED footprint in the flow (transforms do not
+ *              affect layout, so without this the page would keep the unscaled
+ *              footprint and overflow). Centred; never clips.
+ * .fitCanvas   the unscaled stage, shrink-wrapped to its logical width and
+ *              scaled from the top-left corner so it lands exactly inside the
+ *              reserved box.
+ */
+.fitFrame { width: 100%; }
+
+.fitReserve {
+  position: relative;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.fitCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  transform-origin: top left;
+}
+
+.fitReadout {
+  margin: 10px 0 0;
+  color: #71717a;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .stage {
-  /* Do not shrink below the production canvas width — scroll instead. */
+  /* Never shrink below the logical canvas width — FittedStage scales it. */
   flex: none;
   /*
    * content-box so the inline width IS the preview canvas width. With the
@@ -379,6 +409,27 @@
 /* ---- scroll harness ---- */
 
 .scrollHarness { width: 100%; }
+
+/*
+ * Logical viewport of a scroll entry. The box is laid out at the preset's real
+ * size (e.g. 1440×900) and FittedStage scales the whole thing to fit the centre
+ * column. The iframe inside is the section's own window — never transformed
+ * from the inside, so its ScrollTrigger pin is exactly the homepage pin.
+ */
+.viewportFrame {
+  box-sizing: content-box;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  overflow: hidden; /* rounds the corners only — the frame is the full viewport */
+  background: #fff;
+}
+
+.viewportIframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
 
 .scrollSpacer {
   display: flex;
