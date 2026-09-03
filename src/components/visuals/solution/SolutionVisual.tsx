@@ -98,14 +98,29 @@ export function setSolutionVisualProgress(
     set('--logo-scale', 1);
     set('--beam-response', 0);
     set('--pulse-progress', arrived);
-    set('--pulse-opacity', 0);
     set('--connector-settle', arrived);
     set('--solution-scale', 1);
     set('--dot-field-opacity', reveal);
     set('--destination-problem-opacity', 1 - reveal);
     set('--destination-solution-opacity', reveal);
 
+    /*
+     * Reduced motion gets the failure's OUTCOME, not its performance: one pill,
+     * already red, no travelling laser and no radial wave. The meaning — this
+     * workflow fails — survives without repeated movement.
+     */
+    set('--f1-opacity', 1);
+    set('--f1-y', '0cqw');
+    set('--f1-coverage', 1);
+    set('--f2-opacity', 0);
+    set('--f3-opacity', 0);
+    set('--attempt-head', 0);
+    set('--attempt-opacity', 0);
+    set('--failure-field', 0);
+
     visual.dataset.transform = rawProgress < 0.06 ? 'rest' : 'active';
+    // No autoplay under reduced motion — the failure rests on its outcome.
+    visual.dataset.story = 'transforming';
     visual.dataset.connector = arrived ? 'settled' : 'transforming';
     visual.dataset.phase = reveal < 0.5 ? 'problem' : 'solution';
     visual.dataset.visualState =
@@ -120,9 +135,6 @@ export function setSolutionVisualProgress(
   const friction = smooth(segment(rawProgress, 0.08, 0.46));
   // One continuous ramp, never eased, so it tracks scroll directly.
   const pulseProgress = railPosition(rawProgress);
-  const pulseOpacity =
-    smooth(segment(rawProgress, 0.18, 0.26)) *
-    (1 - smooth(segment(rawProgress, 0.76, 0.84)));
   // Both are driven by the state's POSITION, so Beam forms as it approaches and
   // reacts as it passes through — without the state ever changing pace.
   const logoForm = logoFormationFor(pulseProgress);
@@ -143,7 +155,6 @@ export function setSolutionVisualProgress(
   set('--command-y', `${(1 - commandEmphasis) * 0.679}cqw`);
 
   set('--pulse-progress', pulseProgress);
-  set('--pulse-opacity', pulseOpacity);
   set('--connector-settle', connectorSettle);
 
   set('--logo-form', logoForm);
@@ -158,6 +169,13 @@ export function setSolutionVisualProgress(
   // `rest` keeps the friction queue cycling only while the scene is untouched,
   // so State 1 reads without waiting and stops competing the moment you scroll.
   visual.dataset.transform = rawProgress < 0.06 ? 'rest' : 'active';
+  /*
+   * Gates the State 1 autoplay. The failure story is told by its own clock, not
+   * by scroll; scroll only decides WHETHER it is still the active story. The
+   * loop freezes on its current frame the moment the transformation engages, so
+   * leaving and re-entering State 1 never resets or teleports it.
+   */
+  visual.dataset.story = rawProgress < 0.06 ? 'failing' : 'transforming';
   // Gates the ambient final-state laser. It may only run once the connector has
   // substantially resolved into State 2; scrubbing back out removes the
   // animation entirely, so it can never interfere with the semantic transform.
@@ -170,6 +188,163 @@ export function setSolutionVisualProgress(
         : 'solution';
   visual.dataset.visualState =
     rawProgress < 0.5 ? 'Key Visual Problem' : 'Key Visual Solution';
+}
+
+
+/*
+ * STATE 1 AUTOPLAY.
+ *
+ * Two clocks, two responsibilities, no overlap:
+ *
+ *   autoplay clock  ->  the three failed attempts, looping
+ *   scroll progress ->  State 1 composition -> State 2 composition
+ *
+ * The autoplay never touches the transformation, and scroll never scrubs an
+ * individual attempt. `cycle` only advances while the story is active, so
+ * pausing freezes the exact frame and resuming continues from it.
+ */
+const ROUND_MS = 1400;
+const FAILURE_LOOP_MS = ROUND_MS * 3;
+/** Next pill arrives while the failed one is still leaving. */
+const ENTER_MS = 240;
+/** A beat of stable gray before the attempt sets off. */
+const REST_MS = 120;
+const LASER_MS = 380;
+/** Everything downstream is measured from this instant. */
+const IMPACT_AT = REST_MS + LASER_MS;
+const SWEEP_MS = 260;
+/*
+ * Long enough for the centred wave to reach the field's rim (390ms) and decay
+ * (300ms). This moves no beat: the round is still REST+LASER+SWEEP+HOLD+EXIT,
+ * and the wave simply finishes underneath the pill's exit.
+ */
+const PULSE_MS = 760;
+const HOLD_MS = 220;
+const EXIT_AT = IMPACT_AT + SWEEP_MS + HOLD_MS;
+const EXIT_MS = 300;
+/** Matches the slide distance the queue used before, in cqw. */
+const PILL_SLIDE = 4.35;
+
+/**
+ * The failure red. Identical to `.pillFaceFailed`'s `border-color: #e51d31`, so
+ * the field's disturbance and the pill's failed state are literally the same
+ * red rather than two that happen to look alike.
+ */
+const FAILURE_RED = '229, 29, 49';
+
+/*
+ * ONE pulse-wave system, used by both states. Beam's reception wave and the
+ * failure wave share these values verbatim — same centre, same radial
+ * propagation, same wave thickness, same onset and decay. The ONLY difference
+ * between the two is colour.
+ *
+ * The pulse is centred on the dot field in both cases. The pill collision is
+ * causal in TIME — it is what starts the wave — not in space; it does not move
+ * the wave's origin.
+ */
+const FIELD_REACH = 1.18;
+/*
+ * The failure wave travels further than Beam's reception wave, on purpose.
+ *
+ * State 2's wave brightens a field that is ALREADY visible, so its rim reads
+ * even where the centre vignette is strong. State 1 has no resting field, so
+ * only the moving front is visible — and at the shared 1.18 reach the vignette
+ * left everything past d=0.7 under 0.2 alpha, which read as a small central
+ * blob rather than a wave. A longer reach carries the front across the whole
+ * field and lifts the rim's amplitude, without touching the centre.
+ */
+const FAILURE_REACH = 1.6;
+const FIELD_PROPAGATION_MS = 460;
+const FIELD_DECAY_MS = 300;
+const FIELD_ONSET_MS = 50;
+
+/**
+ * One dot's answer to a centred pulse, as a pure function of its distance from
+ * the field centre and how long ago the wave started.
+ *
+ * This is the same expression State 2's reception wave uses; State 1 simply
+ * paints the result red. Exported so propagation and decay can be verified
+ * numerically rather than only by eye.
+ */
+export function failureDotResponse(distance: number, age: number) {
+  const localAge = age - (distance / FAILURE_REACH) * FIELD_PROPAGATION_MS;
+  if (localAge < 0 || localAge > FIELD_DECAY_MS) return 0;
+
+  // Same onset and decay as Beam's reception wave — only the reach differs.
+  const rise = Math.min(1, localAge / FIELD_ONSET_MS);
+  const fall = Math.pow(1 - localAge / FIELD_DECAY_MS, 1.7);
+  // Outer dots answer more faintly than those beside the centre.
+  const reach = 1 - 0.5 * (distance / FAILURE_REACH);
+  return rise * fall * reach * 0.8;
+}
+
+export type FailureFrame = {
+  pills: { opacity: number; offset: number; coverage: number }[];
+  laserHead: number;
+  laserOpacity: number;
+  /** ms since the current attempt struck, or null when nothing has. */
+  impactAge: number | null;
+};
+
+/** Impact envelope: hard zero before contact, fast rise, slower decay. */
+const impulse = (t: number) => {
+  if (t <= 0 || t >= 1) return 0;
+  const rise = smooth(clamp(t / 0.22));
+  const fall = Math.pow(1 - clamp((t - 0.22) / 0.78), 1.6);
+  return rise * fall;
+};
+
+/**
+ * One frame of the State 1 failure loop, as a pure function of elapsed time.
+ *
+ * The render loop does nothing but `sampleFailureAt(cycle)` and write the
+ * result, so the choreography is independently checkable with real millisecond
+ * inputs rather than only observable by watching it.
+ *
+ * Exported for that reason.
+ */
+export function sampleFailureAt(time: number): FailureFrame {
+  const cycle = ((time % FAILURE_LOOP_MS) + FAILURE_LOOP_MS) % FAILURE_LOOP_MS;
+  const pills: FailureFrame['pills'] = [];
+  let laserHead = 0;
+  let laserOpacity = 0;
+  let impactAge: number | null = null;
+
+  for (let index = 0; index < 3; index += 1) {
+    const local =
+      (((cycle - index * ROUND_MS) % FAILURE_LOOP_MS) + FAILURE_LOOP_MS) %
+      FAILURE_LOOP_MS;
+
+    let opacity = 0;
+    let offset = 0;
+    let coverage = 0;
+
+    if (local >= FAILURE_LOOP_MS - ENTER_MS) {
+      // Sliding in from above while the previous pill is still leaving.
+      const entering = smooth((local - (FAILURE_LOOP_MS - ENTER_MS)) / ENTER_MS);
+      opacity = entering;
+      offset = (1 - entering) * -PILL_SLIDE;
+    } else if (local <= EXIT_AT + EXIT_MS) {
+      const exiting = smooth(segment(local, EXIT_AT, EXIT_AT + EXIT_MS));
+      opacity = 1 - exiting;
+      offset = exiting * PILL_SLIDE;
+      coverage = segment(local, IMPACT_AT, IMPACT_AT + SWEEP_MS);
+
+      // Only the pill currently under attack owns the laser and the impact.
+      if (local < IMPACT_AT) {
+        laserHead = segment(local, REST_MS, IMPACT_AT);
+        laserOpacity =
+          segment(local, REST_MS, REST_MS + 40) *
+          (1 - segment(local, IMPACT_AT - 30, IMPACT_AT));
+      } else if (local <= IMPACT_AT + PULSE_MS) {
+        impactAge = local - IMPACT_AT;
+      }
+    }
+
+    pills.push({ opacity, offset, coverage });
+  }
+
+  return { pills, laserHead, laserOpacity, impactAge };
 }
 
 type MachineCardProps = {
@@ -232,24 +407,42 @@ function MachineCard({ title, destination = false }: MachineCardProps) {
   );
 }
 
+const frictionSteps = [
+  { icon: GitFork, label: 'Clone repository' },
+  { icon: GitCommitHorizontal, label: 'Commit unfinished work' },
+  { icon: RotateCcw, label: 'Restore secrets' },
+] as const;
+
+/**
+ * Each pill is rendered TWICE — once neutral, once failed — and the failed face
+ * is progressively unclipped from its left edge.
+ *
+ * That is deliberate. Border, background, text, shadow and the alert glyph all
+ * have to change together, and animating five properties separately is how they
+ * end up looking like five unrelated animations. One clip through one rendering
+ * means the failure crosses every property on the same vertical line at the same
+ * instant, sweeping out from wherever the attempt struck.
+ */
 function ProblemSteps() {
   return (
     <div className={styles.problemScene} aria-hidden="true">
-      <div className={`${styles.problemPill} ${styles.problemPillOne}`}>
-        <GitFork />
-        <span>Clone repository</span>
-        <CircleAlert />
-      </div>
-      <div className={`${styles.problemPill} ${styles.problemPillTwo}`}>
-        <GitCommitHorizontal />
-        <span>Commit unfinished work</span>
-        <CircleAlert />
-      </div>
-      <div className={`${styles.problemPill} ${styles.problemPillThree}`}>
-        <RotateCcw />
-        <span>Restore secrets</span>
-        <CircleAlert />
-      </div>
+      {frictionSteps.map(({ icon: Icon, label }, index) => (
+        <div
+          key={label}
+          className={`${styles.problemPill} ${styles[`problemPill${index + 1}`]}`}
+        >
+          <div className={styles.pillFace}>
+            <Icon />
+            <span>{label}</span>
+            <CircleAlert />
+          </div>
+          <div className={`${styles.pillFace} ${styles.pillFaceFailed}`}>
+            <Icon />
+            <span>{label}</span>
+            <CircleAlert />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -270,6 +463,12 @@ export const SolutionVisual = forwardRef<
   const localRef = useRef<HTMLDivElement | null>(null);
   const dotCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const laserRef = useRef<HTMLSpanElement | null>(null);
+  /*
+   * Shared between the autoplay loop and the canvas: how long ago the current
+   * attempt struck, or null when nothing has. The dot field reads this to place
+   * its red wave, so the two cannot describe different moments.
+   */
+  const failureImpactRef = useRef<number | null>(null);
 
   const setRefs = (node: HTMLDivElement | null) => {
     localRef.current = node;
@@ -282,6 +481,69 @@ export const SolutionVisual = forwardRef<
       setSolutionVisualProgress(localRef.current, progress, reducedMotion);
     }
   }, [progress, reducedMotion]);
+
+  useEffect(() => {
+    const visual = localRef.current;
+    if (!visual || reducedMotion) return;
+
+    let frame = 0;
+    let cycle = 0;
+    let last = performance.now();
+    let inView = false;
+
+    const set = (name: string, value: string | number) =>
+      visual.style.setProperty(name, String(value));
+
+    const apply = (time: number) => {
+      const frameState = sampleFailureAt(time);
+
+      frameState.pills.forEach((pill, index) => {
+        set(`--f${index + 1}-opacity`, pill.opacity.toFixed(4));
+        set(`--f${index + 1}-y`, `${pill.offset.toFixed(4)}cqw`);
+        set(`--f${index + 1}-coverage`, pill.coverage.toFixed(4));
+      });
+
+      set('--attempt-head', frameState.laserHead.toFixed(4));
+      set('--attempt-opacity', frameState.laserOpacity.toFixed(4));
+
+      failureImpactRef.current = frameState.impactAge;
+      set(
+        '--failure-field',
+        frameState.impactAge === null
+          ? 0
+          : impulse(frameState.impactAge / PULSE_MS).toFixed(4),
+      );
+    };
+
+    const tick = (now: number) => {
+      const active = inView && visual.dataset.story === 'failing';
+      if (active) {
+        cycle = (cycle + (now - last)) % FAILURE_LOOP_MS;
+        apply(cycle);
+      }
+      // `last` always advances, so a pause never banks elapsed time and the
+      // story resumes from the frame it froze on rather than jumping forward.
+      last = now;
+      frame = window.requestAnimationFrame(tick);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        inView = Boolean(entry?.isIntersecting);
+      },
+      { threshold: 0.08 },
+    );
+    observer.observe(visual);
+
+    apply(0);
+    frame = window.requestAnimationFrame(tick);
+
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+      failureImpactRef.current = null;
+    };
+  }, [reducedMotion]);
 
   useEffect(() => {
     const visual = localRef.current;
@@ -333,14 +595,11 @@ export const SolutionVisual = forwardRef<
     let targetStrength = strength;
     let lastFrame = performance.now();
 
-    /** Outer edge of the particle field, in normalised distance units. */
-    const fieldReach = 1.18;
-    /** How long the energy front takes to travel from Beam to the outer dots. */
-    const propagationMs = 460;
-    /** How long an individual dot takes to fall back to rest once the front hits it. */
-    const dotDecayMs = 300;
-    /** Onset of an individual dot's response — immediate, but not a hard step. */
-    const dotOnsetMs = 50;
+    /* Both waves share one geometry — see FIELD_* above. */
+    const fieldReach = FIELD_REACH;
+    const propagationMs = FIELD_PROPAGATION_MS;
+    const dotDecayMs = FIELD_DECAY_MS;
+    const dotOnsetMs = FIELD_ONSET_MS;
     /**
      * Where along the rail Beam starts to sense the laser — halfway between the
      * point the streak clears the source card (rail 0.1606, from the card and
@@ -348,6 +607,15 @@ export const SolutionVisual = forwardRef<
      * delayed; anticipating from here makes the field feel connected.
      */
     const triggerRail = 0.33;
+
+    /*
+     * State 1's failure wave uses the same motion language as Beam's success
+     * response — localized origin, outward propagation, decay — but red, shorter,
+     * and originating at the collision rather than at the mark. The two are
+     * mutually exclusive by state: this one only runs while the story is
+     * 'failing', the success one only once the connector is 'settled'.
+     * Its per-dot response lives in `failureDotResponse` above.
+     */
 
     const laserTravel =
       Number.parseFloat(
@@ -406,9 +674,14 @@ export const SolutionVisual = forwardRef<
      */
     const render = (animate = true) => {
       context.clearRect(0, 0, fieldSize, fieldSize);
-      if (strength <= 0.006) return;
 
       const reaction = animate ? laserReaction() : null;
+      const failureAge =
+        animate && visual.dataset.story === 'failing'
+          ? failureImpactRef.current
+          : null;
+
+      if (strength <= 0.006 && failureAge === null) return;
 
       for (const dot of dots) {
         let response = 0;
@@ -429,8 +702,24 @@ export const SolutionVisual = forwardRef<
 
         const alpha = (dot.glow + response * 0.8) * dot.falloff * strength;
 
-        if (alpha < 0.012) continue;
-        context.fillStyle = `rgba(10, 10, 10, ${Math.min(0.72, alpha).toFixed(3)})`;
+        if (alpha >= 0.012) {
+          context.fillStyle = `rgba(10, 10, 10, ${Math.min(0.72, alpha).toFixed(3)})`;
+          context.fillRect(dot.x, dot.y, dot.size, dot.size);
+        }
+
+        if (failureAge === null) continue;
+
+        /*
+         * Softened vignette (sqrt) for the failure wave only. The centre is
+         * untouched — falloff 1 stays 1 — but the rim rises from ~0.18 to ~0.42,
+         * so more of the field participates. This makes the wave LARGER, not
+         * louder: peak alpha at the centre is unchanged.
+         */
+        const red =
+          failureDotResponse(dot.distance, failureAge) * Math.sqrt(dot.falloff);
+        if (red < 0.012) continue;
+
+        context.fillStyle = `rgba(${FAILURE_RED}, ${Math.min(0.72, red).toFixed(3)})`;
         context.fillRect(dot.x, dot.y, dot.size, dot.size);
       }
     };
@@ -500,6 +789,13 @@ export const SolutionVisual = forwardRef<
     >
       <div className={styles.connector} aria-hidden="true">
         {/*
+          State 1's failed attempt: a short streak that travels left -> right and
+          terminates on the pill's leading edge. Its stop point is expressed in
+          the same cqw values as the layout, so the collision cannot drift at any
+          container size, and it never crosses into the pill.
+        */}
+        <span className={styles.attemptLaser} />
+        {/*
           Ambient final-state laser. Time-based on purpose: it runs only after
           the semantic journey has completed, so it never determines product
           progression. Its animation is applied solely by the
@@ -513,19 +809,26 @@ export const SolutionVisual = forwardRef<
       </div>
 
       <div className={styles.center}>
+        {/*
+          The field is a BACKGROUND layer, so it is a sibling of the two scenes
+          rather than a child of the solution scene — which sits above the pills.
+          Same coordinates (both scenes are inset:0 on this box), and it carries
+          the solution scale itself so State 2 is visually unchanged.
+        */}
+        <div className={styles.dotField} aria-hidden="true">
+          <canvas
+            ref={dotCanvasRef}
+            className={styles.dotCanvas}
+            width="420"
+            height="420"
+          />
+          <span className={styles.waveRing} />
+          <span className={styles.waveRing} />
+          <span className={styles.waveRing} />
+        </div>
+
         <ProblemSteps />
         <div className={styles.solutionScene}>
-          <div className={styles.dotField} aria-hidden="true">
-            <canvas
-              ref={dotCanvasRef}
-              className={styles.dotCanvas}
-              width="420"
-              height="420"
-            />
-            <span className={styles.waveRing} />
-            <span className={styles.waveRing} />
-            <span className={styles.waveRing} />
-          </div>
           <div className={styles.logoDisc}>
             <BeamMark className={styles.logo} />
           </div>

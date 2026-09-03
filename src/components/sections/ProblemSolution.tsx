@@ -204,6 +204,12 @@ export default function ProblemSolution() {
         );
       };
 
+      /*
+       * Scroll owns ONLY the State 1 -> State 2 transformation. State 1's three
+       * failed attempts run on their own autoplay clock inside the visual, so no
+       * scroll distance has to be reserved for them and this mapping stays the
+       * one that was already approved.
+       */
       const syncScrollProgress = (progress: number) => {
         setAccessibleState(progress >= 0.45);
         if (visualRef.current) {
@@ -243,8 +249,9 @@ export default function ProblemSolution() {
         },
       });
 
-      // 0–25% holds Problem. The overlapping transition keeps the scene
-      // continuous, then 65–100% holds Solution before the pin releases.
+      // 0–25% holds Problem while its failure loop autoplays. The overlapping
+      // transition keeps the scene continuous, then 65–100% holds Solution
+      // before the pin releases.
       timeline
         .to(
           problemElements,
