@@ -18,7 +18,6 @@ import { SolutionVisual } from '../../components/visuals/solution/SolutionVisual
 import { OnDemandVisual } from '../../components/visuals/on-demand/OnDemandVisual';
 import { OnDemandVisual2 } from '../../components/visuals/on-demand/OnDemandVisual2';
 import { OnDemandVisual3 } from '../../components/visuals/on-demand/OnDemandVisual3';
-import { AgentVisual } from '../../components/visuals/agents/AgentVisual';
 import { ShareVisual } from '../../components/visuals/share/ShareVisual';
 import { SecretVisual } from '../../components/visuals/secrets/SecretVisual';
 import { FooterVisual } from '../../components/visuals/footer/FooterVisual';
@@ -26,6 +25,7 @@ import { FooterVisual } from '../../components/visuals/footer/FooterVisual';
 // Lab-only. Not a production component.
 import { DialKitProof } from './proof/DialKitProof';
 import { SyncTrailTuning } from './tuning/SyncTrailTuning';
+import { AgentsHoverTuning } from './tuning/AgentsHoverTuning';
 
 export type HarnessKind = 'isolated' | 'scroll' | 'proof';
 export type StageTheme = 'light' | 'dark';
@@ -209,8 +209,8 @@ const entries: LabEntry[] = [
     intrinsicWidth: 809,
     aspect: '809 / 692',
     notes:
-      'Plays a half cycle (5200ms) on first intersection, then parks. Hover (non-touch) plays one full 10400ms replay.',
-    render: () => <AgentVisual />,
+      'Production intro is unchanged and NOT tunable: a single forward 2300ms story on first intersection, held on the connected result (readable at 1840ms), no teardown half and no loop. Hover (non-touch) rewinds that same timeline, pauses on frame 1, then replays it: Reverse Duration, Start Hold and Replay Duration are tunable live in the DialKit panel. Both directions are scrubbed on ONE master progress (ease-in-out .42, 0, .58, 1) mapped to a single authored time written to all 21 animations; the two durations set how long that traversal takes and the hold is a controller pause, so beats, easings, connector, travel distance and artwork are all out of reach from the panel. Tuning and the Lock Tuning switch persist in localStorage. Beat times are the BEATS map in the component, in ms.',
+    render: () => <AgentsHoverTuning />,
   },
   {
     id: 'share',

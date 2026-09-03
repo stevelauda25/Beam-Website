@@ -399,12 +399,23 @@
  * They must never apply to 'intrinsic' visuals: SolutionVisual contains nested
  * lucide icon SVGs, and forcing those to 100% stretched a 15.8px icon to
  * 140px wide, which is what clipped the card text.
+ *
+ * The aspect box is on the MOUNTED VISUAL, not on the stage.
+ *
+ * It used to be an aspect-ratio on .stageInner with `height: 100%` cascading to
+ * every direct child of the mount point. That was fine while a fill entry
+ * rendered exactly one child, but a tuning wrapper also renders a status row and
+ * a readout as siblings, and each of those inherited the full aspect height —
+ * an 809x692 visual followed by a 692px-tall empty status row. Scoping the box
+ * to the first child keeps the visual's geometry identical and lets any sibling
+ * readout take its natural height underneath.
  */
-.mountPoint[data-sizing='fill'] { height: 100%; }
+.mountPoint[data-sizing='fill'] > *:first-child {
+  width: 100%;
+  aspect-ratio: var(--fill-aspect);
+}
 
-.mountPoint[data-sizing='fill'] > div { width: 100%; height: 100%; }
-
-.mountPoint[data-sizing='fill'] svg { width: 100%; height: 100%; }
+.mountPoint[data-sizing='fill'] > *:first-child svg { width: 100%; height: 100%; }
 
 /* ---- scroll harness ---- */
 

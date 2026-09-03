@@ -9,7 +9,9 @@
  *
  *  - 'fill'      the homepage wraps the visual in an aspect box and forces
  *                `[&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full`.
- *                The harness reproduces exactly that.
+ *                The harness reproduces exactly that, applying the aspect box to
+ *                the mounted visual rather than to the stage so that a tuning
+ *                wrapper's readouts can sit underneath it.
  *  - 'intrinsic' the homepage gives it no wrapper, so the component sizes
  *                itself. The harness must not force width/height or fill
  *                nested SVGs — doing so stretches icons inside cards and
@@ -23,7 +25,7 @@
  * Replay is a harness-level remount via `key`. No production animation logic is
  * touched to make this work.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import styles from '../MotionLab.module.css';
 import type { SizingMode, StageTheme } from '../registry';
 import { FittedStage } from './FittedStage';
@@ -69,9 +71,19 @@ export function IsolatedHarness({
       className={`${styles.stage} ${stage === 'dark' ? styles.stageDark : ''}`}
       style={{ width: canvasWidth ? `${canvasWidth}px` : '100%' }}
     >
+      {/*
+        The fill aspect is handed to CSS as a variable and applied to the mounted
+        visual itself (see .mountPoint[data-sizing='fill'] > *:first-child), so
+        the stage hugs its content and a tuning wrapper's readouts can sit below
+        the visual instead of inheriting its height.
+      */}
       <div
         className={styles.stageInner}
-        style={isFill && aspect ? { aspectRatio: aspect } : undefined}
+        style={
+          isFill && aspect
+            ? ({ '--fill-aspect': aspect } as CSSProperties)
+            : undefined
+        }
       >
         {/* key remounts the real component so one-shot sequences replay */}
         <div key={replayKey} className={styles.mountPoint} data-sizing={sizing}>
