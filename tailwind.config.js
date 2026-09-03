@@ -3,6 +3,11 @@ export default {
   content: [
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
+    // src/dev is DEV-ONLY tooling (Motion Lab + DialKit authoring UI). It uses
+    // CSS modules, never Tailwind, and must not influence the production CSS
+    // bundle — without this, incidental tokens there (e.g. mode="inline")
+    // generate stray utilities into production output.
+    '!./src/dev/**',
   ],
   theme: {
     screens: {

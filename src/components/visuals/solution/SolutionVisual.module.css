@@ -11,7 +11,6 @@
   --command-emphasis: 0;
   --command-y: .679cqw;
   --pulse-progress: 0;
-  --pulse-opacity: 0;
   --connector-settle: 0;
   --dot-field-opacity: 0;
   /*
@@ -22,6 +21,15 @@
    */
   --laser-cycle: 1.15s;
   --laser-travel: .74;
+  /*
+   * Rail geometry, single-sourced. The rail, the failed attempt's collision
+   * point and the ambient laser's travel all derive from these two values, so
+   * widening the composition overrides them once rather than touching four
+   * literals that could drift apart.
+   */
+  --connector-left: 26.18cqw;
+  --connector-span: 46.927cqw;
+  --pill-left: 40.917cqw;
   position: relative;
   container-type: inline-size;
   width: min(100%, calc(40svh * 1178 / 350));
@@ -259,16 +267,50 @@
 .problemPill {
   position: absolute;
   top: 13.056cqw;
-  left: 40.917cqw;
-  display: grid;
+  left: var(--pill-left);
   width: 18.268cqw;
   height: 3.497cqw;
+  opacity: var(--pill-opacity, 1);
+  transform: translate3d(0, var(--pill-y, 0cqw), 0);
+  will-change: transform, opacity;
+}
+
+/*
+ * One face, rendered twice. The neutral face is the resting truth; the failed
+ * face sits exactly on top of it and is revealed by a clip that opens from the
+ * LEFT — the side the attempt strikes.
+ */
+.pillFace {
+  position: absolute;
+  inset: 0;
+  display: grid;
   grid-template-columns: 1.222cqw 1fr 1.222cqw;
   align-items: center;
   gap: .679cqw;
   padding: 0 1.019cqw;
-  border: .085cqw solid #e51d31;
+  border: .085cqw solid #d4d4d4;
   border-radius: 1.749cqw;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(115, 115, 115, .035)),
+    #f5f5f5;
+  box-shadow:
+    0 .204cqw .407cqw -.204cqw rgba(23, 23, 23, .12),
+    inset 0 .068cqw .136cqw rgba(255, 255, 255, .85);
+  color: #525252;
+  font-size: 1.087cqw;
+  letter-spacing: -.016cqw;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/*
+ * `inset()` insets from the RIGHT by the uncovered remainder, so coverage 0
+ * shows nothing and coverage 1 shows the whole pill — a wipe that travels
+ * left -> right and retracts right -> left on reverse scroll. It is a pure
+ * function of scroll position, so every partial value is a valid frame.
+ */
+.pillFaceFailed {
+  border-color: #e51d31;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(241, 53, 70, .035)),
     #fff0f1;
@@ -276,46 +318,41 @@
     0 .204cqw .407cqw -.204cqw rgba(194, 21, 42, .15),
     inset 0 .068cqw .136cqw rgba(255, 255, 255, .85);
   color: #44060e;
-  font-size: 1.087cqw;
-  letter-spacing: -.016cqw;
-  line-height: 1;
-  white-space: nowrap;
-  transform-origin: center;
-  animation: problemQueueStepped 5.4s cubic-bezier(.22, .61, .36, 1) infinite both paused;
-  will-change: transform, opacity;
+  clip-path: inset(0 calc((1 - var(--fail-coverage, 0)) * 100%) 0 0);
 }
 
-/*
- * The three friction pills share one position, so they can only be read in
- * rotation. The cycle therefore runs ONLY at rest, where it makes State 1
- * readable without waiting. The moment the transformation is engaged it
- * freezes, so it never competes with the command or the travelling state.
- */
-.visual[data-in-view='true'][data-transform='rest'] .problemPill {
-  animation-play-state: running;
-}
-
-.problemPill > svg {
+.pillFace > svg {
   width: 1.222cqw;
   height: 1.222cqw;
   stroke-width: 1.65;
 }
 
-.problemPill > svg:last-child {
+.pillFace > svg:last-child {
   justify-self: end;
+  color: #a3a3a3;
+}
+
+.pillFaceFailed > svg:last-child {
   color: #f13546;
 }
 
-.problemPillOne {
-  animation-delay: 0s;
+/* Per-pill channels, written from the failure clock in SolutionVisual.tsx. */
+.problemPill1 {
+  --pill-opacity: var(--f1-opacity, 1);
+  --pill-y: var(--f1-y, 0cqw);
+  --fail-coverage: var(--f1-coverage, 0);
 }
 
-.problemPillTwo {
-  animation-delay: -3.6s;
+.problemPill2 {
+  --pill-opacity: var(--f2-opacity, 0);
+  --pill-y: var(--f2-y, 0cqw);
+  --fail-coverage: var(--f2-coverage, 0);
 }
 
-.problemPillThree {
-  animation-delay: -1.8s;
+.problemPill3 {
+  --pill-opacity: var(--f3-opacity, 0);
+  --pill-y: var(--f3-y, 0cqw);
+  --fail-coverage: var(--f3-coverage, 0);
 }
 
 .dotField {
@@ -325,9 +362,25 @@
   width: 28cqw;
   height: 28cqw;
   border-radius: 50%;
-  opacity: var(--dot-field-opacity);
+  /*
+   * Background layer: below the pills (2) and the solution scene (3), so the red
+   * pulse can never wash over pill text, border or glyph.
+   */
+  z-index: 1;
+  /*
+   * State 2 reveals the field with scroll; State 1 borrows it transiently for
+   * the failure wave and returns it to nothing. One field, two contexts — the
+   * resting State 1 composition is unchanged.
+   */
+  opacity: max(
+    var(--dot-field-opacity),
+    calc(var(--failure-field, 0) * var(--failure-presence, 1))
+  );
   pointer-events: none;
-  will-change: opacity;
+  /* Was inherited from .solutionScene before the field became its own layer. */
+  transform: scale(var(--solution-scale));
+  transform-origin: center;
+  will-change: opacity, transform;
 }
 
 .dotCanvas {
@@ -488,12 +541,58 @@
   position: absolute;
   z-index: 0;
   top: 14.992cqw;
-  left: 26.18cqw;
-  width: 46.927cqw;
+  left: var(--connector-left);
+  width: var(--connector-span);
   height: .204cqw;
   background: #e5e5e5;
   scale: 1.12 1;
   transform-origin: center;
+}
+
+/*
+ * State 1's failed attempt, in the connector's own ink so it reads as the line
+ * itself trying to reach across rather than as a separate travelling object.
+ *
+ * The endpoint is `--pill-left` minus `--connector-left` — the same variables the
+ * layout itself uses — so the collision stays exact at every container width AND
+ * follows the composition automatically when it widens. There is no normalised
+ * constant to drift and nothing to update in two places.
+ */
+.attemptLaser {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 6.2cqw;
+  height: .34cqw;
+  border-radius: .17cqw;
+  background: linear-gradient(
+    90deg,
+    rgba(23, 23, 23, 0) 0%,
+    rgba(23, 23, 23, .18) 46%,
+    rgba(23, 23, 23, .62) 82%,
+    #171717 100%
+  );
+  /*
+   * Autoplay decides the frame; scroll decides whether the frame may be seen.
+   * The laser sits in `.connector`, which survives into State 2, so without this
+   * multiplier a frozen mid-travel streak stayed visible over the solution.
+   */
+  opacity: calc(var(--attempt-opacity, 0) * var(--failure-presence, 1));
+  pointer-events: none;
+  /*
+   * `-100%` puts the streak's RIGHT edge — its leading edge — on the travel
+   * position, so at head 1 it lands exactly on `--pill-left` minus
+   * `--connector-left`: the pill's left edge. It stops there and never crosses
+   * into the pill, and it follows the composition when that widens.
+   */
+  transform: translateX(
+      calc(
+        var(--attempt-head, 0) * (var(--pill-left) - var(--connector-left)) -
+          100%
+      )
+    )
+    translateY(-50%);
+  will-change: transform, opacity;
 }
 
 /* The trail: the path already traversed, drawn behind the head. */
@@ -509,25 +608,26 @@
   will-change: transform, opacity;
 }
 
-/* The travelling head: one state, positioned directly by scroll progress. */
-.connector::after {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 2.4cqw;
-  height: .475cqw;
-  border-radius: .238cqw;
-  background: #0a0a0a;
-  box-shadow:
-    0 0 .543cqw rgba(10, 10, 10, .28),
-    0 0 1.358cqw rgba(255, 255, 255, .9);
-  content: '';
-  opacity: var(--pulse-opacity);
-  pointer-events: none;
-  transform: translateX(calc(var(--pulse-progress) * 46.927cqw))
-    translate(-50%, -50%);
-  will-change: transform, opacity;
+/*
+ * A brighter, softer termination on the advancing end. Without the capsule this
+ * is what gives the eye a front to track, while remaining part of the connector
+ * rather than an object on top of it.
+ */
+.connector::before {
+  background: linear-gradient(
+    90deg,
+    #171717 0%,
+    #171717 calc(100% - 3.2cqw),
+    #0a0a0a 100%
+  );
 }
+
+/*
+ * The discrete black travelling capsule (`.connector::after`) has been removed.
+ * State 2's movement is now carried by the connector's own progressive fill
+ * above, whose leading edge is brightened so it reads as a line advancing
+ * rather than as a bar growing.
+ */
 
 /*
  * Ambient final-state laser.
@@ -584,11 +684,11 @@
   64% { opacity: .92; }
   74% {
     opacity: 0;
-    transform: translateX(46.927cqw) translate(-50%, -50%);
+    transform: translateX(var(--connector-span)) translate(-50%, -50%);
   }
   100% {
     opacity: 0;
-    transform: translateX(46.927cqw) translate(-50%, -50%);
+    transform: translateX(var(--connector-span)) translate(-50%, -50%);
   }
 }
 
@@ -614,25 +714,39 @@
 
 @keyframes statusSpin { to { transform: rotate(360deg); } }
 
-@keyframes problemQueueStepped {
-  0%, 25% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+/*
+ * Desktop composition. The panels move OUT to the content-grid edges; nothing is
+ * scaled and nothing is resized. `.visual` fills the 1178px content column on a
+ * desktop, so 0cqw and 100cqw are that column's edges and the panels' outer
+ * edges land exactly on them.
+ *
+ * The rail keeps its tuck under both cards (7.538cqw under the left, 6.791cqw
+ * under the right), so the state still departs from beneath the source and is
+ * absorbed beneath the destination.
+ *
+ * The overrides target DESCENDANTS, not `.visual` itself: an element with
+ * `container-type` establishes a query container for its children, and cannot
+ * be styled by a query against itself. Redefining the two rail variables on
+ * `.connector` is enough — `.attemptLaser` and `.connectorLaser` are its
+ * children and inherit them, so the collision point and the ambient laser's
+ * travel follow automatically.
+ *
+ * A container query rather than a media query, because the visual's width
+ * depends on viewport HEIGHT too (the `40svh` cap), and because it keeps the
+ * Motion Lab preview honest.
+ */
+@container (min-width: 900px) {
+  .leftCard {
+    left: 0cqw;
   }
-  32% {
-    opacity: 0;
-    transform: translate3d(0, 4.35cqw, 0) scale(.96);
+
+  .rightCard {
+    left: 76.299cqw;
   }
-  32.01%, 93% {
-    opacity: 0;
-    transform: translate3d(0, -4.35cqw, 0) scale(.96);
-  }
-  96% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+
+  .connector {
+    --connector-left: 16.163cqw;
+    --connector-span: 66.927cqw;
   }
 }
 
@@ -643,17 +757,12 @@
     animation: none !important;
   }
 
-  /* Nothing travels across the screen; the path steps between states instead. */
-  .connector::after {
+  /*
+   * State 1 still tells its story, it just steps between the three failures
+   * instead of travelling: no attempt line, no ripple, and coverage jumps
+   * rather than sweeping. Set from SolutionVisual.tsx.
+   */
+  .attemptLaser {
     display: none;
-  }
-
-  .problemPill {
-    opacity: 0;
-    transform: none;
-  }
-
-  .problemPillOne {
-    opacity: 1;
   }
 }

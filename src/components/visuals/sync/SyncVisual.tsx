@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, type PointerEvent } from "react";
 
 /*
  * REAL TIME OWNS THIS VISUAL.
@@ -30,10 +30,197 @@ const UPPER_TRAIL: readonly [number, number] = [940, 1380];
 const CLOUD_RECEIVE: readonly [number, number] = [1380, TRANSACTION_MS];
 
 /* Dotted state trail: a clear head with a falloff tail, not a marquee. */
-const TRAIL_OPACITY = [1, 0.85, 0.65, 0.45, 0.28, 0.15, 0.06, 0] as const;
-const TRAIL_SIZE = [5.4, 5, 4.6, 4.3, 4, 3.7, 3.5, 3.3] as const;
-const TRAIL_SPACING = 14;
-const TRAIL_SAMPLES = 256;
+/*
+ * ONE packet, not thirty-two particles. A single head position walks the path
+ * and every particle hangs off it at a fixed arc-length offset, so the packet
+ * keeps its shape through bends and nothing is individually animated or delayed.
+ *
+ * THIS IS THE FOUNDER-APPROVED PROFILE, authored directly.
+ *
+ * It was arrived at in the Motion Lab at Trail Length 2.00, Dot Scale 1.20,
+ * Glow Intensity 0.40, Glow Radius 1.00 over the previous 16-particle baseline,
+ * and those four settings are baked into the arrays below rather than left as
+ * runtime multipliers. The homepage renders <SyncVisual /> with no tuning prop
+ * and gets exactly this — the dev dials are a relative layer on top, so 1.00x
+ * on all four now MEANS this profile.
+ *
+ * 32 particles at 8-unit spacing span 248 of the 412-unit path (60.2%) — a long
+ * flowing stream that still never spans the whole route. The length comes from
+ * particle COUNT, not from wider gaps: spacing is untouched at 8.
+ *
+ * Head core 3.36 against a 2.5 connector, 1.34x the line. It reads as the front
+ * through opacity and its halo as much as through size.
+ *
+ * Both falloffs stay gentle early and evaporate together at the tail: the
+ * leading three are within 1.5% of each other in size, the mid-section still
+ * holds 0.50 opacity at the fifteenth particle, and the last particle is at
+ * 0.02 opacity / 1.62 units rather than ending on a medium dot. Head-to-tail
+ * size range is 3.36 -> 1.62 (2.1x), so the packet reads as one coherent
+ * stream rather than a shrinking queue.
+ */
+const TRAIL_OPACITY = [
+  1, 0.985484, 0.970968, 0.951935, 0.932581, 0.904839, 0.875806, 0.839032,
+  0.800323, 0.758065, 0.714516, 0.670968, 0.627419, 0.583871, 0.540323,
+  0.496774, 0.453226, 0.411935, 0.373226, 0.334516, 0.295806, 0.25871, 0.224839,
+  0.192258, 0.163226, 0.135161, 0.110968, 0.087419, 0.068065, 0.049032,
+  0.034516, 0.02,
+] as const;
+const TRAIL_SIZE = [
+  3.36, 3.330968, 3.301935, 3.245806, 3.187742, 3.129677, 3.071613, 3.013548,
+  2.955484, 2.897419, 2.839355, 2.78129, 2.723226, 2.665161, 2.607097, 2.549032,
+  2.490968, 2.432903, 2.374839, 2.316774, 2.25871, 2.200645, 2.142581, 2.084516,
+  2.026452, 1.968387, 1.910323, 1.852258, 1.794194, 1.736129, 1.678065, 1.62,
+] as const;
+/*
+ * Halo strength per particle, at the approved Glow Intensity 0.40 — the earlier
+ * 0.55 / 0.44 / 0.32 ... profile scaled by 0.4 and baked. Sharp core, subtle
+ * bloom, front-loaded: the leading three carry it, the next four keep a trace,
+ * the remaining twenty-five have none. Blurring the whole packet equally is what
+ * turns a luminous trail into fog, so the halo is a separate underlay rather
+ * than a filter on the group. Cores are NOT dimmed by this — TRAIL_OPACITY is
+ * untouched by glow.
+ */
+const TRAIL_HALO = [
+  0.22, 0.176, 0.128, 0.08, 0.048, 0.024, 0.012, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+] as const;
+/*
+ * Halo FOOTPRINT per particle, in path units, at the approved Glow Radius 1.00.
+ *
+ * This used to be derived as core size x a single TRAIL_HALO_SCALE factor. That
+ * derivation no longer holds: baking Trail Length 2.00 resampled the core sizes
+ * onto a finer index, so the halo — which stays anchored to the leading
+ * particles BY INDEX — no longer has a fixed ratio to the core beneath it. No
+ * single scale factor reproduces the approved footprint (it would need 2.09 at
+ * the head falling to 1.84 by the seventh). Authoring the footprint directly is
+ * what preserves the signed-off bloom exactly, so the leading halo stays 7.028
+ * units as it was.
+ *
+ * Entries past the seventh are 0 because their halo opacity is 0 and the layer
+ * is not rendered at all; they exist only to keep the array index-aligned.
+ */
+const TRAIL_HALO_SIZE = [
+  7.028, 6.9025, 6.6515, 6.4005, 6.1495, 5.8985, 5.6475, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+] as const;
+/*
+ * Blur radius of the halo underlay (feGaussianBlur stdDeviation, path units).
+ * 1.35 is the approved value and Glow Radius 1.00 leaves it exactly there; the
+ * dev dial multiplies it together with the halo footprint so the bloom spreads
+ * or tightens as one thing.
+ */
+const TRAIL_HALO_BLUR = 1.35;
+const TRAIL_SPACING = 8;
+/** Particles in the approved profile. A tuning length of 1 reproduces exactly this. */
+const BASE_VISIBLE = 32;
+/** Ceiling for the dev tuning dial; production never renders more than BASE_VISIBLE. */
+const MAX_PARTICLES = 64;
+
+/*
+ * DEV-ONLY relative tuning layer. Every field is a multiplier over the baked
+ * Founder-approved profile above, so 1 means "production, unchanged" for all
+ * four — a panel reset reproduces the homepage exactly.
+ */
+export type SyncTrailTuning = {
+  /** Multiplier on the packet's head-to-tail span. 1 = the approved 32 particles. */
+  length?: number;
+  /** Multiplier on every particle's core size. 1 = the approved sizes. */
+  scale?: number;
+  /**
+   * Multiplier on the halo layer's opacity. 0 = no halo (cores remain),
+   * 1 = the approved glow, 2 = roughly twice as strong. Cores are untouched.
+   */
+  glowIntensity?: number;
+  /**
+   * Multiplier on the halo's footprint AND blur radius. 0.5 = tight rim,
+   * 1 = the approved glow, 2 = broad soft bloom. The per-particle falloff
+   * (head strongest, tail none) is preserved at every value.
+   */
+  glowRadius?: number;
+};
+
+/** The halo-only part of the tuning, clamped, with the resolved blur. */
+export function resolveTrailGlow(tuning?: SyncTrailTuning) {
+  const intensity = Math.min(2, Math.max(0, tuning?.glowIntensity ?? 1));
+  const radius = Math.min(2, Math.max(0.5, tuning?.glowRadius ?? 1));
+  return { intensity, radius, blur: TRAIL_HALO_BLUR * radius };
+}
+
+type TrailParticle = {
+  size: number;
+  opacity: number;
+  halo: number;
+  haloSize: number;
+};
+
+/**
+ * The packet's per-particle profile, optionally stretched or scaled.
+ *
+ * `length` adds PARTICLES rather than widening gaps — spacing stays at
+ * TRAIL_SPACING — and resamples the approved falloff across however many there
+ * are, so the head/mid/tail shape survives at any length.
+ *
+ * `scale` multiplies core sizes only. The halo is deliberately left out of both:
+ * it stays anchored to the leading particles BY INDEX and is sized from its own
+ * authored TRAIL_HALO_SIZE footprint, so neither dial can alter the approved
+ * glow.
+ *
+ * `glowIntensity` scales halo opacity only; `glowRadius` scales halo footprint
+ * only (its blur is scaled alongside by resolveTrailGlow). Neither touches a
+ * core, and both multiply the same front-loaded TRAIL_HALO falloff, so the
+ * head/mid/tail hierarchy is preserved — the tail's halo stays at zero.
+ *
+ * With no tuning this returns the approved 32-particle profile verbatim: count
+ * is BASE_VISIBLE, so `at` lands on whole indices and every value is read
+ * straight out of the arrays with no interpolation.
+ */
+export function resolveTrailProfile(tuning?: SyncTrailTuning): TrailParticle[] {
+  const length = Math.min(2, Math.max(0.5, tuning?.length ?? 1));
+  const scale = Math.min(1.6, Math.max(0.4, tuning?.scale ?? 1));
+  const glow = resolveTrailGlow(tuning);
+  const count = Math.min(
+    MAX_PARTICLES,
+    Math.max(2, Math.round(BASE_VISIBLE * length)),
+  );
+
+  const profile: TrailParticle[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const at = (i / (count - 1)) * (BASE_VISIBLE - 1);
+    const lo = Math.min(BASE_VISIBLE - 1, Math.floor(at));
+    const hi = Math.min(BASE_VISIBLE - 1, lo + 1);
+    const f = at - lo;
+
+    const baseSize = TRAIL_SIZE[lo] + (TRAIL_SIZE[hi] - TRAIL_SIZE[lo]) * f;
+    const opacity =
+      TRAIL_OPACITY[lo] + (TRAIL_OPACITY[hi] - TRAIL_OPACITY[lo]) * f;
+
+    profile.push({
+      size: baseSize * scale,
+      opacity,
+      halo: Math.min(1, (TRAIL_HALO[i] ?? 0) * glow.intensity),
+      haloSize:
+        (TRAIL_HALO_SIZE[Math.min(i, BASE_VISIBLE - 1)] ?? 0) * glow.radius,
+    });
+  }
+  return profile;
+}
+
+/** Founder-facing description of a tuning setting, for the dev panel readout. */
+export function describeTrail(tuning?: SyncTrailTuning) {
+  const profile = resolveTrailProfile(tuning);
+  const glow = resolveTrailGlow(tuning);
+  return {
+    count: profile.length,
+    spanUnits: (profile.length - 1) * TRAIL_SPACING,
+    headSize: profile[0].size,
+    /** Particles whose halo is visible at all (opacity > 0). */
+    haloCount: profile.filter((particle) => particle.halo > 0).length,
+    headHalo: profile[0].halo,
+    headHaloSize: profile[0].haloSize,
+    haloBlur: glow.blur,
+  };
+}
+const TRAIL_SAMPLES = 512;
 
 type PathTable = { len: number; xs: Float32Array; ys: Float32Array };
 
@@ -130,13 +317,31 @@ function tabulate(path: SVGPathElement): PathTable {
   return { len, xs, ys };
 }
 
-export function SyncVisual() {
+export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = {}) {
+  /*
+   * DEV-ONLY tuning seam. Absent in production, where the approved profile is
+   * used verbatim. This component imports nothing from src/dev and knows nothing
+   * about DialKit — the Motion Lab passes plain numbers in.
+   */
+  const trailProfile = useMemo(
+    () => resolveTrailProfile(trailTuning),
+    [
+      trailTuning?.length,
+      trailTuning?.scale,
+      trailTuning?.glowIntensity,
+      trailTuning?.glowRadius,
+    ],
+  );
+  const trailGlow = resolveTrailGlow(trailTuning);
+  const trailProfileRef = useRef(trailProfile);
+  trailProfileRef.current = trailProfile;
+
   const rootRef = useRef<SVGSVGElement>(null);
   const counterRef = useRef<SVGTextElement>(null);
   const lowerPathRef = useRef<SVGPathElement>(null);
   const upperPathRef = useRef<SVGPathElement>(null);
-  const lowerDotsRef = useRef<SVGRectElement[]>([]);
-  const upperDotsRef = useRef<SVGRectElement[]>([]);
+  const lowerDotsRef = useRef<SVGGElement[]>([]);
+  const upperDotsRef = useRef<SVGGElement[]>([]);
 
   const runRef = useRef<{ mode: "intro" | "loop"; t0: number } | null>(null);
   const stopRequestedRef = useRef(false);
@@ -162,24 +367,33 @@ export function SyncVisual() {
       if (node.textContent !== label) node.textContent = label;
     };
 
-    const hideTrail = (dots: SVGRectElement[]) => {
+    const hideTrail = (dots: SVGGElement[]) => {
       for (const dot of dots) dot.style.opacity = "0";
     };
 
     const drawTrail = (
-      dots: SVGRectElement[],
+      dots: SVGGElement[],
       table: PathTable | null,
       headFraction: number | null,
       reversed: boolean,
     ) => {
       if (!table) return;
+      const profile = trailProfileRef.current;
       // Head reaches the destination exactly when that machine starts reacting;
       // afterwards it keeps going so the tail flows out rather than blinking off.
       const head = (headFraction ?? 0) * table.len;
       for (let i = 0; i < dots.length; i += 1) {
         const dot = dots[i];
+        if (!dot) continue;
+        const particle = profile[i];
         const distance = head - i * TRAIL_SPACING;
-        if (headFraction === null || distance < 0 || distance > table.len || TRAIL_OPACITY[i] === 0) {
+        if (
+          !particle ||
+          headFraction === null ||
+          distance < 0 ||
+          distance > table.len ||
+          particle.opacity === 0
+        ) {
           dot.style.opacity = "0";
           continue;
         }
@@ -192,7 +406,7 @@ export function SyncVisual() {
         const x = table.xs[index] + (table.xs[index + 1] - table.xs[index]) * f;
         const y = table.ys[index] + (table.ys[index + 1] - table.ys[index]) * f;
         dot.setAttribute("transform", `translate(${x} ${y})`);
-        dot.style.opacity = String(TRAIL_OPACITY[i]);
+        dot.style.opacity = String(particle.opacity);
       }
     };
 
@@ -572,16 +786,22 @@ export function SyncVisual() {
 
   /* ---------- propagation packets ---------- */
 
-  .sync-build { display: none; }
-
   /*
    * Dotted state trail. The connector paths below carry no stroke: they exist
    * only as geometry for getPointAtLength, and the dots are placed along them
-   * from the real transaction clock. Compact, no glow, opacity falls off behind
-   * a clear leading edge so the direction of travel reads on its own.
+   * from the real transaction clock. Opacity falls off behind a clear leading
+   * edge so the direction of travel reads on its own, and the leading seven
+   * carry a halo underlay (see TRAIL_HALO) rather than the whole packet glowing.
    */
   .sync-trail-path { stroke: none; fill: none; }
-  .sync-trail rect { fill: #0D76F2; opacity: 0; }
+  .sync-trail g { opacity: 0; }
+  .sync-trail rect { fill: #0D76F2; }
+  /*
+   * The halo is a blurred underlay behind a sharp core, so the particle keeps a
+   * crisp edge and only gains a rim of light. A filter on the group would blur
+   * the core too and read as fog.
+   */
+  .sync-trail-halo { filter: url(#syncTrailGlow); }
 
 
 
@@ -606,7 +826,7 @@ export function SyncVisual() {
       --cloud-open: 1 !important;
       --mac-open: 1 !important;
     }
-    .sync-root .sync-trail rect { opacity: 0 !important; }
+    .sync-root .sync-trail g { opacity: 0 !important; }
   }
 `}</style>
 <rect width="809" height="692" fill="#B2B2B2"/>
@@ -633,25 +853,35 @@ export function SyncVisual() {
 <path d="M528 151.299H430.542C422.534 151.3 416.042 157.791 416.042 165.799V327.799C416.042 334.938 411.767 341.077 405.639 343.799C411.767 346.522 416.042 352.661 416.042 359.799V521.799C416.042 529.807 422.534 536.299 430.542 536.299H528V539.299H430.542C420.877 539.299 413.042 531.464 413.042 521.799V359.799C413.042 351.791 406.55 345.299 398.542 345.299H296V342.299H398.542C406.55 342.299 413.042 335.807 413.042 327.799V165.799C413.042 156.134 420.877 148.3 430.542 148.299H528V151.299Z" fill="url(#paint6_linear_928_111777)"/>
 </g>
 <g className="sync-connector-track" aria-hidden="true">
-<path d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528" stroke="#DCDCDC" strokeWidth="11" strokeLinecap="round" fill="none"/>
-<path d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528" stroke="#DCDCDC" strokeWidth="11" strokeLinecap="round" fill="none"/>
-<path d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528" stroke="white" strokeWidth="9" strokeLinecap="round" fill="none"/>
-<path d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528" stroke="white" strokeWidth="9" strokeLinecap="round" fill="none"/>
-</g>
-<g className="sync-build" aria-hidden="true">
-<path pathLength="1" d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528" stroke="#DCDCDC" strokeWidth="11" strokeLinecap="round" fill="none"/>
-<path pathLength="1" d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528" stroke="#DCDCDC" strokeWidth="11" strokeLinecap="round" fill="none"/>
-<path pathLength="1" d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528" stroke="white" strokeWidth="9" strokeLinecap="round" fill="none"/>
-<path pathLength="1" d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528" stroke="white" strokeWidth="9" strokeLinecap="round" fill="none"/>
+{/*
+  The route, not the payload. This was an 11-unit grey stroke with a 9-unit white
+  stroke laid over it — a drawn tube whose walls happened to be 1 unit wide, which
+  is why it read as a rail rather than a line. One 2.5-unit stroke instead: still
+  6x lighter than before, and 1.5x SolutionVisual's connector in proportional
+  terms (0.309% of canvas width against 0.204%), which holds up better through
+  Sync's two 90-degree bends than exact parity would.
+*/}
+<path d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528" stroke="#DCDCDC" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+<path d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528" stroke="#DCDCDC" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
 </g>
 <g className="sync-trail" aria-hidden="true">
 <path ref={upperPathRef} className="sync-trail-path" d="M296 343.799H398.542C407.568 343.799 414.542 336.382 414.542 327.799V165.799C414.542 156.963 421.706 149.799 430.542 149.799H528"/>
 <path ref={lowerPathRef} className="sync-trail-path" d="M296 343.799H398.542C407.568 343.799 414.542 351.216 414.542 359.799V521.799C414.542 530.635 421.706 537.799 430.542 537.799H528"/>
-{TRAIL_OPACITY.map((_, i) => (
-<rect key={"lower-" + i} x={-TRAIL_SIZE[i] / 2} y={-TRAIL_SIZE[i] / 2} width={TRAIL_SIZE[i]} height={TRAIL_SIZE[i]} rx={TRAIL_SIZE[i] * 0.3} ref={(el) => { if (el) lowerDotsRef.current[i] = el; }} />
+{trailProfile.map((particle, i) => (
+<g key={"lower-" + i} ref={(el) => { if (el) lowerDotsRef.current[i] = el; }}>
+{particle.halo > 0 && (
+<rect className="sync-trail-halo" x={-particle.haloSize / 2} y={-particle.haloSize / 2} width={particle.haloSize} height={particle.haloSize} rx={particle.haloSize * 0.3} opacity={particle.halo} />
+)}
+<rect x={-particle.size / 2} y={-particle.size / 2} width={particle.size} height={particle.size} rx={particle.size * 0.3} />
+</g>
 ))}
-{TRAIL_OPACITY.map((_, i) => (
-<rect key={"upper-" + i} x={-TRAIL_SIZE[i] / 2} y={-TRAIL_SIZE[i] / 2} width={TRAIL_SIZE[i]} height={TRAIL_SIZE[i]} rx={TRAIL_SIZE[i] * 0.3} ref={(el) => { if (el) upperDotsRef.current[i] = el; }} />
+{trailProfile.map((particle, i) => (
+<g key={"upper-" + i} ref={(el) => { if (el) upperDotsRef.current[i] = el; }}>
+{particle.halo > 0 && (
+<rect className="sync-trail-halo" x={-particle.haloSize / 2} y={-particle.haloSize / 2} width={particle.haloSize} height={particle.haloSize} rx={particle.haloSize * 0.3} opacity={particle.halo} />
+)}
+<rect x={-particle.size / 2} y={-particle.size / 2} width={particle.size} height={particle.size} rx={particle.size * 0.3} />
+</g>
 ))}
 </g><g id="Frame 2147260377">
 <g id="Frame" clipPath="url(#clip1_928_111777)">
@@ -878,6 +1108,14 @@ export function SyncVisual() {
 </g>
 </g>
 <defs>
+{/*
+  Micro-bloom for the trail's leading particles only. Applied to a blurred
+  underlay behind each sharp core, never to the group, so the particle keeps a
+  crisp edge and gains a rim of light rather than turning to fog.
+*/}
+<filter id="syncTrailGlow" x="-120%" y="-120%" width="340%" height="340%">
+<feGaussianBlur stdDeviation={trailGlow.blur}/>
+</filter>
 <filter id="filter0_ddddii_928_111777" x="49" y="179.701" width="310" height="328.598" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
 <feFlood floodOpacity="0" result="BackgroundImageFix"/>
 <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
