@@ -119,14 +119,14 @@ export default function Pricing() {
   };
 
   return (
-    <section className="w-full bg-[#fafafa] px-5 py-12 sm:px-8 sm:py-20 lg:px-[131px] lg:py-[100px]">
-      <div className="mx-auto flex max-w-[1144px] flex-col items-center gap-6 lg:gap-16">
+    <section className="w-full bg-[#fafafa] px-5 py-12 sm:px-8 sm:py-16 lg:px-[131px] lg:py-[100px]">
+      <div className="mx-auto flex max-w-[1144px] flex-col items-center gap-6 min-[744px]:w-[680px] lg:w-full lg:gap-16">
         <FadeIn className="flex w-full flex-col items-center gap-2.5 text-center">
           <h2 className="text-section font-normal text-text-primary">
             <span className="block">Simple pricing.</span>
             <span className="block">Built for teams of any size.</span>
           </h2>
-          <p className="max-w-[490px] text-[12px] leading-[18px] text-text-primary">
+          <p className="max-w-[490px] text-[14px] leading-[20px] text-text-primary">
             Start free. Upgrade when you need more. All plans include end-to-end
             encryption and on-demand file access.
           </p>

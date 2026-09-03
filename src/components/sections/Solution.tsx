@@ -22,7 +22,7 @@ export default function Solution() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <p className="max-w-[387px] text-center text-[12px] leading-[18px] text-text-primary">
+          <p className="max-w-[387px] text-center text-[14px] leading-[20px] text-text-primary">
             One unified directory, mirrored everywhere. Attach it to any machine
             and your workspace is just there. Files on demand, secrets included,
             and the same view for agents through CLI and MCP.

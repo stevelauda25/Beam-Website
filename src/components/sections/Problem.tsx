@@ -21,13 +21,13 @@ const features = [
     icon: featureColdstart,
     title: 'Cold starts are slow',
     description:
-      'Repositories, dependencies, and context have to be rebuilt before real work can begin.',
+      'Repositories and dependencies must be rebuilt before real work can begin.',
   },
   {
     icon: featureAgents,
     title: 'Agents repeat the cycle',
     description:
-      'Ephemeral environments repeat the same setup again and again for every agent.',
+      'Ephemeral environments repeat setup for every agent.',
   },
 ];
 

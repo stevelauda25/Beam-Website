@@ -8,23 +8,23 @@ import syncFast from '../../assets/icons/sync/sync-fast.svg';
 
 export default function Sync() {
   return (
-    <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-20 lg:px-0 lg:py-[100px]">
-      <div className="mx-auto flex max-w-[1440px] flex-col items-center lg:flex-row lg:items-stretch">
-        <FadeIn className="w-full lg:w-[809px]">
+    <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-16 lg:px-0 lg:py-[100px]">
+      <div className="mx-auto flex max-w-[1440px] flex-col items-center min-[744px]:w-[680px] lg:w-full lg:flex-row lg:items-stretch">
+        <FadeIn className="w-full sm:max-w-[640px] min-[744px]:w-[520px] lg:w-[809px] lg:max-w-none">
           <SyncVisual />
         </FadeIn>
 
         <FadeIn
           delay={0.1}
-          className="flex w-full items-center pt-12 lg:w-[621px] lg:pr-[131px] lg:pl-0 lg:pt-0"
+          className="flex w-full items-center pt-12 sm:max-w-[640px] sm:pt-8 min-[744px]:w-[500px] lg:w-[621px] lg:max-w-none lg:pr-[131px] lg:pl-0 lg:pt-0"
         >
-          <div className="flex flex-col gap-6 lg:gap-[130px]">
+          <div className="flex w-full flex-col gap-6 lg:gap-[130px]">
             <div className="flex max-w-[490px] flex-col gap-[10px]">
               <SectionLabel label="Sync" />
               <h2 className="text-section font-normal text-text-primary">
                 One directory, every machine
               </h2>
-              <p className="text-[12px] leading-[18px] text-text-primary">
+              <p className="text-[14px] leading-[20px] text-text-primary">
                 Edit on your laptop and pick up on another machine in seconds. Beam
                 keeps your workspace live and in sync without commits, pushes, or
                 manual copies.

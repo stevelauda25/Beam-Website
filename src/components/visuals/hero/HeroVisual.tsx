@@ -15,7 +15,10 @@ export function HeroVisual() {
     const updateScale = () => {
       const width = visual.getBoundingClientRect().width;
       setIsMobile(width < 640);
-      setScale(width / canvasWidth);
+      const isTablet = window.innerWidth >= 744 && window.innerWidth < 1200;
+      // Tablet crops the artwork's outer gutters and scales from the actual app
+      // frame, so the product—not its invisible canvas—fills the 680px guide.
+      setScale(width / (isTablet ? 1164.56 : canvasWidth));
     };
     updateScale();
     const observer = new ResizeObserver(updateScale);

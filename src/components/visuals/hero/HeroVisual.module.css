@@ -72,3 +72,9 @@
     width: 100%;
   }
 }
+
+@media (min-width: 744px) and (max-width: 1199px) {
+  .visual {
+    aspect-ratio: 1164.56 / 540;
+  }
+}

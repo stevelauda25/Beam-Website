@@ -25,13 +25,13 @@ export default function PricingCard({
   return (
     <div
       data-pricing-card
-      className={`flex min-w-0 flex-col items-start overflow-hidden rounded-[2.83px] px-3 ${
+      className={`flex min-w-0 flex-col items-start overflow-hidden rounded-[2.83px] px-3 min-[744px]:px-0 lg:px-3 ${
         recommended
           ? 'lg:w-[277.25px] lg:shrink-0'
           : 'lg:flex-1'
       } ${className}`}
     >
-      <div className="flex w-full flex-col justify-center text-[12px] leading-[18px]">
+      <div className="flex w-full flex-col justify-center text-[14px] leading-[20px]">
         <div className="flex items-center justify-between">
           <span className="text-text-primary">{name}</span>
           {recommended && (
@@ -70,7 +70,7 @@ export default function PricingCard({
                 width={12}
                 height={12}
               />
-              <span className="text-[12px] leading-[18px] text-text-primary lg:whitespace-nowrap">
+              <span className="text-[14px] leading-[20px] text-text-primary lg:whitespace-nowrap">
                 {feature}
               </span>
             </div>

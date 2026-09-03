@@ -388,6 +388,36 @@
   100% { opacity: 0; }
 }
 
+@media (min-width: 641px) and (max-width: 1199px) {
+  .footerVisual {
+    height: 160px;
+    aspect-ratio: auto;
+  }
+
+  .centerTile,
+  .activeTileShadow {
+    width: clamp(72px, 9cqw, 88px);
+    height: clamp(72px, 9cqw, 88px);
+    border-radius: clamp(17px, 2.2cqw, 21px);
+  }
+
+  .tileEdge {
+    inset: 5px;
+    border-radius: 14px;
+  }
+
+  .activeSymbol {
+    width: clamp(38px, 4.8cqw, 46px);
+    height: clamp(38px, 4.8cqw, 46px);
+  }
+
+  .interactionZone {
+    width: 112px;
+    height: 112px;
+    border-radius: 28px;
+  }
+}
+
 @media (max-width: 640px) {
   .footerVisual {
     height: clamp(140px, 42cqw, 160px);

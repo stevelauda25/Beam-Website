@@ -3,8 +3,8 @@ import Button from '../ui/Button';
 
 export default function Navbar() {
   return (
-    <nav className="w-full bg-[#fafafa] px-5 py-3 sm:px-8 lg:px-[132px]">
-      <div className="mx-auto flex max-w-[1176px] items-center justify-between">
+    <nav className="fixed inset-x-0 top-0 z-50 w-full bg-[#fafafa]/95 px-5 py-3 backdrop-blur-sm sm:px-8 min-[744px]:h-[52px] min-[744px]:py-0 lg:h-auto lg:px-[132px] lg:py-3">
+      <div className="mx-auto flex h-full max-w-[1176px] items-center justify-between min-[744px]:w-[680px] lg:w-full">
         <a href="#" className="flex items-center gap-[5px]">
           <img
             src={beamLogo}
@@ -28,7 +28,7 @@ export default function Navbar() {
           <Button
             variant="secondary"
             href="#"
-            className="!px-[14px] !leading-none whitespace-nowrap"
+            className="!px-[14px] !leading-none whitespace-nowrap min-[744px]:!h-[30px] min-[744px]:!py-0 lg:!h-auto lg:!py-2"
           >
             Login
           </Button>

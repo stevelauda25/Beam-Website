@@ -33,6 +33,68 @@ body {
   @apply bg-canvas text-text-primary;
 }
 
+@property --agent-outline-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes agent-outline-orbit {
+  to {
+    --agent-outline-angle: 360deg;
+  }
+}
+
+.agent-prompt-button {
+  position: relative;
+  isolation: isolate;
+}
+
+.agent-prompt-button::before {
+  content: '';
+  position: absolute;
+  inset: -0.5px;
+  z-index: 1;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--agent-outline-angle),
+    transparent 0deg 38deg,
+    rgba(92, 92, 92, 0.12) 50deg,
+    rgba(62, 62, 62, 0.58) 69deg,
+    rgba(255, 255, 255, 0.98) 81deg,
+    rgba(92, 92, 92, 0.16) 94deg,
+    transparent 106deg 218deg,
+    rgba(92, 92, 92, 0.12) 230deg,
+    rgba(62, 62, 62, 0.58) 249deg,
+    rgba(255, 255, 255, 0.98) 261deg,
+    rgba(92, 92, 92, 0.16) 274deg,
+    transparent 286deg,
+    transparent 360deg
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease-out;
+  animation: agent-outline-orbit 3.2s linear infinite;
+  animation-play-state: paused;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.agent-prompt-button:not(.is-copy-active):hover::before {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+.agent-prompt-button:active::before,
+.agent-prompt-button.is-copy-active::before {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

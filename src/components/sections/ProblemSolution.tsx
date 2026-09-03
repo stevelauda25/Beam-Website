@@ -32,13 +32,13 @@ const problemFeatures = [
     icon: featureColdstart,
     title: 'Cold starts are slow',
     description:
-      'Repositories, dependencies, and context have to be rebuilt before real work can begin.',
+      'Repositories and dependencies must be rebuilt before real work can begin.',
   },
   {
     icon: featureAgents,
     title: 'Agents repeat the cycle',
     description:
-      'Ephemeral environments repeat the same setup again and again for every agent.',
+      'Ephemeral environments repeat setup for every agent.',
   },
 ];
 
@@ -285,8 +285,8 @@ export default function ProblemSolution() {
 
   return (
     <section ref={sectionRef} className="relative h-[100svh] w-full bg-canvas">
-      <div className="flex h-full w-full items-center justify-center overflow-hidden px-5 sm:px-8 md:px-16 lg:px-[131px]">
-        <div className="flex w-full max-w-[1178px] flex-col items-center gap-[clamp(16px,2svh,24px)] md:gap-[clamp(20px,4svh,48px)]">
+      <div className="flex h-full w-full items-center justify-center overflow-hidden px-5 sm:px-8 md:px-16 min-[744px]:px-0 lg:px-[131px]">
+        <div className="flex w-full max-w-[1178px] flex-col items-center gap-[clamp(16px,2svh,24px)] min-[744px]:absolute min-[744px]:left-[50vw] min-[744px]:top-1/2 min-[744px]:w-[680px] min-[744px]:-translate-x-1/2 min-[744px]:-translate-y-1/2 min-[744px]:gap-8 lg:static lg:w-full lg:translate-x-0 lg:translate-y-0 lg:gap-[clamp(20px,4svh,48px)]">
           <div className="relative h-[clamp(58px,8svh,84px)] w-full">
             <h2
               data-problem-state
@@ -303,7 +303,7 @@ export default function ProblemSolution() {
             </h2>
           </div>
 
-          <div className="flex h-[min(260px,34svh)] w-full items-center md:h-[min(350px,40svh)]">
+          <div className="flex h-[min(260px,34svh)] w-full items-center min-[744px]:h-[320px] lg:h-[min(350px,40svh)]">
             <div className="w-full origin-center scale-[1.2] md:scale-100">
               <SolutionVisual
                 ref={visualRef}
@@ -324,7 +324,7 @@ export default function ProblemSolution() {
               aria-hidden="true"
               className="invisible absolute inset-x-0 top-0 flex justify-center will-change-[transform,filter,opacity]"
             >
-              <p className="max-w-[387px] text-center text-[12px] leading-[18px] text-text-primary">
+              <p className="max-w-[387px] text-center text-[14px] leading-[20px] text-text-primary">
                 <span className="sm:hidden">
                   <span className="block whitespace-nowrap">
                     One unified directory, mirrored everywhere.

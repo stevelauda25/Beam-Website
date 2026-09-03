@@ -17,7 +17,7 @@ const links = [
 export default function Footer() {
   return (
     <footer className="relative w-full overflow-hidden bg-[#292929] text-white">
-      <div className="relative z-10 w-full pt-16 sm:pt-20">
+      <div className="relative z-10 w-full pt-16 lg:pt-20">
         <div className="relative mx-auto flex max-w-[1440px] flex-col items-center">
           <FadeIn className="relative z-0 w-full">
             <div className="flex w-full justify-center">
@@ -33,7 +33,7 @@ export default function Footer() {
               <span className="block md:inline">Your workspace.</span>{' '}
               <span className="block md:inline">Ready anywhere.</span>
             </h2>
-            <p className="max-w-[382px] text-[12px] leading-[18px]">
+            <p className="max-w-[382px] text-[14px] leading-[20px]">
               <span className="block">Mount your files in seconds and keep the same</span>
               <span className="block">workspace across your machines, tools, and agents.</span>
             </p>
@@ -62,7 +62,7 @@ export default function Footer() {
       </div>
 
       <FadeIn delay={0.2} className="relative z-10">
-        <nav className="flex flex-wrap items-center justify-center gap-4 px-5 pb-16 pt-5 sm:pb-20">
+        <nav className="flex flex-wrap items-center justify-center gap-4 px-5 pb-16 pt-5 lg:pb-20">
           {links.map(({ label, icon }) => (
             <a
               key={label}
