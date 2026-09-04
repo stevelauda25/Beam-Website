@@ -161,29 +161,7 @@ const READY = { x: 29.03, y: 22.95, r: 8.83, copyX: 56.94 } as const;
 /** app.ts — the row state 2 selects and measures. */
 const SELECTED_ROW = 4;
 
-/*
- * DIAGNOSTIC NUDGE — TEMPORARY. Revert after the device check. NOT a fix.
- *
- * On a real phone, positions 2 and 6 paint as blank row-sized slots whatever
- * content sits there -- proven by the row-order swap in the previous commit,
- * where the blanks stayed at 2 and 6 while README.md and "..." moved away and
- * rendered correctly. Static analysis then found NO difference between those
- * two positions and the five that work: no index-specific logic anywhere in the
- * codebase, byte-identical subtrees, identical overlays, identical paint order.
- *
- * So this moves ONLY those two rows 6 units down, leaving their indices, DOM
- * order, classes, content, icons, stagger and opacity untouched:
- *
- *   they appear     -> the failure follows the COORDINATE / raster position
- *   they stay blank -> the failure follows the INDEX / DOM order
- *
- * The list will look visibly uneven at those two rows; that is expected. 6 is
- * safe: the pitch is 35.32 against a 22.5-unit row, so nothing can overlap.
- */
-const rowNudge = (index: number) => (index === 2 || index === 6 ? 6 : 0);
-
-const rowTop = (index: number) =>
-  PANEL.row0 + index * PANEL.pitch + rowNudge(index);
+const rowTop = (index: number) => PANEL.row0 + index * PANEL.pitch;
 /** Rows are set on a 20-unit mono face; this is its optical centre line. */
 const rowBaseline = (index: number) => rowTop(index) + 14.6;
 
@@ -393,11 +371,7 @@ export const OnDemandPanel = forwardRef<SVGSVGElement, OnDemandPanelProps>(
               transform={`translate(0 ${
                 (index -
                   (row.kind === "folder" ? FOLDER_BASE_ROW : FILE_BASE_ROW)) *
-                  PANEL.pitch +
-                /* Same nudge rowTop applies: the icon derives its own offset,
-                   so without this the glyph would stay put while its label
-                   moved. Diagnostic only. */
-                rowNudge(index)
+                PANEL.pitch
               }) ${CANVAS_TO_CONTENT}`}
             >
               {row.kind === "folder" ? (
