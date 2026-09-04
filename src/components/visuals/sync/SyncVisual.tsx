@@ -866,6 +866,27 @@ export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = 
    */
   @media (max-width: 743px) {
     .sync-root [filter] { filter: none; }
+
+    /*
+     * ...with one exception that must be HIDDEN rather than un-blurred.
+     *
+     * "Rectangle 60912" is a 200x328 rect rotated -111.412 degrees, filled with
+     * a gradient, whose only filter is a single feGaussianBlur at stdDeviation
+     * 50. It is not a shadow and not a reveal mask: it is a decorative ambient
+     * wash that exists purely to be smeared out by that blur.
+     *
+     * Neutralising filters therefore did something different to this one element
+     * than to the nine shadow stacks. A shadow stack simply stops casting a
+     * shadow; this one snapped back to its unblurred self -- a hard-edged
+     * diagonal gradient band lying across the Cloud VM header, which is the
+     * white overlay cutting through "Cloud".
+     *
+     * Since its entire contribution is a soft glow, hiding it on a phone is far
+     * closer to the authored intent than drawing it hard-edged. It is the only
+     * blur-only filter in this visual, and Agents and Secrets have none at all,
+     * so nothing else needs this treatment.
+     */
+    .sync-root g[filter="url(#filter9_f_928_111777)"] { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
