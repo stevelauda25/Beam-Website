@@ -4,13 +4,48 @@ const svgMarkup = "<svg width=\"809\" height=\"692\" viewBox=\"0 0 809 692\" fil
 
 import { useEffect, useRef } from "react";
 
-const LOOP_DURATION = 8000;
+/*
+ * State 1 — "Everything appears instantly".
+ *
+ * This used to be an 8s infinite cycle that hid the file rows and brought them
+ * back, which read as a reload rather than a reveal and never finished settling.
+ * It is now a single forward cascade just over a second long: the rows arrive in
+ * sequence, the cloud gives one pulse, one scan passes, and the count lands.
+ *
+ * Every number below is the source of truth for BOTH the CSS keyframes and the
+ * JS counter — the per-row delays and the counter window are derived from them,
+ * so the two clocks cannot drift apart.
+ */
 const ROW_COUNT = 7;
+const ROW_START_MS = 60;
+const ROW_STAGGER_MS = 46;
+const ROW_DURATION_MS = 300;
+const COUNT_DELAY_MS = 520;
+const COUNT_DURATION_MS = 520;
+const TOTAL_FILES = 12480;
+
+/** The whole reveal, end to end. */
+export const OD1_REVEAL_DURATION_MS = COUNT_DELAY_MS + COUNT_DURATION_MS;
+
+const rowDelays = Array.from(
+  { length: ROW_COUNT },
+  (_, index) =>
+    `  .od-motion-play .od-file-row-${index} { animation-delay: ${
+      ROW_START_MS + index * ROW_STAGGER_MS
+    }ms; }`,
+).join("\n");
 
 const animationStyles = `
   .od-window {
     transform-box: fill-box;
     transform-origin: center;
+  }
+  /*
+   * The panel's own entrance belongs to the standalone component only. Inside the
+   * On-Demand section the panel is the persistent shell and must never move
+   * independently of it, so the entrance is scoped away from the driven case.
+   */
+  .on-demand-visual:not(.od-driven) .od-window {
     animation: od-window-enter 620ms cubic-bezier(.16,1,.3,1) both;
   }
   .od-cloud-pulse {
@@ -32,24 +67,18 @@ const animationStyles = `
     transform-box: fill-box;
     transform-origin: center;
   }
-  .od-motion-active .od-cloud-pulse {
-    animation: od-cloud-cycle 8s cubic-bezier(.16,1,.3,1) infinite;
+  .od-motion-play .od-file-row {
+    animation: od-file-in ${ROW_DURATION_MS}ms cubic-bezier(.16,1,.3,1) both;
   }
-  .od-motion-active .od-file-row {
-    animation: od-file-cycle 8s cubic-bezier(.16,1,.3,1) infinite both;
+${rowDelays}
+  .od-motion-play .od-cloud-pulse {
+    animation: od-cloud-once 420ms cubic-bezier(.16,1,.3,1) 40ms both;
   }
-  .od-motion-active .od-file-row-0 { animation-delay: 0ms; }
-  .od-motion-active .od-file-row-1 { animation-delay: 100ms; }
-  .od-motion-active .od-file-row-2 { animation-delay: 200ms; }
-  .od-motion-active .od-file-row-3 { animation-delay: 300ms; }
-  .od-motion-active .od-file-row-4 { animation-delay: 400ms; }
-  .od-motion-active .od-file-row-5 { animation-delay: 500ms; }
-  .od-motion-active .od-file-row-6 { animation-delay: 600ms; }
-  .od-motion-active .od-scan {
-    animation: od-scan-cycle 8s cubic-bezier(.45,0,.22,1) infinite;
+  .od-motion-play .od-scan {
+    animation: od-scan-once 720ms cubic-bezier(.45,0,.22,1) 200ms both;
   }
-  .od-motion-active .od-status {
-    animation: od-status-cycle 8s cubic-bezier(.16,1,.3,1) 700ms infinite both;
+  .od-motion-play .od-status {
+    animation: od-file-in 320ms cubic-bezier(.16,1,.3,1) ${COUNT_DELAY_MS}ms both;
   }
   .od-counter {
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -62,26 +91,21 @@ const animationStyles = `
     from { opacity: 0; transform: translateY(7px) scale(.992); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
-  @keyframes od-cloud-cycle {
-    0%, 11%, 22%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(90,90,90,0)); }
-    15% { transform: scale(1.09); filter: drop-shadow(0 0 5px rgba(90,90,90,.18)); }
-    19% { transform: scale(.985); filter: drop-shadow(0 0 2px rgba(90,90,90,.08)); }
+  @keyframes od-file-in {
+    from { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
   }
-  @keyframes od-file-cycle {
-    0% { opacity: 1; transform: translateY(0); filter: blur(0); }
-    12.5%, 18.75% { opacity: 0; transform: translateY(-3px); filter: blur(1.5px); }
-    30%, 100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  @keyframes od-cloud-once {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(90,90,90,0)); }
+    46% { transform: scale(1.09); filter: drop-shadow(0 0 5px rgba(90,90,90,.18)); }
+    72% { transform: scale(.985); filter: drop-shadow(0 0 2px rgba(90,90,90,.08)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(90,90,90,0)); }
   }
-  @keyframes od-scan-cycle {
-    0%, 15% { opacity: 0; transform: translateY(-45px); }
-    19% { opacity: .16; }
-    32% { opacity: .38; transform: translateY(250px); }
-    39%, 100% { opacity: 0; transform: translateY(335px); }
-  }
-  @keyframes od-status-cycle {
-    0% { opacity: 1; transform: translateY(0); filter: blur(0); }
-    12.5%, 18.75% { opacity: 0; transform: translateY(-3px); filter: blur(1.5px); }
-    30%, 100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  @keyframes od-scan-once {
+    0% { opacity: 0; transform: translateY(-45px); }
+    12% { opacity: .16; }
+    55% { opacity: .38; transform: translateY(250px); }
+    100% { opacity: 0; transform: translateY(335px); }
   }
   @media (prefers-reduced-motion: reduce) {
     .od-window, .od-cloud-pulse, .od-file-row, .od-scan, .od-status {
@@ -97,8 +121,60 @@ const animationStyles = `
 function buildAnimatedMarkup(source: string) {
   let markup = source.replace(
     '<g filter="url(#filter0_ddddii_1003_3758)">',
-    '<g class="od-window" filter="url(#filter0_ddddii_1003_3758)">',
+    '<g class="od-window od-panel-shadow" filter="url(#filter0_ddddii_1003_3758)">',
   );
+
+  /*
+   * Tag the panel chrome so the On-Demand section can switch it off. The section
+   * owns ONE persistent shell that draws the card, its edge and its shadow; the
+   * artwork must then stop drawing its own, or two cards would be stacked and
+   * the crossfade would show the seam. Tagged, never deleted: standalone and
+   * Motion Lab still render every one of these.
+   */
+  markup = markup
+    .replace(
+      '<rect width="809" height="692" fill="#FAFAFA"/>',
+      '<rect class="od-canvas-bg" width="809" height="692" fill="#FAFAFA"/>',
+    )
+    // The inset grey card and the white list frame are boxes whose HEIGHT has to
+    // follow the panel, which a flattened path cannot do. The section rebuilds
+    // both as CSS and switches these off; every clip and filter region that is
+    // pinned to the state 1 height is neutralised with them, or the expanded
+    // state 3 layout would be cropped back to 540.965 where Figma ended it.
+    .replace(
+      '<g clip-path="url(#clip1_1003_3758)">',
+      '<g class="od-clip-panel" clip-path="url(#clip1_1003_3758)">',
+    )
+    .replace(
+      '<g clip-path="url(#clip2_1003_3758)">',
+      '<g class="od-clip-inner" clip-path="url(#clip2_1003_3758)">',
+    )
+    .replace(
+      '<g filter="url(#filter1_ddi_1003_3758)">',
+      '<g class="od-inner-shadow" filter="url(#filter1_ddi_1003_3758)">',
+    )
+    .replace(
+      '<g filter="url(#filter2_i_1003_3758)">',
+      '<g class="od-list-shadow" filter="url(#filter2_i_1003_3758)">',
+    )
+    .replace(
+      '<rect x="177.47" y="150.469" width="473.053" height="390.496" rx="3.31967" fill="#F5F5F5"/>',
+      '<rect class="od-inner-fill" x="177.47" y="150.469" width="473.053" height="390.496" rx="3.31967" fill="#F5F5F5"/>',
+    )
+    .replace(
+      '<rect x="177.885" y="150.884" width="472.223" height="389.666" rx="2.90471" stroke="#C4C4C4" stroke-width="0.829918"/>',
+      '<rect class="od-inner-edge" x="177.885" y="150.884" width="472.223" height="389.666" rx="2.90471" stroke="#C4C4C4" stroke-width="0.829918"/>',
+    )
+    .replace('<path d="M178.3 209.619', '<path class="od-list-fill" d="M178.3 209.619')
+    .replace('<path d="M646.374 205.884', '<path class="od-list-edge" d="M646.374 205.884')
+    .replace(
+      '<rect x="170" y="143" width="487.992" height="405.434" rx="9.95902" fill="white"/>',
+      '<rect class="od-panel-fill" x="170" y="143" width="487.992" height="405.434" rx="9.95902" fill="white"/>',
+    )
+    .replace(
+      '<rect x="170.415" y="143.415" width="487.162" height="404.605" rx="9.54406" stroke="black" stroke-opacity="0.1" stroke-width="0.829918"/>',
+      '<rect class="od-panel-edge" x="170.415" y="143.415" width="487.162" height="404.605" rx="9.54406" stroke="black" stroke-opacity="0.1" stroke-width="0.829918"/>',
+    );
 
   markup = markup.replace(
     /(<path d="M213\.26[\s\S]*?stroke-linejoin="round"\/>\n<path d="M209\.083[\s\S]*?stroke-linejoin="round"\/>)/,
@@ -133,116 +209,131 @@ function buildAnimatedMarkup(source: string) {
 
 const animatedSvgMarkup = buildAnimatedMarkup(svgMarkup);
 
-export function OnDemandVisual() {
+/**
+ * When the parent owns the clock (the persistent-shell On-Demand section) it
+ * passes `playback`. The component then ignores its own IntersectionObserver and
+ * hover replay and runs the cascade exactly once per activation, rewinding to
+ * frame 0 when deactivated so a scroll-up cannot leave the counter mid-flight.
+ * With the prop absent (Motion Lab, standalone) the original behaviour stands.
+ */
+export type OnDemandPlayback = { active: boolean };
+
+export function OnDemandVisual({
+  playback,
+}: { playback?: OnDemandPlayback } = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const driven = playback !== undefined;
+  const isActive = playback?.active ?? false;
 
   useEffect(() => {
     const root = rootRef.current;
     const svg = root?.querySelector<SVGSVGElement>("svg");
-    const counter = rootRef.current?.querySelector<SVGTextElement>("[data-od-counter]");
+    const counter = root?.querySelector<SVGTextElement>("[data-od-counter]");
     if (!root || !svg || !counter) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (reducedMotion.matches) {
-      counter.textContent = "12,480 files available";
+    const formatter = new Intl.NumberFormat("en-US");
+    const settledText = `${formatter.format(TOTAL_FILES)} files available`;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      counter.textContent = settledText;
       return;
     }
 
-    const formatter = new Intl.NumberFormat("en-US");
     let frame = 0;
-    let cycleStartedAt = 0;
+    let startedAt = 0;
     let previousValue = -1;
-    let active = false;
-    let hovered = false;
-    let stopRequested = false;
-    let hasAppeared = false;
     let observer: IntersectionObserver | null = null;
 
-    const stopCycle = () => {
-      active = false;
-      stopRequested = false;
-      svg.classList.remove("od-motion-active");
-      counter.textContent = "12,480 files available";
-      previousValue = 12480;
-      if (frame) window.cancelAnimationFrame(frame);
-      frame = 0;
+    const writeCount = (value: number) => {
+      if (value === previousValue) return;
+      previousValue = value;
+      counter.textContent = `${formatter.format(value)} files available`;
     };
 
-    const updateCounter = (now: number) => {
-      const elapsed = now - cycleStartedAt;
+    /*
+     * One forward pass, no loop. The counter is driven off the SAME clock as the
+     * CSS cascade (both start when od-motion-play is added), so the number and
+     * the rows land together instead of on two independent cycles.
+     */
+    const tick = (now: number) => {
+      const elapsed = now - startedAt;
+      const raw = Math.min(
+        1,
+        Math.max(0, (elapsed - COUNT_DELAY_MS) / COUNT_DURATION_MS),
+      );
+      const eased = 1 - Math.pow(1 - raw, 3);
+      writeCount(Math.round(TOTAL_FILES * eased));
 
-      if (elapsed >= LOOP_DURATION && stopRequested && !hovered) {
-        stopCycle();
+      if (raw >= 1) {
+        frame = 0;
+        writeCount(TOTAL_FILES);
         return;
       }
-
-      const loopTime = elapsed % LOOP_DURATION;
-      const rawProgress = Math.min(1, Math.max(0, (loopTime - 1750) / 1050));
-      const easedProgress = 1 - Math.pow(1 - rawProgress, 3);
-      const value = loopTime < 1200 ? 12480 : Math.round(12480 * easedProgress);
-
-      if (value !== previousValue) {
-        counter.textContent = `${formatter.format(value)} files available`;
-        previousValue = value;
-      }
-
-      frame = window.requestAnimationFrame(updateCounter);
+      frame = window.requestAnimationFrame(tick);
     };
 
-    const startCycle = (stopAfterFirstLoop: boolean) => {
-      if (active) return;
-      active = true;
-      stopRequested = stopAfterFirstLoop;
-      cycleStartedAt = performance.now();
-      svg.classList.add("od-motion-active");
-      frame = window.requestAnimationFrame(updateCounter);
+    const play = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      // Force a reflow between removing and re-adding the class so the browser
+      // restarts the keyframes instead of treating it as a no-op.
+      svg.classList.remove("od-motion-play");
+      void svg.getBoundingClientRect();
+      previousValue = -1;
+      writeCount(0);
+      svg.classList.add("od-motion-play");
+      startedAt = performance.now();
+      frame = window.requestAnimationFrame(tick);
     };
 
-    const pointerEnter = (event: PointerEvent) => {
+    const rewind = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = 0;
+      svg.classList.remove("od-motion-play");
+      previousValue = -1;
+      writeCount(TOTAL_FILES);
+    };
+
+    if (driven) {
+      if (isActive) play();
+      else rewind();
+      return () => {
+        if (frame) window.cancelAnimationFrame(frame);
+      };
+    }
+
+    // ── Standalone: first viewport entry plays it, hover replays it. ────────
+    const replay = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
-      if (!hasAppeared) {
-        hasAppeared = true;
-        observer?.disconnect();
-      }
-      hovered = true;
-      stopRequested = false;
-      if (active) return;
-      startCycle(false);
+      play();
     };
+    root.addEventListener("pointerenter", replay);
 
-    const pointerLeave = () => {
-      hovered = false;
-      if (active) stopRequested = true;
-    };
-
-    root.addEventListener("pointerenter", pointerEnter);
-    root.addEventListener("pointerleave", pointerLeave);
-
-    if ('IntersectionObserver' in window) {
-      observer = new IntersectionObserver(([entry]) => {
-        if (!entry?.isIntersecting || hasAppeared) return;
-        hasAppeared = true;
-        observer?.disconnect();
-        startCycle(true);
-      }, { threshold: 0.35 });
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry?.isIntersecting) return;
+          observer?.disconnect();
+          observer = null;
+          play();
+        },
+        { threshold: 0.35 },
+      );
       observer.observe(root);
     } else {
-      hasAppeared = true;
-      startCycle(true);
+      play();
     }
 
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
       observer?.disconnect();
-      root.removeEventListener("pointerenter", pointerEnter);
-      root.removeEventListener("pointerleave", pointerLeave);
+      root.removeEventListener("pointerenter", replay);
     };
-  }, []);
+  }, [driven, isActive]);
 
   return (
     <div
       ref={rootRef}
-      className="on-demand-visual"
+      className={`on-demand-visual${driven ? " od-driven" : ""}`}
       role="img"
       aria-label="Beam on-demand monorepo directory with 12,480 files available"
       dangerouslySetInnerHTML={{ __html: animatedSvgMarkup }}
