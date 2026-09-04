@@ -469,28 +469,7 @@ const shellCss = `
       0 calc(1 * var(--od-u)) calc(2 * var(--od-u)) calc(-0.5 * var(--od-u)) rgba(0, 0, 0, 0.2),
       inset 0 0 0 calc(${PANEL.hairline} * var(--od-s) * var(--od-u)) rgba(0, 0, 0, 0.1),
       inset 0 calc(0.5 * var(--od-u)) calc(0.5 * var(--od-u)) rgba(255, 255, 255, 0.25);
-    /*
-     * A/B TEST — SINGLE VARIABLE, RUNNING IN PRODUCTION ON PURPOSE.
-     *
-     * This is a diagnostic, not a settled fix. It is on main so the failure can
-     * be observed on a real phone, which is the only place it reproduces. If it
-     * does not restore the missing rows, revert this commit -- do not build on
-     * it.
-     *
-     * Was: will-change: width, height, transform;
-     *
-     * That permanently promotes the panel to a composited layer AND declares
-     * that two LAYOUT properties change continuously -- which they do, every
-     * frame of the scrub. On a real phone (both Safari and Chrome) rows 2 and 6
-     * of the State 1 tree do not paint; on desktop and in emulation all seven
-     * do. A continuously-resized promoted layer is the one compositing anomaly
-     * in the whole ancestor chain, so this neutralises it and nothing else.
-     *
-     * Verified visually inert locally: every row rect and the shell box are
-     * byte-identical with and without the hint, and the width/height morph
-     * still resolves.
-     */
-    will-change: auto;
+    will-change: width, height, transform;
   }
 
   .od-inner {
