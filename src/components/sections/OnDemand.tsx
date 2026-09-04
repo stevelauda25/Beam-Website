@@ -1132,6 +1132,23 @@ export default function OnDemand() {
         pinSpacing: true,
         scrub: SCRUB,
         animation: tl,
+        /*
+         * MOBILE PIN STABILISERS.
+         *
+         * Both were on the OnDemand trigger before this section was rebuilt,
+         * and are still on ProblemSolution's; the rewrite dropped them.
+         *
+         * anticipatePin lets ScrollTrigger pin fractionally early based on
+         * scroll velocity, which is what stops a momentum flick on a phone from
+         * engaging the pin a frame late and showing the jump that follows.
+         * fastScrollEnd completes the section rather than leaving the scrub
+         * lagging behind when the reader flicks straight past it.
+         *
+         * Neither changes a beat, a duration or an easing -- only when the pin
+         * latches and how a fast fling is settled.
+         */
+        anticipatePin: 1,
+        fastScrollEnd: true,
         invalidateOnRefresh: true,
         // Resize / relayout: re-resolve the held geometry before the next draw.
         onRefresh: () => setLinkGeometry(),
