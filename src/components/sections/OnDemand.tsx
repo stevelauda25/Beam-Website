@@ -559,13 +559,19 @@ const shellCss = `
    * icon. Only the secondary Ready mark keeps its own entrance.
    */
   .p-ready-mark { opacity: 0; }
-  /* The tree is hidden only until its first-view cascade has run, once ever. */
-  .od-unrevealed .p-row,
+  /*
+   * DIAGNOSTIC — TEMPORARY. .p-row deliberately removed from this rule.
+   *
+   * The rows now rest at their final state from first paint: no starting
+   * opacity 0, and (with the loop below removed) no reveal animation at all.
+   * The footer keeps its entrance, so only the ROW pipeline is out of the
+   * equation. Restore the ".od-unrevealed .p-row," selector line to undo.
+   */
   .od-unrevealed .p-footer1 > * { opacity: 0; }
 
   @media (prefers-reduced-motion: reduce) {
     .p-ready-mark,
-    .od-unrevealed .p-row, .od-unrevealed .p-footer1 > * {
+    .od-unrevealed .p-footer1 > * {
       opacity: 1;
     }
   }
@@ -677,11 +683,25 @@ export default function OnDemand() {
     const anims: Animation[] = [];
     // The header (cloud mark + path name) is shell, not State 1: it is present
     // before the cascade runs and stays present after it, so it has no entrance.
-    for (let i = 0; i < 7; i += 1) {
-      q(`.p-row-${i}`).forEach((el) =>
-        anims.push(rise(el, OD1.rowDuration, OD1.rowStart + i * OD1.rowStagger)),
-      );
-    }
+    /*
+     * DIAGNOSTIC — TEMPORARY. The per-row stagger loop that stood here is
+     * removed, so nothing schedules, animates, commits or cancels anything on
+     * `.p-row`. Combined with dropping them from the `od-unrevealed` rule above,
+     * the seven rows are simply painted in their rest state and never touched.
+     *
+     *   all 7 appear   -> the bug lives in the row reveal pipeline
+     *   2 and 6 blank  -> the reveal pipeline is eliminated; it is paint order
+     *                     or reconciliation
+     *
+     * The rows will not stagger during this test. That is expected. Restore the
+     * loop to undo:
+     *
+     *   for (let i = 0; i < 7; i += 1) {
+     *     q(`.p-row-${i}`).forEach((el) =>
+     *       anims.push(rise(el, OD1.rowDuration, OD1.rowStart + i * OD1.rowStagger)),
+     *     );
+     *   }
+     */
     q('.p-footer1 > *').forEach((el) =>
       anims.push(rise(el, OD1.footerIn, OD1.footerDelay)),
     );
