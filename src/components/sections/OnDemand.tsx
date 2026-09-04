@@ -1540,17 +1540,17 @@ export default function OnDemand() {
   };
 
   const textHeader = (
-    <div className="relative z-10 flex w-full max-w-[500px] flex-col gap-[10px]">
+    <div className="relative z-10 flex w-full max-w-[500px] flex-col gap-[10px] min-[744px]:items-center min-[744px]:text-center lg:items-start lg:text-left">
       <SectionLabel label="On demand files" />
       <h2 className="text-section font-normal text-text-primary">
-        The whole tree, a fraction of the disk
+        The whole tree,<br className="sm:hidden" />{' '}a fraction of the disk
       </h2>
       <p className="text-[14px] leading-[20px] text-text-primary">
         Beam keeps lightweight refs to every file and downloads contents only when
         something actually reads them. You conserve disk space
-        <br />
+        <br className="hidden min-[744px]:block" />
         on laptops and small sandboxes, while the full file
-        <br />
+        <br className="hidden min-[744px]:block" />
         system stays browsable and searchable.
       </p>
     </div>
@@ -1593,7 +1593,7 @@ export default function OnDemand() {
             height={12}
           />
         </div>
-        <div className="flex flex-col text-[14px] leading-[20px]">
+        <div className="flex flex-col text-[14px] leading-[20px] min-[744px]:w-[200px] min-[744px]:flex-none lg:w-auto lg:flex-initial">
           <button
             type="button"
             onClick={() => scrollToItem(index)}
@@ -1668,7 +1668,7 @@ export default function OnDemand() {
 
         <div className="flex w-full flex-col gap-6 min-[744px]:items-center min-[744px]:gap-8 min-[1200px]:order-1 min-[1200px]:w-[631px] min-[1200px]:shrink-0 min-[1200px]:items-start min-[1200px]:justify-center min-[1200px]:gap-[130px] min-[1200px]:pl-[131px]">
           {textHeader}
-          <div className="flex w-full max-w-[500px] flex-col gap-3">
+          <div className="flex w-full max-w-[500px] flex-col gap-3 min-[744px]:w-fit min-[744px]:max-w-full lg:w-full lg:max-w-[500px]">
             {items.map((_, index) => renderItem(index, index === activeIndex))}
           </div>
         </div>

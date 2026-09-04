@@ -29,25 +29,13 @@ export default function Secrets() {
         <FadeIn className="order-2 flex flex-col items-center gap-3 text-center min-[744px]:w-[500px] lg:order-1 lg:w-auto">
           <SectionLabel label="Secrets" />
           <h2 className="max-w-[460px] text-section font-normal text-text-primary">
-            Env vars that travel,
+            Env vars that travel,{' '}
             <span className="block">without leaving a trace</span>
           </h2>
           <p className="max-w-[490px] text-[14px] leading-[20px] text-text-primary">
-            <span className="sm:hidden">
-              <span className="block">Keep environment variables with your workspace</span>
-              <span className="block">
-                and make them available only where you explicitly
-              </span>
-              <span className="block">
-                mount them—without committing .env files or copying
-              </span>
-              <span className="block">secrets between machines.</span>
-            </span>
-            <span className="hidden sm:inline">
-              Keep environment variables with your workspace and make them available
-              only where you explicitly mount them—without committing .env files or
-              copying secrets between machines.
-            </span>
+            Keep environment variables with your workspace and make them available
+            only where you explicitly mount them—without committing .env files or
+            copying secrets between machines.
           </p>
         </FadeIn>
 

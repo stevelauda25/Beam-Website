@@ -746,10 +746,10 @@
 @keyframes statusSpin { to { transform: rotate(360deg); } }
 
 /*
- * Desktop composition. The panels move OUT to the content-grid edges; nothing is
- * scaled and nothing is resized. `.visual` fills the 1178px content column on a
- * desktop, so 0cqw and 100cqw are that column's edges and the panels' outer
- * edges land exactly on them.
+ * Tablet and desktop composition. The panels move OUT to the content-grid edges;
+ * nothing is scaled and nothing is resized. `.visual` fills its ratio-locked
+ * content column, so 0cqw and 100cqw are that column's edges and the panels'
+ * outer edges land exactly on them.
  *
  * The rail keeps its tuck under both cards (7.538cqw under the left, 6.791cqw
  * under the right), so the state still departs from beneath the source and is
@@ -766,9 +766,9 @@
  * depends on viewport HEIGHT too (the `40svh` cap), and because it keeps the
  * Motion Lab preview honest.
  */
-@container (min-width: 900px) {
+@container (min-width: 600px) {
   /*
-   * Wide desktop pushes the cards out to the content-column edges. They are
+   * Tablet and desktop push the cards out to the content-column edges. They are
    * positioned by their RENDERED edges, not their layout boxes: `left: 0` put
    * the layout box on the boundary and left the scaled card hanging 1.422cqw
    * past it on each side, which the container's `overflow: hidden` then cut off.
