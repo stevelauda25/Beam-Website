@@ -431,8 +431,26 @@ export function AgentVisual({
     });
   };
 
+  /*
+   * Capability, not viewport width: the pointer that actually generated the
+   * event decides. A mouse or pen replays on hover exactly as before; a finger
+   * gets no hover, so it replays on tap. A hybrid laptop with both gets each
+   * behaviour from the device it is actually using at that moment.
+   */
   const startMotion = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "touch" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    playOneReplay();
+  };
+
+  /*
+   * pointerup, not click: the browser fires pointercancel instead when the
+   * gesture turns into a scroll, so a scroll that happens to start on the
+   * visual cannot be mistaken for a tap. playOneReplay is already guarded by
+   * agent-loop-ready and replayRunningRef, so a tap before the intro has
+   * settled, or during a run, is ignored rather than stacking a second one.
+   */
+  const replayOnTap = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     playOneReplay();
   };
 
@@ -477,6 +495,7 @@ export function AgentVisual({
       ref={frameRef}
       className="agent-visual-frame"
       onPointerEnter={startMotion}
+      onPointerUp={replayOnTap}
     >
       <div
         className="on-demand-visual agent-svg"

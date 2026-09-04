@@ -513,11 +513,17 @@ export function ShareVisual() {
 
   const getSvg = () => containerRef.current?.querySelector<SVGSVGElement>("svg") ?? null;
 
-  const handlePointerEnter = (event: PointerEvent<HTMLDivElement>) => {
+  /**
+   * ONE replay transaction, shared by hover (mouse/pen) and tap (touch).
+   *
+   * The guards live here rather than in the handlers, so neither entry point can
+   * stack a second run on top of one already in flight, and neither can run
+   * before the viewport intro has settled.
+   */
+  const playReplay = () => {
     if (
       !isHoverReplayReadyRef.current ||
       hoverRunningRef.current ||
-      event.pointerType === "touch" ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
       return;
@@ -621,6 +627,27 @@ export function ShareVisual() {
     });
   };
 
+  /*
+   * Capability, not viewport width: the pointer that actually generated the
+   * event decides. A mouse or pen replays on hover exactly as before; a finger
+   * gets no hover, so it replays on tap. A hybrid laptop with both gets each
+   * behaviour from the device it is actually using at that moment.
+   */
+  const handlePointerEnter = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") return;
+    playReplay();
+  };
+
+  /*
+   * pointerup, not click: the browser fires pointercancel instead when the
+   * gesture turns into a scroll, so a scroll that happens to start on the
+   * visual cannot be mistaken for a tap.
+   */
+  const handleTap = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") return;
+    playReplay();
+  };
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -683,6 +710,7 @@ export function ShareVisual() {
       <div
         aria-hidden="true"
         onPointerEnter={handlePointerEnter}
+        onPointerUp={handleTap}
         style={{ position: "absolute", inset: 0 }}
       />
     </div>
