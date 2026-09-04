@@ -307,7 +307,7 @@ export default function ProblemSolution() {
             </h2>
           </div>
 
-          <div className="flex h-[min(260px,34svh)] w-full items-center min-[744px]:h-[320px] lg:h-[min(350px,40svh)]">
+          <div className="flex h-[min(260px,34svh)] w-full items-center min-[744px]:h-auto min-[744px]:aspect-[1178/350]">
             <div className="w-full origin-center scale-[1.2] md:scale-100">
               <SolutionVisual
                 ref={visualRef}

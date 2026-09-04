@@ -118,7 +118,7 @@ function AgentPromptButton() {
 export default function Hero() {
   return (
     <section className="relative min-h-[90svh] w-full bg-canvas min-[744px]:flex min-[744px]:min-h-[calc(100svh-52px)] min-[744px]:flex-col min-[744px]:justify-center lg:block lg:min-h-[90svh]">
-      <div className="relative mx-auto flex max-w-[1176px] flex-col px-5 pb-16 pt-[92px] md:px-8 md:pb-8 md:pt-12 min-[744px]:bottom-12 min-[744px]:w-[680px] min-[744px]:!px-0 lg:bottom-auto lg:h-[266px] lg:w-full lg:block lg:py-0">
+      <div className="relative mx-auto flex max-w-[1176px] flex-col px-5 pb-16 pt-[92px] md:px-8 md:pb-8 md:pt-12 min-[744px]:bottom-12 min-[744px]:w-[680px] min-[744px]:!px-0 lg:bottom-auto lg:h-[266px] lg:w-[calc(100%-264px)] lg:block lg:py-0">
         <FadeIn>
           <div className="flex w-full max-w-[748px] flex-col gap-2 lg:absolute lg:left-0 lg:top-[103px]">
             <div className="flex flex-wrap items-center gap-[6px]">
@@ -163,7 +163,7 @@ export default function Hero() {
       </div>
 
       <FadeIn delay={0.15} className="relative w-full min-[744px]:bottom-12 lg:bottom-auto">
-        <div className="mx-auto w-full max-w-[1440px] min-[744px]:w-[680px] lg:w-full">
+        <div className="mx-auto w-full max-w-[1440px] min-[744px]:w-[680px] lg:w-[min(calc((100vw-264px)*1.2365),1454px)] lg:max-w-none">
           <HeroKeyVisual />
         </div>
       </FadeIn>

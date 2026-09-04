@@ -35,9 +35,15 @@
   width: min(100%, calc(40svh * 1178 / 350));
   aspect-ratio: 1178 / 350;
   margin-inline: auto;
-  overflow: hidden;
+  overflow: visible;
   background: #fafafa;
   color: #0a0a0a;
+}
+
+@media (min-width: 744px) {
+  .visual {
+    width: 100%;
+  }
 }
 
 .leftCard,
