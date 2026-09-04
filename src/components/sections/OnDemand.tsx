@@ -187,7 +187,6 @@ const TARGET = RESOLVED.map((r) => (r.from + r.to) / 2);
  * final third of their morph so the shell has visibly become the destination
  * before its interior starts talking.
  */
-const ARRIVE_1 = P(0.24); // first-view cascade: v at or below this, once ever
 
 /*
  * WHERE THE FILE TREE STARTS REVEALING.
@@ -868,8 +867,26 @@ export default function OnDemand() {
     else if (demo3Ref.current) stopDemo3();
     if (v < RESET_3 && demo3ArmedRef.current) resetDemo3();
 
-    // State 1: the cascade, once, when the reader is actually here.
-    if (inViewRef.current && v <= ARRIVE_1) runFirstCascade();
+    /*
+     * State 1: the cascade, once, whenever the reader is inside this section.
+     *
+     * The progress gate that used to be here (`v <= ARRIVE_1`) was a single
+     * point of failure. The file rows are NOT State 1 foreground -- the timeline
+     * never writes .p-row at any progress, because the panel is one continuous
+     * object showing the same tree at three scales. They must therefore exist at
+     * EVERY progress, and there was never a reason to refuse the reveal above
+     * 0.18.
+     *
+     * What the gate actually did was strand the tree: if the first progress this
+     * section ever saw was above 0.18 -- a reload with a restored scroll
+     * position inside the pin, a fast flick, a back-navigation -- the cascade
+     * was never called from here, `od-unrevealed` stayed on, and the rows and
+     * "12,480 files available" were held at opacity 0 with no recovery path.
+     *
+     * runFirstCascade is idempotent (revealedRef), so calling it on every frame
+     * the reader is here costs one boolean check.
+     */
+    if (inViewRef.current) runFirstCascade();
 
     // The nav highlight follows what is on screen.
     const highlight = v < HIGHLIGHT_AT[0] ? 0 : v < HIGHLIGHT_AT[1] ? 1 : 2;
