@@ -843,6 +843,31 @@ export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = 
    * The +0.3s overlap is 5.8% of a 5.2s cycle (17.3 -> 23.1, 68.3 -> 74).
    */
 
+  /*
+   * PHONE ONLY — drop the SVG filter stacks.
+   *
+   * This visual carries 11 filter definitions and 220 primitives, including
+   * three 42-primitive drop+inner-shadow stacks (one per machine) covering ~18%
+   * of the canvas each. Every rAF frame the run writes --mac-open / --beam-open
+   * / --cloud-open, which resolve into the y and height of ~18 rects, so each of
+   * those filter regions is re-rasterised on every frame of a 1.8s transaction.
+   *
+   * Animating transform instead of geometry was considered first and rejected:
+   * the rects being resized are the card frame and the file-list plate, both
+   * rounded and both carrying a hairline ring, so a scaleY would squash the
+   * corner radii and the stroke. The motion is a panel growing by one 44px row,
+   * not a scale, and it cannot be expressed as one without changing what is
+   * drawn.
+   *
+   * Removing the shadows on a phone leaves the strokes, fills, geometry,
+   * connector, counters, timing, tap replay and intro exactly as authored --
+   * the cards simply sit flat on the ground instead of casting a shadow. Tablet
+   * and desktop are untouched.
+   */
+  @media (max-width: 743px) {
+    .sync-root [filter] { filter: none; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .sync-root,
     .sync-root * { animation: none !important; }

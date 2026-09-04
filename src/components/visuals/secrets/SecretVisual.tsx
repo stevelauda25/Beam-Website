@@ -198,6 +198,26 @@ function createAnimatedMarkup(source: string) {
         64.2593%, 100% { opacity: 0; }
       }
 
+      /*
+       * PHONE ONLY — drop the SVG filter stacks.
+       *
+       * Unlike Sync and Agents, this visual's eight animations are INFINITE:
+       * they run for as long as the section is on screen, and one of them
+       * animates clip-path. Two of its six filters cover 33% and 32% of the
+       * canvas and sit over exactly that animated region, so the cost is
+       * continuous rather than a one-off intro.
+       *
+       * The clip-path animation is kept as authored: it is the command typing
+       * itself in, and swapping it for opacity would turn a type-on into a
+       * fade, which is not the same picture.
+       *
+       * Everything else -- geometry, fills, strokes, timing, the whole
+       * choreography -- is untouched. Tablet and desktop keep their filters.
+       */
+      @media (max-width: 743px) {
+        .secret-svg [filter] { filter: none; }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .secret-svg.secret-motion-active * { animation: none !important; }
 

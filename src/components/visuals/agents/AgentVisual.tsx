@@ -662,6 +662,29 @@ export function AgentVisual({
           ${beat(BEATS.sandbox, "opacity: 1;", "opacity: 0;")}
         }
 
+        /*
+         * PHONE ONLY — drop the filter stacks on the MOVING groups.
+         *
+         * filter0_ddddii and filter7_ddddii are 42-primitive drop+inner-shadow
+         * stacks over 22% and 17% of the canvas; filter3_dd is 16 primitives.
+         * All three sit on groups this component animates, so each is
+         * re-rasterised for the whole 2.3s intro and again on every replay.
+         *
+         * filter4_i is deliberately left alone: it is the largest region (44%)
+         * but it is static, so it rasterises once and costs nothing per frame.
+         *
+         * Geometry, fills, strokes, timing, choreography and the confirmation
+         * sequence are untouched -- the two panels just lose their shadows on a
+         * phone. Tablet and desktop keep everything.
+         */
+        @media (max-width: 743px) {
+          .agent-svg g[filter="url(#filter0_ddddii_964_1383257)"],
+          .agent-svg g[filter="url(#filter7_ddddii_964_1383257)"],
+          .agent-svg g[filter="url(#filter3_dd_964_1383257)"] {
+            filter: none;
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .agent-svg *, .agent-confirmation-cover { animation: none !important; }
           .agent-confirmation-cover { display: none; }
