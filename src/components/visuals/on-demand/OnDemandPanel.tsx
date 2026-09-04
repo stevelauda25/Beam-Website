@@ -117,37 +117,14 @@ const TYPE = {
   size: 16,
 } as const;
 
-/*
- * DIAGNOSTIC ORDER — TEMPORARY. Revert after the device check.
- *
- * On a real phone (Safari and Chrome both) the tree paints with two blank
- * row-sized slots, at positions 2 and 6, where README.md and "..." should be.
- * Every other explanation has been eliminated: the DOM nodes exist with
- * opacity 1 and valid boxes, the subtrees are byte-identical, React keys are
- * unique, there are no duplicate SVG ids, and neutralising the shell's
- * will-change hint changed nothing.
- *
- * So this swaps ONLY the order of this array to separate the two remaining
- * possibilities. Nothing else in the file, the JSX, the styles or the geometry
- * changes -- each row still renders through the identical code path, just at a
- * different index.
- *
- *   blanks stay at positions 2 and 6  -> the failure follows POSITION
- *   blanks follow README.md and "..." -> the failure follows CONTENT
- *
- * app.ts stays at index 4 on purpose: SELECTED_ROW is 4, so State 2's
- * selection, size readout and connector anchor are unaffected.
- *
- * Original order: apps/ packages/ README.md auth.ts app.ts utils.ts ...
- */
 const ROWS: Row[] = [
   { label: "apps/", kind: "folder" },
   { label: "packages/", kind: "folder" },
-  { label: "auth.ts", kind: "file" },
   { label: "README.md", kind: "file" },
+  { label: "auth.ts", kind: "file" },
   { label: "app.ts", kind: "file" },
-  { label: "...", kind: "file" },
   { label: "utils.ts", kind: "file" },
+  { label: "...", kind: "file" },
 ];
 
 /**
