@@ -559,19 +559,13 @@ const shellCss = `
    * icon. Only the secondary Ready mark keeps its own entrance.
    */
   .p-ready-mark { opacity: 0; }
-  /*
-   * DIAGNOSTIC — TEMPORARY. .p-row deliberately removed from this rule.
-   *
-   * The rows now rest at their final state from first paint: no starting
-   * opacity 0, and (with the loop below removed) no reveal animation at all.
-   * The footer keeps its entrance, so only the ROW pipeline is out of the
-   * equation. Restore the ".od-unrevealed .p-row," selector line to undo.
-   */
+  /* The tree is hidden only until its first-view cascade has run, once ever. */
+  .od-unrevealed .p-row,
   .od-unrevealed .p-footer1 > * { opacity: 0; }
 
   @media (prefers-reduced-motion: reduce) {
     .p-ready-mark,
-    .od-unrevealed .p-footer1 > * {
+    .od-unrevealed .p-row, .od-unrevealed .p-footer1 > * {
       opacity: 1;
     }
   }
@@ -680,28 +674,49 @@ export default function OnDemand() {
         { duration, delay, easing: EASE_OUT, fill: 'both' },
       );
 
+    /*
+     * ROWS ONLY. Identical keyframes, duration, delay and easing to rise() --
+     * the authored stagger is unchanged -- but a different FINALISATION.
+     *
+     * The row pipeline was proven on-device to be what strands rows 2 and 6
+     * blank: removing it made all seven paint. The one thing it did that nothing
+     * else does is finish with commitStyles(), which reads each element's
+     * COMPUTED style and writes it back inline. On these SVG groups that also
+     * bakes a permanent "filter: blur(0px)" -- visually a no-op, but it puts
+     * every row into its own filter rasterisation pass at 7-9px tall on a phone.
+     *
+     * So rows write their authored rest state directly instead: opacity 1,
+     * transform none, filter none. No computed-style round trip, no residual
+     * filter. Written BEFORE cancel, so the animation is still filling when the
+     * inline values land -- there is no frame in which neither applies.
+     */
+    const riseRow = (el: SVGElement, duration: number, delay: number) => {
+      const anim = el.animate(
+        [
+          { opacity: 0, transform: 'translateY(6px)', filter: 'blur(1.5px)' },
+          { opacity: 1, transform: 'none', filter: 'blur(0)' },
+        ],
+        { duration, delay, easing: EASE_OUT, fill: 'both' },
+      );
+      anim.finished
+        .then(() => {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+          el.style.filter = 'none';
+          anim.cancel();
+        })
+        .catch(() => {});
+    };
+
     const anims: Animation[] = [];
     // The header (cloud mark + path name) is shell, not State 1: it is present
     // before the cascade runs and stays present after it, so it has no entrance.
-    /*
-     * DIAGNOSTIC — TEMPORARY. The per-row stagger loop that stood here is
-     * removed, so nothing schedules, animates, commits or cancels anything on
-     * `.p-row`. Combined with dropping them from the `od-unrevealed` rule above,
-     * the seven rows are simply painted in their rest state and never touched.
-     *
-     *   all 7 appear   -> the bug lives in the row reveal pipeline
-     *   2 and 6 blank  -> the reveal pipeline is eliminated; it is paint order
-     *                     or reconciliation
-     *
-     * The rows will not stagger during this test. That is expected. Restore the
-     * loop to undo:
-     *
-     *   for (let i = 0; i < 7; i += 1) {
-     *     q(`.p-row-${i}`).forEach((el) =>
-     *       anims.push(rise(el, OD1.rowDuration, OD1.rowStart + i * OD1.rowStagger)),
-     *     );
-     *   }
-     */
+    // Authored stagger, unchanged: 80ms start, 38ms apart, 240ms each.
+    for (let i = 0; i < 7; i += 1) {
+      q<SVGElement>(`.p-row-${i}`).forEach((el) =>
+        riseRow(el, OD1.rowDuration, OD1.rowStart + i * OD1.rowStagger),
+      );
+    }
     q('.p-footer1 > *').forEach((el) =>
       anims.push(rise(el, OD1.footerIn, OD1.footerDelay)),
     );
