@@ -2,8 +2,6 @@ import { forwardRef, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   CircleAlert,
   CircleCheck,
-  File,
-  Folder,
   GitCommitHorizontal,
   GitFork,
   LoaderCircle,
@@ -11,13 +9,23 @@ import {
   Monitor,
   RotateCcw,
 } from 'lucide-react';
+import fileIcon from '../../../assets/icons/common/file.svg';
+import folderIcon from '../../../assets/icons/common/folder.svg';
 import { BeamMark } from './BeamMark';
 import styles from './SolutionVisual.module.css';
+
+function BeamFileIcon() {
+  return <img className={styles.fileIcon} src={fileIcon} alt="" />;
+}
+
+function BeamFolderIcon() {
+  return <img className={styles.headerIcon} src={folderIcon} alt="" />;
+}
 
 const files = [
   { name: 'src/', type: 'folder' },
   { name: 'package.json', type: 'file' },
-  { name: 'components/', type: 'file' },
+  { name: 'components.tsx', type: 'file' },
 ] as const;
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
@@ -456,7 +464,7 @@ function MachineCard({ title, destination = false }: MachineCardProps) {
   return (
     <article className={styles.machineCard}>
       <header className={styles.machineHeader}>
-        {title === 'Your machine' ? <Monitor /> : <Folder />}
+        {title === 'Your machine' ? <Monitor /> : <BeamFolderIcon />}
         <span>{title}</span>
       </header>
 
@@ -465,12 +473,12 @@ function MachineCard({ title, destination = false }: MachineCardProps) {
         <div className={styles.fileList}>
           {files.map((item) => (
             <div className={styles.fileRow} key={item.name}>
-              {item.type === 'folder' ? <Folder /> : <File />}
+              {item.type === 'folder' ? <BeamFolderIcon /> : <BeamFileIcon />}
               <span>{item.name}</span>
             </div>
           ))}
           <div className={styles.fileRow}>
-            <File />
+            <BeamFileIcon />
             <span>.env</span>
             {destination ? (
               <span className={`${styles.secretsRequired} ${styles.problemOnly}`}>
