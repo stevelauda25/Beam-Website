@@ -22,7 +22,7 @@ export default function Agents() {
             <div className="flex max-w-[500px] flex-col gap-[10px] min-[744px]:mx-auto min-[744px]:items-center min-[744px]:text-center lg:mx-0 lg:items-start lg:text-left">
               <SectionLabel label="Agents" />
               <h2 className="text-section font-normal text-text-primary">
-                Built for agents, not just humans
+                Built for agents,<br className="sm:hidden" />{' '}not just humans
               </h2>
               <p className="text-[14px] leading-[20px] text-text-primary">
                 <span className="sm:hidden">

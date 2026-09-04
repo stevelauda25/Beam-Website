@@ -99,7 +99,7 @@ function ProblemDetails() {
         role="region"
         aria-label="Workflow problems"
         aria-roledescription="carousel"
-        className="-mx-5 flex w-[calc(100%+40px)] snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-2 [scroll-padding-inline:20px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:w-full sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
+        className="-mx-5 flex w-[calc(100%+40px)] snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-2 [scroll-padding-inline:20px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:w-full sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 min-[744px]:gap-x-8 min-[744px]:gap-y-12 lg:grid-cols-4 lg:gap-3"
       >
         {problemFeatures.map((feature) => (
           <div
@@ -303,7 +303,7 @@ export default function ProblemSolution() {
               aria-hidden="true"
               className="invisible absolute inset-0 flex items-center justify-center text-center text-section font-normal text-text-primary will-change-[transform,filter,opacity]"
             >
-              One workspace. Every environment.
+              One workspace.<br className="sm:hidden" />{' '}Every environment.
             </h2>
           </div>
 
@@ -328,17 +328,17 @@ export default function ProblemSolution() {
               aria-hidden="true"
               className="invisible absolute inset-x-0 top-0 flex justify-center will-change-[transform,filter,opacity]"
             >
-              <p className="max-w-[387px] text-center text-[14px] leading-[20px] text-text-primary">
-                <span className="block whitespace-nowrap">
-                  One unified directory, mirrored everywhere.
+              <p className="w-full max-w-[387px] text-center text-[14px] leading-[20px] text-text-primary">
+                <span className="sm:block sm:whitespace-nowrap">
+                  One unified directory, mirrored everywhere.{' '}
                 </span>
-                <span className="block whitespace-nowrap">
-                  Attach it to any machine and your workspace is just there.
+                <span className="sm:block sm:whitespace-nowrap">
+                  Attach it to any machine and your workspace is just there.{' '}
                 </span>
-                <span className="block whitespace-nowrap">
-                  Files on demand, secrets included, and the same
+                <span className="sm:block sm:whitespace-nowrap">
+                  Files on demand, secrets included, and the same{' '}
                 </span>
-                <span className="block whitespace-nowrap">
+                <span className="sm:block sm:whitespace-nowrap">
                   view for agents through CLI and MCP.
                 </span>
               </p>
