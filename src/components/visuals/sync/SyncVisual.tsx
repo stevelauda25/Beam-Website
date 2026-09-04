@@ -511,6 +511,30 @@ export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = 
     startRef.current?.("loop");
   }
 
+  /*
+   * TAP REPLAY, touch only.
+   *
+   * Capability, not viewport width: the pointer that generated the event
+   * decides, so a mouse keeps hover and a finger gets tap.
+   *
+   * It starts the SAME "loop" transaction hover uses, then immediately requests
+   * the stop that a pointer-leave would have requested. The frame loop releases
+   * only on a settled+synced sample, which in loop mode is first reached after
+   * one complete delete-then-add round trip -- so a tap plays exactly one full
+   * transaction and comes to rest, and can never become an endless loop.
+   */
+  function replayOnTap(event: PointerEvent<SVGSVGElement>) {
+    if (
+      event.pointerType !== "touch" ||
+      !introDoneRef.current ||
+      runRef.current ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) return;
+    startRef.current?.("loop");
+    // start() clears the flag, so the stop request has to follow it.
+    stopRequestedRef.current = true;
+  }
+
   function endHover(event: PointerEvent<SVGSVGElement>) {
     if (event.pointerType !== "mouse") return;
     // The frame loop lets the current transaction finish and releases on the
@@ -529,6 +553,7 @@ export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = 
   aria-label="A new file in the Beam workspace synchronising to a Cloud VM and a MacBook Pro, until all three machines match."
   onPointerEnter={beginHover}
   onPointerLeave={endHover}
+  onPointerUp={replayOnTap}
   style={{
     display: "block",
     width: "100%",

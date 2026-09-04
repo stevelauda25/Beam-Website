@@ -307,8 +307,22 @@ export default function ProblemSolution() {
             </h2>
           </div>
 
+          {/*
+            The visual row is `w-full`, so it is exactly as wide as the feature
+            grid below it -- they are siblings in the same column. That is what
+            makes the panels' outer edges land on the content grid: the query in
+            SolutionVisual.module.css places them on 0cqw and 100cqw, and 0/100cqw
+            ARE this column's edges. FeatureItem has no horizontal padding, so the
+            first item's icon and the last item's right edge sit on those same two
+            lines at every breakpoint -- 2 columns on tablet, 4 on desktop.
+          */}
           <div className="flex h-[min(260px,34svh)] w-full items-center min-[744px]:h-auto min-[744px]:aspect-[1178/350]">
-            <div className="w-full origin-center scale-[1.2] md:scale-100">
+            {/*
+              The zoom releases on the SAME gate the layout switches on. It was
+              `md` (768px), so 744-767px ran the tablet layout with the mobile
+              1.2x zoom still applied and the composition overflowed.
+            */}
+            <div className="w-full origin-center scale-[1.2] min-[744px]:scale-100">
               <SolutionVisual
                 ref={visualRef}
                 reducedMotion={Boolean(reducedMotion)}
