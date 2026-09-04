@@ -674,12 +674,47 @@ export default function OnDemand() {
         { duration, delay, easing: EASE_OUT, fill: 'both' },
       );
 
+    /*
+     * ROWS ONLY. Identical keyframes, duration, delay and easing to rise() --
+     * the authored stagger is unchanged -- but a different FINALISATION.
+     *
+     * The row pipeline was proven on-device to be what strands rows 2 and 6
+     * blank: removing it made all seven paint. The one thing it did that nothing
+     * else does is finish with commitStyles(), which reads each element's
+     * COMPUTED style and writes it back inline. On these SVG groups that also
+     * bakes a permanent "filter: blur(0px)" -- visually a no-op, but it puts
+     * every row into its own filter rasterisation pass at 7-9px tall on a phone.
+     *
+     * So rows write their authored rest state directly instead: opacity 1,
+     * transform none, filter none. No computed-style round trip, no residual
+     * filter. Written BEFORE cancel, so the animation is still filling when the
+     * inline values land -- there is no frame in which neither applies.
+     */
+    const riseRow = (el: SVGElement, duration: number, delay: number) => {
+      const anim = el.animate(
+        [
+          { opacity: 0, transform: 'translateY(6px)', filter: 'blur(1.5px)' },
+          { opacity: 1, transform: 'none', filter: 'blur(0)' },
+        ],
+        { duration, delay, easing: EASE_OUT, fill: 'both' },
+      );
+      anim.finished
+        .then(() => {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+          el.style.filter = 'none';
+          anim.cancel();
+        })
+        .catch(() => {});
+    };
+
     const anims: Animation[] = [];
     // The header (cloud mark + path name) is shell, not State 1: it is present
     // before the cascade runs and stays present after it, so it has no entrance.
+    // Authored stagger, unchanged: 80ms start, 38ms apart, 240ms each.
     for (let i = 0; i < 7; i += 1) {
-      q(`.p-row-${i}`).forEach((el) =>
-        anims.push(rise(el, OD1.rowDuration, OD1.rowStart + i * OD1.rowStagger)),
+      q<SVGElement>(`.p-row-${i}`).forEach((el) =>
+        riseRow(el, OD1.rowDuration, OD1.rowStart + i * OD1.rowStagger),
       );
     }
     q('.p-footer1 > *').forEach((el) =>
