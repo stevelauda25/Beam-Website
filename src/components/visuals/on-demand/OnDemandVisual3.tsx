@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 
 const svgMarkup = [
   "<svg width=\"809\" height=\"692\" viewBox=\"0 0 809 692\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<g clip-path=\"url(#clip0_1003_1944)\">\n<rect width=\"809\" height=\"692\" fill=\"#FAFAFA\"/>\n<foreignObject x=\"70.4098\" y=\"-129.59\" width=\"713.68\" height=\"682.902\"><div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"backdrop-filter:blur(49.8px);clip-path:url(#bgblur_2_1003_1944_clip_path);height:100%;width:100%\"></div></foreignObject><g filter=\"url(#filter0_i_1003_1944)\" data-figma-bg-blur-radius=\"99.5902\">\n<g clip-path=\"url(#clip1_1003_1944)\">\n<rect x=\"170\" y=\"-30\" width=\"514.5\" height=\"483.721\" rx=\"11.9508\" fill=\"white\"/>\n<g filter=\"url(#filter1_ddi_1003_1944)\">\n<g clip-path=\"url(#clip3_1003_1944)\">\n<rect x=\"178.963\" y=\"-21.0371\" width=\"496.574\" height=\"465.795\" rx=\"3.98361\" fill=\"#F5F5F5\"/>\n<path d=\"M221.911 10.1473C221.663 7.06198 219.108 4.62598 215.959 4.62598C212.645 4.62598 209.959 7.31264 209.959 10.626C209.959 11.0926 210.024 11.5406 210.124 11.9766C207.995 12.066 206.292 13.8086 206.292 15.9593C206.292 18.1686 208.083 19.9593 210.292 19.9593H220.625C223.387 19.9593 225.625 17.7206 225.625 14.9593C225.625 12.6446 224.045 10.7166 221.911 10.1473Z\" stroke=\"#8F8F8F\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M216.898 11.6252C217.814 10.6025 219.144 9.9585 220.625 9.9585C221.069 9.9585 221.501 10.0372 221.91 10.1465\" stroke=\"#8F8F8F\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M253.758 12.487C253.662 13.271 253.454 13.951 253.134 14.527C252.83 15.087 252.438 15.519 251.958 15.823C251.478 16.111 250.918 16.255 250.278 16.255C249.958 16.255 249.654 16.223 249.366 16.159C249.094 16.079 248.814 15.967 248.526 15.823C248.254 15.663 247.982 15.471 247.71 15.247L246.702 14.431C246.382 14.143 246.086 13.943 245.814 13.831C245.558 13.703 245.302 13.639 245.046 13.639C244.566 13.639 244.166 13.831 243.846 14.215C243.542 14.599 243.35 15.127 243.27 15.799H241.494C241.59 14.999 241.782 14.319 242.07 13.759C242.374 13.199 242.774 12.775 243.27 12.487C243.766 12.183 244.326 12.031 244.95 12.031C245.27 12.031 245.566 12.071 245.838 12.151C246.126 12.215 246.406 12.319 246.678 12.463C246.966 12.607 247.246 12.799 247.518 13.039L248.55 13.879C248.886 14.167 249.174 14.367 249.414 14.479C249.67 14.591 249.926 14.647 250.182 14.647C250.662 14.647 251.062 14.455 251.382 14.071C251.702 13.687 251.902 13.159 251.982 12.487H253.758ZM255.885 23.839L261.573 3.63098H263.541L257.853 23.839H255.885ZM270.122 21.247C269.034 21.247 268.05 20.991 267.17 20.479C266.29 19.951 265.586 19.199 265.058 18.223C264.546 17.231 264.29 16.039 264.29 14.647C264.29 13.239 264.546 12.047 265.058 11.071C265.57 10.079 266.258 9.32698 267.122 8.81498C268.002 8.30298 268.986 8.04698 270.074 8.04698C271.306 8.04698 272.338 8.31098 273.17 8.83898C274.018 9.35098 274.658 10.167 275.09 11.287L273.29 12.007C272.97 11.239 272.538 10.679 271.994 10.327C271.466 9.97498 270.81 9.79898 270.026 9.79898C269.418 9.79898 268.834 9.96698 268.274 10.303C2",
@@ -35,6 +35,24 @@ const svgMarkup = [
 ].join("");
 
 const animatedSvgMarkup = svgMarkup
+  // Panel chrome — see the note in OnDemandVisual.tsx.
+  .replace(
+    '<rect width="809" height="692" fill="#FAFAFA"/>',
+    '<rect class="od-canvas-bg" width="809" height="692" fill="#FAFAFA"/>',
+  )
+  .replace(
+    '<rect x="170" y="-30" width="514.5" height="483.721" rx="11.9508" fill="white"/>',
+    '<rect class="od-panel-fill" x="170" y="-30" width="514.5" height="483.721" rx="11.9508" fill="white"/>',
+  )
+  .replace(
+    '<rect x="170.498" y="-29.502" width="513.504" height="482.725" rx="11.4529" stroke="black" stroke-opacity="0.1" stroke-width="0.995902"/>',
+    '<rect class="od-panel-edge" x="170.498" y="-29.502" width="513.504" height="482.725" rx="11.4529" stroke="black" stroke-opacity="0.1" stroke-width="0.995902"/>',
+  )
+  .replace('<foreignObject ', '<foreignObject class="od-panel-backdrop" ')
+  .replace(
+    '<g filter="url(#filter0_i_1003_1944)" data-figma-bg-blur-radius="99.5902">',
+    '<g class="od-panel-shadow" filter="url(#filter0_i_1003_1944)" data-figma-bg-blur-radius="99.5902">',
+  )
   .replace(/stroke="#0D76F2"/g, 'class="odv3-available-icon" stroke="#0D76F2"')
   .replace('fill="#0D76F2"', 'class="odv3-available-copy" fill="#0D76F2"')
   .replace('stroke="#129457"', 'class="odv3-ready-ring" stroke="__ODV3_READY_GREEN__"')
@@ -53,10 +71,32 @@ type MotionPhase = "closed" | "opening" | "complete" | "closing";
 const TARGET_COUNT = 1_250_000;
 const COUNT_DELAY = 520;
 const COUNT_DURATION = 1500;
-const OPENING_DURATION = 2900;
+/** The number locks at COUNT_DELAY + COUNT_DURATION = 2020ms. */
+const COUNT_END = COUNT_DELAY + COUNT_DURATION;
+const READY_DURATION = 620;
+/**
+ * The "ready" confirmation used to start at 2120ms and the phase used to
+ * complete at 2900ms, leaving ~880ms of dead air after the number had already
+ * stopped. It now lands 20ms AFTER the number locks, so the result confirms the
+ * count instead of trailing it.
+ */
+const READY_DELAY = COUNT_END - READY_DURATION + 20;
+const OPENING_DURATION = READY_DELAY + READY_DURATION;
 const CLOSING_DURATION = 480;
 
-export function OnDemandVisual3() {
+/**
+ * When the parent owns the clock (the persistent-shell On-Demand section) it
+ * passes `playback`. The component then ignores its own mount trigger and hover
+ * replay entirely and runs the opening exactly once per activation, resetting to
+ * frame 0 the moment it is deactivated — which is what stops the counter from
+ * being seen running backwards when the reader scrolls up. With the prop absent
+ * (Motion Lab, standalone) the original self-driven behaviour is unchanged.
+ */
+export type OnDemandPlayback = { active: boolean };
+
+export function OnDemandVisual3({ playback }: { playback?: OnDemandPlayback } = {}) {
+  const driven = playback !== undefined;
+  const isActive = playback?.active ?? false;
   const [phase, setPhase] = useState<MotionPhase>("closed");
   const [count, setCount] = useState(0);
   const timers = useRef<number[]>([]);
@@ -69,9 +109,28 @@ export function OnDemandVisual3() {
       return;
     }
 
+    if (driven) return;
+
     const frame = window.requestAnimationFrame(() => setPhase("opening"));
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [driven]);
+
+  /*
+   * Parent-driven activation. Going active always rewinds to "closed" first so
+   * the opening restarts from a known frame 0 rather than resuming wherever the
+   * previous pass stopped; going inactive rewinds and stays there.
+   */
+  useEffect(() => {
+    if (!driven) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    setPhase("closed");
+    setCount(0);
+    if (!isActive) return;
+
+    const frame = window.requestAnimationFrame(() => setPhase("opening"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [driven, isActive]);
 
   useEffect(() => {
     if (phase !== "opening") return;
@@ -114,6 +173,7 @@ export function OnDemandVisual3() {
   );
 
   const replay = () => {
+    if (driven) return;
     if (phase !== "complete") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
@@ -125,8 +185,14 @@ export function OnDemandVisual3() {
   return (
     <>
       <div
-        className="on-demand-visual odv3-motion"
+        className={`on-demand-visual odv3-motion${driven ? " od-driven" : ""}`}
         data-phase={phase}
+        style={
+          {
+            "--odv3-ready-delay": `${READY_DELAY}ms`,
+            "--odv3-ready-duration": `${READY_DURATION}ms`,
+          } as CSSProperties
+        }
         role="img"
         aria-label="Beam on-demand directory with more than 1.25 million files ready in 1.2 seconds"
         onPointerEnter={replay}
@@ -214,7 +280,7 @@ export function OnDemandVisual3() {
         .odv3-motion[data-phase="opening"] .odv3-ready-ring,
         .odv3-motion[data-phase="opening"] .odv3-ready-check,
         .odv3-motion[data-phase="opening"] .odv3-ready-copy {
-          animation: odv3-ready-group-enter 620ms cubic-bezier(.16, 1, .3, 1) 2120ms both;
+          animation: odv3-ready-group-enter var(--odv3-ready-duration) cubic-bezier(.16, 1, .3, 1) var(--odv3-ready-delay) both;
         }
 
         .odv3-motion[data-phase="complete"] .odv3-ready-ring,
