@@ -789,6 +789,25 @@
   }
 }
 
+/*
+ * OFFSCREEN: PAUSE THE TWO SELF-RUNNING LOOPS.
+ *
+ * `statusSpin` and `connectorLaser` are the only infinite animations here, and
+ * both are gated on a STATE (the problem pill's waiting state, the connector's
+ * settled state) rather than on visibility -- so they kept ticking while the
+ * section was several screens away.
+ *
+ * `animation-play-state: paused` rather than `animation: none`: the animation
+ * keeps its current frame and resumes from it, so nothing restarts or jumps
+ * when the reader scrolls back. `data-visible` is written by the same
+ * IntersectionObserver that owns the story loop in SolutionVisual.tsx, and is
+ * absent until it first fires, so the default remains "running".
+ */
+.visual[data-visible='false'] .connectorLaser,
+.visual[data-visible='false'] .problemReadyState svg {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .visual *,
   .visual *::before,

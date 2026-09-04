@@ -640,8 +640,8 @@ export const SolutionVisual = forwardRef<
     };
 
     const tick = (now: number) => {
-      const active = inView && visual.dataset.story === 'failing';
-      if (active) {
+      // inView is no longer tested here: the loop only EXISTS while in view.
+      if (visual.dataset.story === 'failing') {
         cycle = (cycle + (now - last)) % timing.loopMs;
         apply(cycle);
       }
@@ -651,9 +651,39 @@ export const SolutionVisual = forwardRef<
       frame = window.requestAnimationFrame(tick);
     };
 
+    /*
+     * OFFSCREEN LIFECYCLE.
+     *
+     * This loop used to reschedule itself unconditionally and only skip its
+     * WORK when out of view, so a rAF callback ran ~60x a second for the whole
+     * session no matter where the reader was on the page. It now stops outright
+     * and restarts on re-entry, which is what the two Footer visuals already do.
+     *
+     * The visible result is unchanged: `cycle` is never reset, so the story
+     * resumes on the exact frame it froze on, and `last` is re-seeded at start
+     * so the gap while offscreen banks no elapsed time -- the same guarantee the
+     * old per-frame `last = now` gave.
+     */
+    const startLoop = () => {
+      if (frame) return;
+      last = performance.now();
+      frame = window.requestAnimationFrame(tick);
+    };
+
+    const stopLoop = () => {
+      if (!frame) return;
+      window.cancelAnimationFrame(frame);
+      frame = 0;
+    };
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         inView = Boolean(entry?.isIntersecting);
+        // Paused rather than removed, so the CSS keeps its current frame and
+        // resumes from it instead of restarting when the reader comes back.
+        visual.dataset.visible = inView ? 'true' : 'false';
+        if (inView) startLoop();
+        else stopLoop();
       },
       { threshold: 0.08 },
     );
@@ -665,12 +695,13 @@ export const SolutionVisual = forwardRef<
     resize.observe(visual);
 
     apply(0);
-    frame = window.requestAnimationFrame(tick);
+    // The observer fires immediately on observe() and starts the loop if the
+    // visual is already on screen, so there is no unconditional start here.
 
     return () => {
       observer.disconnect();
       resize.disconnect();
-      window.cancelAnimationFrame(frame);
+      stopLoop();
       failureImpactRef.current = null;
     };
   }, [reducedMotion]);
