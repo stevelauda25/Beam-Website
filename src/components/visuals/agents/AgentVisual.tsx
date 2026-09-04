@@ -683,6 +683,41 @@ export function AgentVisual({
           .agent-svg g[filter="url(#filter3_dd_964_1383257)"] {
             filter: none;
           }
+
+          /*
+           * PHONE ONLY — the repo panel flies as ONE group, nothing inside it
+           * animates.
+           *
+           * agent-workspace-flight translates the whole repo panel from
+           * (174.5, 222.9) to (0, 0). An SVG <g> transform is not composited, so
+           * every frame of that flight repaints the entire 340x320 subtree --
+           * file list, icons, gradients, clip paths and all. Running five more
+           * animations INSIDE that subtree while it moves means five more style
+           * recalcs and invalidations per frame on top of the repaint.
+           *
+           * So on a phone the internal reveals resolve immediately and only the
+           * panel itself moves: one transform, one opacity, same direction, same
+           * duration, same easing as the approved motion.
+           *
+           * The settled picture is unchanged. Each of these animations ends where
+           * the base markup already sits -- the file icon is authored at #0D76F2,
+           * the reading dot at full opacity, the fade masks and the focus row at
+           * opacity 1 -- so stopping them lands on exactly the resolved artwork
+           * rather than an intermediate frame. Verified against the markup.
+           *
+           * The confirmation sequence, the connector draw and the panel-resolve
+           * beat are deliberately NOT touched: they are the second half of the
+           * story and they run after the flight, not during it.
+           */
+          .agent-motion-active .agent-svg rect[fill="url(#paint0_linear_964_1383257)"],
+          .agent-motion-active .agent-svg rect[fill="url(#paint1_linear_964_1383257)"],
+          .agent-motion-active .agent-svg g[filter="url(#filter3_dd_964_1383257)"],
+          .agent-motion-active .agent-svg g[clip-path="url(#clip7_964_1383257)"] path,
+          .agent-motion-active .agent-svg circle[cx="254.701"],
+          .agent-motion-active .agent-svg circle[cx="254.701"] + path {
+            animation: none !important;
+            opacity: 1 !important;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
