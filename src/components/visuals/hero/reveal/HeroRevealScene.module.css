@@ -1,0 +1,379 @@
+/*
+ * Hero reveal scenes — static reproduction of Fahmi's Figma frames.
+ *
+ * No transitions and no keyframes live in this file on purpose. These are
+ * review states, not motion. Timing, easing and choreography are a later pass.
+ */
+
+/*
+ * Compositing mirrors Figma's two frames, and the order matters:
+ *   outer wrapper fill  ->  "Key Visual - Hero" fill at 0.9 opacity  ->  content
+ * Painting the canvas fill at full opacity and putting only the CONTENT in the
+ * 0.9 group is not the same composite. Both fills are set inline per scene
+ * because the four frames do not share them (#fbfbfb vs #ffffff).
+ */
+.scene {
+  position: relative;
+  overflow: hidden;
+}
+
+.group {
+  position: absolute;
+  inset: 0;
+  opacity: .9;
+}
+
+.panelFrame {
+  position: absolute;
+  top: 0;
+  background-image: linear-gradient(129.3446deg, rgb(0 0 0 / 4%) 0%, rgb(0 0 0 / 0%) 101.21%);
+}
+
+.panelInner {
+  position: absolute;
+  overflow: hidden;
+}
+
+/* --- drop target (scenes 1 and 2) ------------------------------------- */
+
+.overlay {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  background: rgb(0 0 0 / 5%);
+  backdrop-filter: blur(10px);
+}
+
+/*
+ * Drawn as an SVG stroke, not `border-style: dashed`.
+ *
+ * Figma's dashPattern is [13, 13]. CSS dashed borders use a browser-chosen
+ * pattern derived from the border width (~3px dash on a 1px border in Blink),
+ * which is roughly a quarter of Figma's and reads as dots. The pattern is not
+ * author-controllable on a CSS border, so the rule is an SVG rect stroke with
+ * an explicit stroke-dasharray instead.
+ */
+.overlayRule {
+  position: absolute;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Spans the dashed area so the copy centres in it at any panel width. */
+.overlayCopy {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  color: #0a0a0a;
+  font-family: 'TikTok Sans', Inter, ui-sans-serif, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.overlayCopyInner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.overlayDestination {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #000;
+}
+
+.overlayFolderIcon {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+/* --- dragged file stack (scene 1) ------------------------------------- */
+
+.dragStack {
+  position: absolute;
+  z-index: 3;
+}
+
+.dragCard {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dragCardBox {
+  position: relative;
+  flex: none;
+}
+
+/*
+ * Figma bleeds this art a fraction past its box (inset -0.67% / -0.83%) purely
+ * so the card's own drop shadow is not clipped. Nothing clips it here, so the
+ * bleed is dropped: reproducing it as a percentage margin resolves against the
+ * BOX width on both axes and pushed every card ~1.4px off its authored rect.
+ * The art sits on the authored rect exactly instead.
+ */
+.dragCardArt {
+  position: absolute;
+  display: block;
+  max-width: none;
+}
+
+.cursor {
+  position: absolute;
+  overflow: hidden;
+}
+
+/* Positioned by its resolved rect, not centred — see the cursor data. */
+.cursorArt {
+  position: absolute;
+  display: block;
+  max-width: none;
+}
+
+/* --- washes ------------------------------------------------------------ */
+
+.bottomWash {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(250 250 250 / 0%) 0%, #fafafa 66.0644%);
+}
+
+.rightWash {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgb(250 250 250 / 0%) 0%, #fafafa 66.0644%);
+}
+
+/* --- live demo mount (scene 4) ----------------------------------------- */
+
+.liveDemo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* --- scene 3 upload panel (Figma 1008:8581) ---------------------------- */
+
+.uploadPanel {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  overflow: hidden;
+  transform: translateX(-50%);
+  border: .7329px solid rgb(255 255 255 / 20%);
+  border-radius: 8.7949px;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 0%) 0%, rgb(0 0 0 / 30%) 100%),
+    #292929;
+  box-shadow:
+    0 11.7265px 17.5897px -5.8632px rgb(0 0 0 / 10%),
+    0 5.8632px 11.7265px -5.8632px rgb(0 0 0 / 15%),
+    0 2.9316px 5.8632px -2.9316px rgb(0 0 0 / 20%),
+    0 1.4658px 2.9316px -1.4658px rgb(0 0 0 / 25%),
+    inset 0 -.7329px .7329px rgb(0 0 0 / 10%),
+    inset 0 .7329px .7329px rgb(255 255 255 / 25%),
+    inset .7329px 2.9316px 2.9316px rgb(255 255 255 / 20%),
+    inset 0 -2.9316px 0 rgb(0 0 0 / 20%);
+  color: #fff;
+  font-family: 'TikTok Sans', Inter, ui-sans-serif, sans-serif;
+  font-size: 17.5897px;
+  font-weight: 400;
+  line-height: 26.3846px;
+}
+
+/*
+ * 1008:8582 — transferred region. Starts 0.733 above the panel, hence -0.733.
+ * Scaled from its left edge so progress is composite-only.
+ */
+.uploadFill {
+  position: absolute;
+  top: -.7329px;
+  left: 0;
+  height: 93.8118px;
+  background: rgb(76 95 97 / 20%);
+  transform-origin: left center;
+}
+
+/*
+ * The generated square field spans the whole panel and is stationary; the
+ * frontier sweeps across it inside the SVG, so this layer never transforms.
+ */
+.uploadTextureLayer {
+  position: absolute;
+  top: 1.466px;
+  left: 0;
+  pointer-events: none;
+}
+
+.uploadHeader {
+  position: absolute;
+  top: .7329px;
+  left: .7329px;
+  display: flex;
+  width: 566.2572px;
+  height: 57.1666px;
+  align-items: center;
+  gap: 17.5897px;
+  padding: 17.5897px 17.5897px 11.7265px;
+}
+
+.uploadTitle {
+  display: flex;
+  width: 235.9953px;
+  height: 27.8504px;
+  flex: none;
+  align-items: center;
+  gap: 8.7949px;
+}
+
+/* Both labels stacked in one cell so the completion crossfade cannot reflow. */
+.uploadLabel {
+  position: relative;
+  display: grid;
+  flex: none;
+}
+
+.uploadLabel > span {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.uploadTitle img {
+  display: block;
+  width: 17.5897px;
+  height: 17.5897px;
+  flex: none;
+}
+
+.uploadPercentWrap {
+  display: flex;
+  min-width: 1px;
+  flex: 1 0 0;
+  justify-content: flex-end;
+}
+
+/*
+ * Figma authors this as a fixed 58.632 box with textAlignHorizontal RIGHT, so
+ * the value grows leftwards and never moves its neighbours. `tabular-nums` is
+ * the other half of that: proportional digits change width as the number
+ * counts, which makes the numerals jitter inside the box even though the box
+ * itself is fixed.
+ */
+.uploadPercent {
+  width: 58.6324px;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.uploadActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 5.8632px;
+}
+
+.uploadAction {
+  display: flex;
+  width: 26.3846px;
+  height: 26.3846px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploadAction img {
+  display: block;
+  width: 17.5897px;
+  height: 17.5897px;
+}
+
+.uploadDivider {
+  display: block;
+  width: .7329px;
+  height: 17.5897px;
+  flex: none;
+}
+
+.uploadTrack {
+  position: absolute;
+  top: 57.8993px;
+  left: .7329px;
+  width: 566.2572px;
+  height: 35.1794px;
+}
+
+/*
+ * Vector 6877. Figma strokes it #6b9094 with a black 0 -> 0.3 gradient over the
+ * top, and hangs TWO black drop shadows off it. Production instead paints a
+ * teal outer glow, which is a different treatment, not a lighter one.
+ */
+.uploadLine {
+  position: absolute;
+  top: 5.8632px;
+  left: 0;
+  height: 2.9316px;
+  /*
+   * The gradient stroke's transform maps t = 0.5y + 0.5, so across the 2.93px
+   * stroke it runs from alpha 0.5 to 1.0, times the 0.3 layer opacity: 0.15 to
+   * 0.30. Not 0 to 0.30 — the stroke never reaches the gradient's transparent end.
+   */
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 15%) 0%, rgb(0 0 0 / 30%) 100%),
+    #6b9094;
+  box-shadow:
+    0 1.4658px 2.9316px rgb(0 0 0 / 50%),
+    0 .7329px 0 rgb(0 0 0 / 30%);
+  transform-origin: left center;
+}
+
+/*
+ * Armed / dim treatments as their own layers so they animate on opacity.
+ *
+ * ARMED IS GREY, NOT BLACK. Figma authors this fill as solid black at 20%
+ * opacity (1008:9767), so the paint carries the 20% and the layer's own
+ * `opacity` carries only the 0..1 animation strength. An earlier pass moved the
+ * 20% into the strength value and left the paint at solid #000, which meant a
+ * fully armed ring rendered 100% black — the bug this comment exists to
+ * prevent. Black is reserved exclusively for drop confirmation.
+ *
+ * Keeping the authored alpha (rather than a flat grey hex) also preserves the
+ * frame gradient underneath, so the ring stays lighter toward the bottom-right
+ * exactly as Figma draws it.
+ */
+.panelArm {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: rgb(0 0 0 / 20%);
+  pointer-events: none;
+}
+
+.panelDim {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: #f3f3f3;
+  pointer-events: none;
+}
+
+/* Black confirmation ring, wiped in bottom-to-top on a successful drop. */
+.panelConfirm {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: #0a0a0a;
+  pointer-events: none;
+}

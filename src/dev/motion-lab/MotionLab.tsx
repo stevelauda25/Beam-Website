@@ -26,7 +26,7 @@ import { IsolatedHarness } from './harnesses/IsolatedHarness';
 import { ScrollFrame } from './harnesses/ScrollFrame';
 import { ScrollHarness } from './harnesses/ScrollHarness';
 import { ReducedMotionStatus } from './components/ReducedMotionStatus';
-import { HERO_EXCLUSION_REASON, findEntry, labGroups } from './registry';
+import { HERO_STORAGE_NOTE, findEntry, labGroups } from './registry';
 
 type ViewportPreset = 'desktop' | 'tablet' | 'mobile' | 'fluid';
 
@@ -121,7 +121,13 @@ export default function MotionLab() {
   // Inner document of a scroll entry: only the real section, no lab chrome, so
   // the section's window IS the logical viewport. See ScrollHarness.
   if (isFrameDocument()) {
-    return <ScrollFrame>{entry.render({ progress: 0 })}</ScrollFrame>;
+    /*
+     * In frame mode there is no lab chrome and no preset: this document IS the
+     * logical viewport, so the real window width is the correct one.
+     */
+    return (
+      <ScrollFrame>{entry.render({ progress: 0, viewportWidth: windowSize.width })}</ScrollFrame>
+    );
   }
 
   return (
@@ -152,7 +158,7 @@ export default function MotionLab() {
           ))}
         </nav>
 
-        <p className={styles.sidebarNote}>{HERO_EXCLUSION_REASON}</p>
+        <p className={styles.sidebarNote}>{HERO_STORAGE_NOTE}</p>
       </aside>
 
       <main className={styles.main}>
@@ -197,7 +203,10 @@ export default function MotionLab() {
             canvas width only. They are <strong>not</strong> true breakpoint behaviour: media
             queries, <span className={styles.mono}>matchMedia</span> and{' '}
             <span className={styles.mono}>svh</span> still follow the real browser window. Resize
-            the browser to test breakpoints.
+            the browser to test breakpoints. Entries that pick behaviour by viewport width in JS
+            are handed this preset as{' '}
+            <span className={styles.mono}>viewportWidth</span> and DO follow it — the Hero reveal
+            resolves its responsive band from it, so its Tablet/Mobile presets are real.
             {entry.intrinsicWidth
               ? ` Desktop preview is capped at ${entry.intrinsicWidth}px to match this visual's production parent width.`
               : ''}{' '}
@@ -272,7 +281,7 @@ export default function MotionLab() {
                 stage={entry.stage}
                 aspect={entry.aspect}
               >
-                {entry.render({ progress })}
+                {entry.render({ progress, viewportWidth: logicalViewport.width })}
               </IsolatedHarness>
             )}
           </div>

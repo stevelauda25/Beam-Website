@@ -22,6 +22,10 @@ import { ShareVisual } from '../../components/visuals/share/ShareVisual';
 import { SecretVisual } from '../../components/visuals/secrets/SecretVisual';
 import { FooterVisual } from '../../components/visuals/footer/FooterVisual';
 
+// Lab-only harness UI. The scenes it shows are production components.
+import { HeroRealCondition } from './hero/HeroRealCondition';
+import { HeroSceneReview } from './hero/HeroSceneReview';
+
 // Lab-only. Not a production component.
 import { DialKitProof } from './proof/DialKitProof';
 import { SyncTrailTuning } from './tuning/SyncTrailTuning';
@@ -47,6 +51,17 @@ export type SizingMode = 'fill' | 'intrinsic';
 export type EntryRenderArgs = {
   /** 0..1 — only used by entries that expose a production progress prop. */
   progress: number;
+  /**
+   * The LOGICAL viewport width the preview is standing in for — the selected
+   * preset, or the real window on "Fluid".
+   *
+   * Viewport presets only resize the preview container; `window.innerWidth`,
+   * media queries and `matchMedia` all still report the real browser window.
+   * Any entry whose behaviour is chosen by viewport width (rather than by its
+   * own container) must therefore be told the logical width explicitly, or it
+   * silently renders its desktop behaviour inside a 390px-wide stage.
+   */
+  viewportWidth: number;
 };
 
 export type LabEntry = {
@@ -92,6 +107,32 @@ export type LabGroup = {
 };
 
 const entries: LabEntry[] = [
+  {
+    id: 'hero-scene-review',
+    section: 'Hero',
+    label: 'Hero — Scene Review',
+    componentName: 'HeroRevealScene',
+    path: 'src/components/visuals/hero/reveal/HeroRevealScene.tsx',
+    kind: 'isolated',
+    sizing: 'intrinsic',
+    intrinsicWidth: 1440,
+    notes:
+      "Four states of ONE hero panel: files approach -> drop target armed -> upload in progress -> interactive workspace resolved. The panel is the shipping hero's own geometry (x=132, 1176 x 680.661, inner 1164.56) in every state, so switching states must never move or resize it — the readout under the stage measures the rendered panel per state and flags any drift. Fahmi's frames (Figma section 1008:9872) are the visual source of truth for states 1-3, but their frame widths (1727.731 / 954 / 954) are deliberately NOT carried over; only state 4 was authored at the shipping geometry. Each state lists exactly how it was adapted. State 4 mounts the real HeroWorkspaceDemo. No motion is authored here.",
+    render: () => <HeroSceneReview />,
+  },
+  {
+    id: 'hero-real-condition',
+    section: 'Hero',
+    label: 'Hero — Real Condition',
+    componentName: 'HeroRevealSequence',
+    path: 'src/components/visuals/hero/reveal/HeroRevealSequence.tsx',
+    kind: 'isolated',
+    sizing: 'intrinsic',
+    intrinsicWidth: 1454,
+    notes:
+      "The reveal running in the hero's real container, with review controls: Replay, Play/Pause, Restart, a millisecond scrubber and jump-to-beat markers. The sequence is a pure function of time (heroRevealTimeline.sampleHeroReveal), so scrubbing and playback render the identical frame and the sequence is deterministic and repeatable. Sizing comes from the production HeroVisual.module.css and the wrapper mirrors Hero.tsx's key-visual container, so the panel sits where it sits on the homepage. The workspace is mounted throughout and revealed by opacity — no remount, no geometry change at the handoff, and production drag-and-drop is live once visible. Under prefers-reduced-motion the player parks at the settled end state. Production is NOT wired to this yet; the homepage still renders the shipping hero.",
+    render: ({ viewportWidth }) => <HeroRealCondition viewportWidth={viewportWidth} />,
+  },
   {
     id: 'dialkit-proof',
     section: 'Dev · DialKit',
@@ -267,15 +308,18 @@ export function findEntry(id: string | null): LabEntry {
 }
 
 /**
- * Hero is deliberately absent.
+ * Hero storage caveat.
  *
- * HeroVisual mounts HeroWorkspaceDemo, which persists to the shared
- * `beam-website-hero-demo-metadata-v1` localStorage key and to the
- * `beam-website-hero-demo-storage` IndexedDB database. Rendering it here would
- * read and write the same records the homepage demo uses, so lab activity would
- * leak into the real Hero state. That fails the "isolated cleanly without
- * disturbing its product-state/storage logic" bar, so it is left out until we
- * decide how to namespace that storage.
+ * Hero used to be excluded from the lab on the grounds that HeroWorkspaceDemo
+ * shares localStorage AND IndexedDB with the homepage demo. Half of that was
+ * wrong: the demo uses no localStorage at all (verified — there is not a single
+ * reference in src/components/visuals/hero/**). It persists only uploaded file
+ * blobs, to the `beam-website-hero-demo-storage` IndexedDB database.
+ *
+ * So the real caveat is narrow: seeded content is in-memory and cannot be
+ * disturbed, and a file a reviewer drops in the lab will also appear in the
+ * homepage demo in that same browser. That is a dev-only side effect of a
+ * deliberate action, not passive leakage, so Hero is now in the lab.
  */
-export const HERO_EXCLUSION_REASON =
-  'Hero is excluded: HeroWorkspaceDemo shares localStorage + IndexedDB with the homepage demo, so it cannot be isolated without leaking state.';
+export const HERO_STORAGE_NOTE =
+  'Hero is live in the lab. HeroWorkspaceDemo keeps uploaded files in the shared beam-website-hero-demo-storage IndexedDB database, so a file dropped here also shows up in the homepage demo in this browser. Seeded content is in-memory and is never written.';

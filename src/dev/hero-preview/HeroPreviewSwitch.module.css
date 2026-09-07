@@ -1,0 +1,122 @@
+/*
+ * Dev chrome for the Hero reveal preview. DEV ONLY — this stylesheet is only
+ * ever imported by HeroPreviewSwitch, which production never loads.
+ *
+ * Deliberately unlike the site's own design language (mono type, dark pill,
+ * a "dev" badge) so it can never be mistaken for shipping UI in a screenshot.
+ */
+
+.dock {
+  position: fixed;
+  z-index: 2147483000;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  background: rgb(18 18 18 / 92%);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 24%);
+  backdrop-filter: blur(6px);
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .02em;
+}
+
+.badge {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #f5a524;
+  color: #1a1a1a;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+}
+
+.tab {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(255 255 255 / 62%);
+  font: inherit;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.tab:hover {
+  color: #fff;
+}
+
+.tab[data-active='true'] {
+  background: #fff;
+  color: #121212;
+}
+
+.link {
+  padding-right: 4px;
+  color: rgb(255 255 255 / 52%);
+  text-decoration: none;
+}
+
+.link:hover {
+  color: #fff;
+}
+
+/* Playback sits above the dock so neither ever covers the other. */
+.playback {
+  position: fixed;
+  z-index: 2147483000;
+  bottom: 60px;
+  left: 16px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  background: rgb(18 18 18 / 92%);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 24%);
+  font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.chip {
+  padding: 5px 10px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.chip:hover:not(:disabled) {
+  background: rgb(255 255 255 / 10%);
+}
+
+.chip:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+.time {
+  padding-right: 4px;
+  color: rgb(255 255 255 / 52%);
+  font-variant-numeric: tabular-nums;
+}
+
+.scrub {
+  width: 160px;
+  height: 4px;
+  margin: 0 2px;
+  accent-color: #f5a524;
+  cursor: pointer;
+}

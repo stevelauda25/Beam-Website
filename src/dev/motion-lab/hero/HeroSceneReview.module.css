@@ -1,0 +1,130 @@
+.wrap {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.barLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.stage {
+  width: 1440px;
+  flex: none;
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 1000px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #374151;
+}
+
+.caveats {
+  margin: 0;
+  padding-left: 16px;
+  color: #92400e;
+}
+
+.caveats li {
+  margin: 2px 0;
+}
+
+.link {
+  color: #1d4ed8;
+}
+
+.tick {
+  margin-left: 6px;
+  font-size: 9px;
+  color: #059669;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.continuity {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
+}
+
+.continuity[data-ok] {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.boundsList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  gap: 2px;
+  list-style: none;
+}
+
+.boundsList li {
+  display: flex;
+  gap: 10px;
+}
+
+.boundsName {
+  width: 220px;
+  flex: none;
+  color: #6b7280;
+}
+
+.adaptTitle {
+  margin-top: 2px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.scrub {
+  width: 100%;
+  max-width: 640px;
+  accent-color: #111827;
+}
+
+/* Lock state badge — unmistakable at a glance, both ways. */
+.lockOn,
+.lockOff {
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.lockOn {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.lockOff {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+}
