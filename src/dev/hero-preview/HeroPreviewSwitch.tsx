@@ -1,8 +1,9 @@
 /**
  * Hero Reveal preview switch — DEV ONLY.
  *
- * Swaps the homepage's key visual between the SHIPPING hero and the Hero
- * reveal, in place, inside the real Hero section. Nothing here is a simulation:
+ * Swaps the homepage's key visual between the reveal AS IT SHIPS (frozen
+ * defaults, exactly what production renders) and the reveal driven by LIVE
+ * DialKit tuning, in place, inside the real Hero section. Nothing here is a simulation:
  * the surrounding markup, the width classes, the FadeIn, the section padding
  * and every breakpoint are the homepage's own, because this component is
  * mounted by the homepage's own `HeroKeyVisual`.
@@ -171,7 +172,7 @@ export default function HeroPreviewSwitch({ shipping }: { shipping: ReactNode })
             data-active={mode === 'shipping'}
             onClick={() => setMode('shipping')}
           >
-            Shipping Hero
+            Shipping (frozen)
           </button>
           <button
             type="button"
@@ -179,7 +180,7 @@ export default function HeroPreviewSwitch({ shipping }: { shipping: ReactNode })
             data-active={mode === 'reveal'}
             onClick={() => setMode('reveal')}
           >
-            Hero Reveal Preview
+            Live DialKit tuning
           </button>
         </div>
         <a className={styles.link} href="/dev/motion-lab?entry=hero-real-condition">
