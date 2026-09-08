@@ -778,19 +778,47 @@
   background: #f0f0f0;
 }
 
-.previewBreadcrumb {
+/*
+ * ONE COMPACT back control: the chevron, the gap and the file name, with a
+ * little padding for usability, and nothing more — the empty header space to
+ * its right is not part of the target. ANIMATION_RULES.md §6 Hover
+ * Interaction: hover stays localized to the hovered element, moves no layout,
+ * and is gated for fine pointers; the fill is the header's own button hover.
+ * The resting look is unchanged: same 12px chevron, same 7px gap, same name
+ * position (the left padding is offset by an equal negative margin).
+ */
+.previewBar .previewBreadcrumb {
+  display: flex;
+  flex: 0 1 auto;
+  width: auto;
+  height: 32px;
   min-width: 0;
+  align-items: center;
+  gap: 7px;
+  margin: 0 8px 0 -6px;
+  padding: 0 8px 0 6px;
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
-.previewBreadcrumb > button {
+@media (hover: hover) and (pointer: fine) {
+  .previewBar .previewBreadcrumb:hover {
+    background: #f0f0f0;
+  }
+}
+
+.previewBar .previewBreadcrumb:focus-visible {
+  outline: 2px solid #0a0a0a;
+  outline-offset: -2px;
+}
+
+.previewBreadcrumb > svg {
+  flex: none;
   width: 12px;
-  height: 26px;
-  padding: 0;
   color: #777;
-}
-
-.previewBreadcrumb > button:hover {
-  background: transparent;
 }
 
 .previewBreadcrumb strong {
@@ -1164,43 +1192,53 @@
   to { opacity: 1; transform: translateY(0) scaleY(1); }
 }
 
-@media (max-width: 639px) {
-  .sidebar {
-    display: none;
-  }
+/*
+ * MOBILE LAYOUT — keyed on the app's `data-layout`, not on a media query.
+ *
+ * This block used to be `@media (max-width: 639px)`. A media query answers for
+ * the PHYSICAL browser window, so the Hero Reveal's logical mobile band (the
+ * Motion Lab's "Mobile 390" preset inside a desktop-sized window) rendered the
+ * desktop layout — sidebar and all — while the reveal itself was already
+ * framing for mobile. The component now carries the decision: the reveal
+ * passes its band as `layout`, and a standalone demo derives the same value
+ * from `matchMedia('(max-width: 639px)')`, so the rules below apply in
+ * exactly the situations the media query covered, plus the logical one.
+ */
+.app[data-layout='mobile'] .sidebar {
+  display: none;
+}
 
-  .content {
-    left: 0;
-  }
+.app[data-layout='mobile'] .content {
+  left: 0;
+}
 
-  .preview {
-    right: 0;
-    width: auto;
-  }
+.app[data-layout='mobile'] .preview {
+  right: 0;
+  width: auto;
+}
 
-  .previewBar {
-    padding-right: 8px;
-    padding-left: 14px;
-  }
+.app[data-layout='mobile'] .previewBar {
+  padding-right: 8px;
+  padding-left: 14px;
+}
 
-  .previewBody {
-    justify-items: stretch;
-    padding: 14px 7.4px;
-  }
+.app[data-layout='mobile'] .previewBody {
+  justify-items: stretch;
+  padding: 14px 7.4px;
+}
 
-  .previewBody pre {
-    width: 100%;
-    max-width: none;
-  }
+.app[data-layout='mobile'] .previewBody pre {
+  width: 100%;
+  max-width: none;
+}
 
-  .previewBody img,
-  .previewBody iframe {
-    width: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    justify-self: stretch;
-    object-fit: contain;
-  }
+.app[data-layout='mobile'] .previewBody img,
+.app[data-layout='mobile'] .previewBody iframe {
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  justify-self: stretch;
+  object-fit: contain;
 }
 
 @media (prefers-reduced-motion: reduce) {

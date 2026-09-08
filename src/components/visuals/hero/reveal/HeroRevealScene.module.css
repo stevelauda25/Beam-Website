@@ -146,15 +146,7 @@
   background: linear-gradient(180deg, rgb(250 250 250 / 0%) 0%, #fafafa 66.0644%);
 }
 
-.rightWash {
-  position: absolute;
-  z-index: 4;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg, rgb(250 250 250 / 0%) 0%, #fafafa 66.0644%);
-}
+/* .rightWash was removed: the right-hand fade is no longer painted on any band. */
 
 /* --- live demo mount (scene 4) ----------------------------------------- */
 
@@ -375,5 +367,49 @@
   z-index: 0;
   inset: 0;
   background: #0a0a0a;
+  pointer-events: none;
+}
+
+/*
+ * The three cards as one group. Carries the stack's travel and the files-only
+ * scale (about the grip point) so the cards move and size together while the
+ * hand stays independent. Same box as .dragStack, so card offsets are unchanged.
+ */
+.dragCards {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+ * Scene-content layers. The shell (panel frame, inner panel, washes) and the
+ * workspace are NOT inside these; only the drag / drop / upload content is, so
+ * a band can place that content independently of the shell it sits in. Both
+ * are inert: nothing in them is interactive, and they must never shadow the
+ * live workspace beneath.
+ */
+.panelContent {
+  position: absolute;
+  /* Above the overlay backdrop (2) and the workspace, whatever transform it carries. */
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+}
+
+/*
+ * The dashed target and its copy, WITHOUT the backdrop: that stays on .overlay
+ * as part of the shell. Same box and z-order as the overlay had, so desktop
+ * and tablet render exactly as before.
+ */
+.overlayTarget {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.canvasContent {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
   pointer-events: none;
 }

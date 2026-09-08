@@ -91,9 +91,37 @@ function initialEntryId() {
   return new URLSearchParams(window.location.search).get('entry');
 }
 
+/**
+ * The viewport preset survives a reload.
+ *
+ * Every reload used to land back on Desktop 1440, and any Responsive Tablet /
+ * Mobile dial moved before noticing looked dead — the preset picks the band,
+ * and a Desktop stage cannot show a tablet value. Remembering it keeps the
+ * stage on the band being tuned. New key; nothing else in storage is touched.
+ */
+const VIEWPORT_KEY = 'beam.motionlab.viewport.v1';
+
+function initialViewport(): ViewportPreset {
+  try {
+    const stored = window.localStorage.getItem(VIEWPORT_KEY);
+    if (VIEWPORTS.some((v) => v.id === stored)) return stored as ViewportPreset;
+  } catch {
+    /* blocked site data — fall through to the default */
+  }
+  return 'desktop';
+}
+
 export default function MotionLab() {
   const [entryId, setEntryId] = useState<string | null>(initialEntryId);
-  const [viewport, setViewport] = useState<ViewportPreset>('desktop');
+  const [viewport, setViewportState] = useState<ViewportPreset>(initialViewport);
+  const setViewport = (next: ViewportPreset) => {
+    setViewportState(next);
+    try {
+      window.localStorage.setItem(VIEWPORT_KEY, next);
+    } catch {
+      /* the choice simply does not persist */
+    }
+  };
   const [replayKey, setReplayKey] = useState(0);
   const [progress, setProgress] = useState(0);
 

@@ -13,9 +13,9 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  HERO_REDUCED_STEPS,
   HERO_REDUCED_STEP_MS,
   HERO_REVEAL_DEFAULTS,
+  heroReducedSteps,
   heroRevealDuration,
   type HeroRevealTuning,
 } from './heroRevealTimeline';
@@ -57,6 +57,8 @@ export function useHeroRevealPlayer(
 ): HeroRevealPlayer {
   const reducedMotion = usePrefersReducedMotion();
   const HERO_REVEAL_DURATION = heroRevealDuration(tuning);
+  /* Representative frames follow the tuning (including the initial hold). */
+  const HERO_REDUCED_STEPS = heroReducedSteps(tuning);
   const [time, setTime] = useState(reducedMotion ? HERO_REDUCED_STEPS[0] : 0);
   const [playing, setPlaying] = useState(autoplay && !reducedMotion);
   const [stepIndex, setStepIndex] = useState(0);

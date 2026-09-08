@@ -132,24 +132,50 @@
  */
 .previewColumn { min-width: 0; }
 
+/*
+ * The panel is pinned to the viewport and SCROLLS INTERNALLY.
+ *
+ * `position: sticky` alone only pins an element that fits: the DialKit panel
+ * grows past the viewport once its folders are expanded, and a sticky element
+ * taller than the viewport simply scrolls away with the page — so reaching the
+ * lower dials meant scrolling the Hero preview off screen. Capping the height
+ * at the viewport (minus the top offset and a matching bottom margin) and
+ * letting the column scroll its own content keeps every dial reachable while
+ * the preview stays where it is. Vertical only: the column is 320px wide and
+ * the panel fits it, so sideways scrolling is disabled rather than allowed.
+ * `overscroll-behavior` stops a scroll that reaches the panel's end from
+ * spilling into the page and dragging the preview away after all.
+ */
 .panelColumn {
   position: sticky;
   top: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
+  max-height: calc(100vh - 24px);
+  padding: 0 10px 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid #d4d4d8;
   border-radius: 6px;
   background: #fff;
 }
 
+/* Stays visible at the top of the panel's own scroll, so context is never lost. */
 .panelHeading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 -10px;
+  padding: 10px 10px 6px;
   color: #71717a;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: .04em;
   text-transform: uppercase;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f2;
 }
 
 .panelEmpty {

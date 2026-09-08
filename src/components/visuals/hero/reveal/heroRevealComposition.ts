@@ -69,6 +69,49 @@ export const HERO_DESKTOP_MIN = 1200;
  */
 export const HERO_MOBILE_TIGHT_MAX = 430;
 
+/**
+ * THE RESOLVED WORKSPACE ON MOBILE — the pre-reveal presentation, restored.
+ *
+ * Below 640 the shipping hero that preceded the reveal (HeroVisual.tsx +
+ * HeroVisual.module.css, still in the tree, no longer rendered) did not scale
+ * the workspace at all: the 1440-wide canvas was drawn at 1:1, slid left by
+ * 112px, in a 344px-tall window, with the bottom fade moved up to start at
+ * 133px. Together with HeroWorkspaceDemo's own `@media (max-width: 639px)`
+ * rule (sidebar hidden, content full-width) that put "My Beam", the Name
+ * header and the folder rows at full size at the top of the window.
+ *
+ * The reveal's mobile composition frames the whole panel and scales it to
+ * ~0.36 instead — right for the approach / drop / upload scenes, whose
+ * payload sits mid-canvas, but it left the RESOLVED workspace at a third of
+ * its size. So the sequence keeps its composition for every scene and, across
+ * the existing workspace-handoff window, moves the framing to this window.
+ *
+ * These are the previous wrapper's numbers, verified against a live render of
+ * commit d72c625 at 390px: breadcrumb 19px from the top, header row at 49px,
+ * folder rows at 74 / 98 / 122px, fade from 133px. Canvas px; at 1:1 they
+ * are screen px too. Not a dial: the mobile placement dials shape the reveal
+ * composition, and this window is the fixed destination it resolves into.
+ */
+export const HERO_MOBILE_WORKSPACE_WINDOW = {
+  /** Left edge of the visible window on the canvas (the old translateX(-112px)). */
+  canvasX: 112,
+  /** Height of the visible window, screen px. */
+  height: 344,
+  /** The bottom fade, re-anchored for the short window (canvas / screen px). */
+  fadeTop: 133,
+  fadeHeight: 211,
+} as const;
+
+/** The 1:1 mobile window as a composition rect — width is the real container. */
+export function heroMobileWorkspaceFraming(containerWidth: number): HeroCompositionRect {
+  return {
+    x: HERO_MOBILE_WORKSPACE_WINDOW.canvasX,
+    y: 0,
+    width: containerWidth,
+    height: HERO_MOBILE_WORKSPACE_WINDOW.height,
+  };
+}
+
 const FULL_CANVAS: HeroCompositionRect = {
   x: 0,
   y: 0,
@@ -151,6 +194,60 @@ const DEFAULT_COMPOSITION_TRANSLATE_X = { tablet: 60, mobile: 30 } as const;
 const DEFAULT_VISUAL_SCALE = { tablet: 1.2, mobile: 1.08 } as const;
 
 /**
+ * ON-SCREEN PLACEMENT of the whole key visual, per band.
+ *
+ * These are the "Visual Position X / Y", "Visual Scale", "Pointer Scale" and
+ * "Files Scale" dials. Every band — desktop included — owns an independent set,
+ * and every default is NEUTRAL (0 / 0 / 1 / 1 / 1), so a band renders exactly
+ * as it did before these dials existed until someone moves one.
+ */
+export type HeroPlacementTuning = {
+  /**
+   * ROOT COMPOSITION TRANSLATION, in SCREEN px.
+   *
+   * Applied to the reveal's root canvas element AFTER scaling, so it is a
+   * plain on-screen shift of the whole composition: outer frame, inner panel,
+   * dashed dropzone, instruction copy, upload panel, washes and the resolved
+   * workspace all move by exactly this many pixels. Positive moves everything
+   * RIGHT (X) or DOWN (Y). It is not a crop and not a window — the framing
+   * rectangle is unchanged; the rendered result is picked up and moved.
+   */
+  compositionTranslateX: number;
+  compositionTranslateY: number;
+  /**
+   * Multiplier on the fitted scale for this band, so the key visual can be
+   * drawn larger than "fit the container". Framing, translation and every
+   * release target are unaffected — the finished composition is simply drawn
+   * bigger, growing to the right and down from the container's top-left.
+   * Anything past the container is no longer clipped by the column; it is cut
+   * only at the viewport, as production's <main> does.
+   */
+  visualScale: number;
+  /**
+   * Size of the HAND only, scaled about its own hotspot (the centre of the
+   * authored cursor frame). The travel path is untouched — only the drawing
+   * grows or shrinks around the point that does the carrying.
+   */
+  pointerScale: number;
+  /**
+   * Size of the DRAGGABLE FILE STACK only, scaled about the pointer hotspot
+   * at the stack's rest position — the point the hand grips. The stack's
+   * travel, release drift and lag are applied OUTSIDE this scale, so the path
+   * and the release point are the same at every size; only the cards grow.
+   */
+  filesScale: number;
+  /**
+   * UPLOAD PANEL position, in canvas px, added to its authored placement
+   * (centred in the panel, entrance slide on Y). Moves the Uploading /
+   * Uploaded panel only — not the shell, the hand, the files or the
+   * workspace — and stays with it through the whole upload phase, so the
+   * 100% / "Uploaded" state sits exactly where the progress did.
+   */
+  uploadOffsetX: number;
+  uploadOffsetY: number;
+};
+
+/**
  * A horizontal shift of the VISIBLE WINDOW over the canvas.
  *
  * This moves the crop, never the artwork: the hero panel, the dashed dropzone,
@@ -162,32 +259,12 @@ const DEFAULT_VISUAL_SCALE = { tablet: 1.2, mobile: 1.08 } as const;
  * NEGATIVE slides the window left, so the panel's content shifts RIGHT on
  * screen and its left edge moves toward the middle of the viewport.
  *
- * Desktop has none: its framing is the full canvas and is not to be touched.
+ * Desktop has none: its framing is the full canvas. (Desktop placement is
+ * tunable through HeroPlacementTuning instead, which moves the rendered
+ * result rather than the crop.)
  */
 export type HeroFramingTuning = {
   framingOffsetX: number;
-  /**
-   * ROOT COMPOSITION TRANSLATION, in SCREEN px.
-   *
-   * Applied to the reveal's root canvas element AFTER scaling, so it is a
-   * plain on-screen shift of the whole composition: outer frame, inner panel,
-   * dashed dropzone, instruction copy, upload panel, washes and the resolved
-   * workspace all move by exactly this many pixels. Positive moves everything
-   * RIGHT. It is not a crop and not a window — the framing rectangle is
-   * unchanged; the rendered result is picked up and moved.
-   *
-   * Desktop has none and cannot: its composition is not to be touched.
-   */
-  compositionTranslateX: number;
-  /**
-   * Multiplier on the fitted scale for this band, so the key visual can be
-   * drawn larger than "fit the container" on narrow viewports. Framing,
-   * translation and every release target are unaffected — the finished
-   * composition is simply drawn bigger, growing to the right from the
-   * container's left edge. Anything past the container is no longer clipped
-   * by the column; it is cut only at the viewport, as production's <main> does.
-   */
-  visualScale: number;
 };
 
 /** Mobile alone can reframe: a zoom about the frame's centre, plus a nudge. */
@@ -199,9 +276,27 @@ export type HeroMobileComposition = {
 };
 
 export type HeroResponsiveTuning = {
-  desktop: HeroBreakpointTuning;
-  tablet: HeroBreakpointTuning & HeroFramingTuning;
-  mobile: HeroBreakpointTuning & HeroMobileComposition & HeroFramingTuning;
+  desktop: HeroBreakpointTuning & HeroPlacementTuning;
+  tablet: HeroBreakpointTuning & HeroPlacementTuning & HeroFramingTuning;
+  mobile: HeroBreakpointTuning &
+    HeroPlacementTuning &
+    HeroMobileComposition &
+    HeroFramingTuning;
+};
+
+/**
+ * Placement that changes nothing. Every band starts here; the tablet and
+ * mobile defaults below then override X and scale with the values that
+ * shipped before the placement dials existed, so their render is unchanged.
+ */
+const NEUTRAL_PLACEMENT: HeroPlacementTuning = {
+  compositionTranslateX: 0,
+  compositionTranslateY: 0,
+  visualScale: 1,
+  pointerScale: 1,
+  filesScale: 1,
+  uploadOffsetX: 0,
+  uploadOffsetY: 0,
 };
 
 /**
@@ -288,6 +383,8 @@ export const HERO_SUPERSEDED_SIDE_TARGETS: Readonly<Record<string, readonly numb
 export const HERO_RESPONSIVE_DEFAULTS: HeroResponsiveTuning = {
   desktop: {
     ...AUTHORED_POSITIONS,
+    /* Neutral: desktop draws exactly as it did before placement was tunable. */
+    ...NEUTRAL_PLACEMENT,
     stackTargetX: HERO_DESKTOP_RELEASE_TARGET.x,
     stackTargetY: HERO_DESKTOP_RELEASE_TARGET.y,
     handTargetX: HERO_DESKTOP_RELEASE_TARGET.x,
@@ -295,6 +392,7 @@ export const HERO_RESPONSIVE_DEFAULTS: HeroResponsiveTuning = {
   },
   tablet: {
     ...AUTHORED_POSITIONS,
+    ...NEUTRAL_PLACEMENT,
     framingOffsetX: DEFAULT_FRAMING_OFFSET_X,
     compositionTranslateX: DEFAULT_COMPOSITION_TRANSLATE_X.tablet,
     visualScale: DEFAULT_VISUAL_SCALE.tablet,
@@ -305,6 +403,7 @@ export const HERO_RESPONSIVE_DEFAULTS: HeroResponsiveTuning = {
   },
   mobile: {
     ...AUTHORED_POSITIONS,
+    ...NEUTRAL_PLACEMENT,
     framingOffsetX: DEFAULT_FRAMING_OFFSET_X,
     compositionTranslateX: DEFAULT_COMPOSITION_TRANSLATE_X.mobile,
     visualScale: DEFAULT_VISUAL_SCALE.mobile,
@@ -338,8 +437,22 @@ export const HERO_BREAKPOINT_DIALS = [
   'pointerExitY',
 ] as const;
 
-/** Framing keys — tablet and mobile only; desktop's framing is not tunable. */
-export const HERO_FRAMING_DIALS = ['visualScale', 'compositionTranslateX', 'framingOffsetX'] as const;
+/**
+ * Placement keys — EVERY band, in panel order. These are the dials that move
+ * and size the whole key visual, the hand, and the files on screen.
+ */
+export const HERO_PLACEMENT_DIALS = [
+  'compositionTranslateX',
+  'compositionTranslateY',
+  'visualScale',
+  'pointerScale',
+  'filesScale',
+  'uploadOffsetX',
+  'uploadOffsetY',
+] as const;
+
+/** Framing keys — tablet and mobile only; desktop's framing is the full canvas. */
+export const HERO_FRAMING_DIALS = ['framingOffsetX'] as const;
 
 /** Mobile-only composition keys. */
 export const HERO_MOBILE_DIALS = [
@@ -425,46 +538,85 @@ export function heroComposition(
 }
 
 /**
- * The root composition translation for a viewport, in screen px.
+ * ONE resolver for every placement dial.
  *
- * Ramped across the same seams as the framing so neither breakpoint boundary
- * becomes a step: the tablet value fades in across the 640..744 fluid band and
- * the mobile value fades out toward 640. Desktop is always exactly 0.
+ * Desktop (>=1200) returns its own band's value. Tablet (744..1199) returns
+ * the tablet value. The two seams are ramped so neither breakpoint boundary
+ * becomes a step: across the 640..744 fluid band the tablet value fades in
+ * from `neutral`, and below 640 the mobile value fades out toward `neutral`
+ * as the mobile framing ramps into the full canvas. `neutral` is 0 for a
+ * translation and 1 for a scale — the value that changes nothing.
+ *
+ * With every band at its default this reproduces the previous per-dial
+ * functions exactly (desktop 0 / 1, tablet 60 / 1.2, mobile 30 / 1.08).
  */
+export function heroPlacementValue(
+  viewportWidth: number,
+  responsive: HeroResponsiveTuning,
+  key: keyof HeroPlacementTuning,
+  neutral: number,
+): number {
+  if (viewportWidth >= HERO_DESKTOP_MIN) return responsive.desktop[key];
+  if (viewportWidth >= HERO_TABLET_MIN) return responsive.tablet[key];
+  if (viewportWidth >= HERO_FLUID_MIN) {
+    const t = clamp01((viewportWidth - HERO_FLUID_MIN) / (HERO_TABLET_MIN - HERO_FLUID_MIN));
+    return neutral + (responsive.tablet[key] - neutral) * t;
+  }
+  const t = clamp01(
+    (viewportWidth - HERO_MOBILE_TIGHT_MAX) / (HERO_FLUID_MIN - HERO_MOBILE_TIGHT_MAX),
+  );
+  return neutral + (responsive.mobile[key] - neutral) * (1 - t);
+}
+
+/** The root composition translation for a viewport, in screen px (Visual Position X). */
 export function heroCompositionTranslateX(
   viewportWidth: number,
   responsive: HeroResponsiveTuning = HERO_RESPONSIVE_DEFAULTS,
 ): number {
-  if (viewportWidth >= HERO_DESKTOP_MIN) return 0;
-  if (viewportWidth >= HERO_TABLET_MIN) return responsive.tablet.compositionTranslateX;
-  if (viewportWidth >= HERO_FLUID_MIN) {
-    const t = clamp01((viewportWidth - HERO_FLUID_MIN) / (HERO_TABLET_MIN - HERO_FLUID_MIN));
-    return responsive.tablet.compositionTranslateX * t;
-  }
-  const t = clamp01(
-    (viewportWidth - HERO_MOBILE_TIGHT_MAX) / (HERO_FLUID_MIN - HERO_MOBILE_TIGHT_MAX),
-  );
-  return responsive.mobile.compositionTranslateX * (1 - t);
+  return heroPlacementValue(viewportWidth, responsive, 'compositionTranslateX', 0);
 }
 
-/**
- * The visual scale multiplier for a viewport. Ramped at the seams exactly like
- * the translation, so it never steps at 640 or 744. Desktop is always 1.
- */
+/** Vertical root translation, in screen px (Visual Position Y). */
+export function heroCompositionTranslateY(
+  viewportWidth: number,
+  responsive: HeroResponsiveTuning = HERO_RESPONSIVE_DEFAULTS,
+): number {
+  return heroPlacementValue(viewportWidth, responsive, 'compositionTranslateY', 0);
+}
+
+/** The visual scale multiplier for a viewport (Visual Scale). */
 export function heroVisualScale(
   viewportWidth: number,
   responsive: HeroResponsiveTuning = HERO_RESPONSIVE_DEFAULTS,
 ): number {
-  if (viewportWidth >= HERO_DESKTOP_MIN) return 1;
-  if (viewportWidth >= HERO_TABLET_MIN) return responsive.tablet.visualScale;
-  if (viewportWidth >= HERO_FLUID_MIN) {
-    const t = clamp01((viewportWidth - HERO_FLUID_MIN) / (HERO_TABLET_MIN - HERO_FLUID_MIN));
-    return 1 + (responsive.tablet.visualScale - 1) * t;
-  }
-  const t = clamp01(
-    (viewportWidth - HERO_MOBILE_TIGHT_MAX) / (HERO_FLUID_MIN - HERO_MOBILE_TIGHT_MAX),
-  );
-  return 1 + (responsive.mobile.visualScale - 1) * (1 - t);
+  return heroPlacementValue(viewportWidth, responsive, 'visualScale', 1);
+}
+
+/** Hand-only scale multiplier (Pointer Scale). */
+export function heroPointerScale(
+  viewportWidth: number,
+  responsive: HeroResponsiveTuning = HERO_RESPONSIVE_DEFAULTS,
+): number {
+  return heroPlacementValue(viewportWidth, responsive, 'pointerScale', 1);
+}
+
+/** File-stack-only scale multiplier (Files Scale). */
+export function heroFilesScale(
+  viewportWidth: number,
+  responsive: HeroResponsiveTuning = HERO_RESPONSIVE_DEFAULTS,
+): number {
+  return heroPlacementValue(viewportWidth, responsive, 'filesScale', 1);
+}
+
+/** Upload-panel-only offset, canvas px (Upload Panel Position X / Y). */
+export function heroUploadOffset(
+  viewportWidth: number,
+  responsive: HeroResponsiveTuning = HERO_RESPONSIVE_DEFAULTS,
+): { x: number; y: number } {
+  return {
+    x: heroPlacementValue(viewportWidth, responsive, 'uploadOffsetX', 0),
+    y: heroPlacementValue(viewportWidth, responsive, 'uploadOffsetY', 0),
+  };
 }
 
 /**
@@ -512,22 +664,8 @@ export function resolveHeroRevealTuning(
   };
 }
 
-/**
- * Right-hand wash geometry for a composition.
- *
- * The wash exists to fade the canvas out past the panel's right edge. Authored
- * in canvas space it sits at x 1164..1440 — outside every mobile frame, so it
- * would simply vanish. Expressed against the frame it keeps the same
- * proportion of the visible width it has on desktop (276/1440 = 19.2%).
- *
- * Returns the authored values unchanged whenever the frame is the full canvas,
- * so the 639/640 seam is numerically identical on both sides.
+/*
+ * `heroRightWash` used to re-anchor the right-hand wash to a mobile frame. The
+ * wash is no longer painted on any band (see HeroCanvas), so the helper is gone
+ * with it rather than left wired to nothing.
  */
-export function heroRightWash(composition: HeroCompositionRect, authoredWidth: number) {
-  const fraction = composition.width / HERO_CANVAS.width;
-  return {
-    /** Distance from the canvas's right edge to the frame's. */
-    inset: HERO_CANVAS.width - (composition.x + composition.width),
-    width: authoredWidth * fraction,
-  };
-}

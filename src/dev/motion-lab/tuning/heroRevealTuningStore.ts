@@ -20,6 +20,7 @@ import {
   HERO_BREAKPOINT_KEYS,
   HERO_FRAMING_DIALS,
   HERO_MOBILE_DIALS,
+  HERO_PLACEMENT_DIALS,
   HERO_RESPONSIVE_DEFAULTS,
   HERO_SUPERSEDED_DESKTOP_TARGET,
   HERO_SUPERSEDED_SIDE_TARGETS,
@@ -74,6 +75,8 @@ export const HERO_TUNING_RANGES: Record<string, Range> = {
   handOffsetY: { min: -300, max: 300, step: 2 },
   releaseOffsetX: { min: -300, max: 300, step: 2 },
   releaseOffsetY: { min: -300, max: 300, step: 2 },
+  /* Global still frame before motion begins. */
+  initialHoldDuration: { min: 0, max: 2000, step: 50 },
   handOpacity: { min: 0.2, max: 1, step: 0.05 },
   stackOpacity: { min: 0.2, max: 1, step: 0.05 },
   releaseBlur: { min: 0, max: 8, step: 0.5 },
@@ -160,6 +163,17 @@ export const HERO_RESPONSIVE_RANGES: Record<string, Range> = {
   visualScale: { min: 0.8, max: 1.6, step: 0.02 },
   /* Screen px. Bounded so the composition cannot be pushed out of its container. */
   compositionTranslateX: { min: -300, max: 300, step: 2 },
+  compositionTranslateY: { min: -300, max: 300, step: 2 },
+  /*
+   * Hand-only and files-only multipliers. 1 is the authored size. Bounded so
+   * the hand cannot vanish or swallow the panel, and so the stack still fits
+   * the drop target at the top of the range.
+   */
+  pointerScale: { min: 0.5, max: 2, step: 0.02 },
+  filesScale: { min: 0.5, max: 2, step: 0.02 },
+  /* Canvas px, added to the upload panel's authored centring. 0 is authored. */
+  uploadOffsetX: { min: -600, max: 600, step: 2 },
+  uploadOffsetY: { min: -300, max: 300, step: 2 },
   compositionScale: { min: 0.6, max: 1.6, step: 0.01 },
   compositionOffsetX: { min: -400, max: 400, step: 2 },
   compositionOffsetY: { min: -300, max: 300, step: 2 },
@@ -214,7 +228,14 @@ function clampWithRange(range: Range | undefined, value: unknown, fallback: numb
   return Number(clamped.toFixed(decimals));
 }
 
-/** Clamp one responsive dial against its band's defaults. */
+/**
+ * Clamp one responsive dial against its band's defaults.
+ *
+ * BACKWARD COMPATIBILITY: a key that is missing from a stored payload (for
+ * example the placement dials added after the payload was written) resolves
+ * to its NEUTRAL default here, and every key that is present is carried
+ * through unchanged. No stored value is ever rewritten by this fallback.
+ */
 export function clampHeroResponsiveDial(
   breakpoint: HeroBreakpoint,
   key: string,
@@ -224,14 +245,25 @@ export function clampHeroResponsiveDial(
   return clampWithRange(heroResponsiveRange(key), value, defaults[key]);
 }
 
-/** Keys a given band owns — mobile alone carries the composition dials. */
+/**
+ * Keys a given band owns, in PANEL ORDER: placement first (what moves and
+ * sizes the visual, the hand and the files), then the crop window, then
+ * mobile's zoom, then the entry / target / exit positions.
+ */
 export function heroBreakpointKeys(breakpoint: HeroBreakpoint): readonly string[] {
   if (breakpoint === 'mobile') {
-    return [...HERO_BREAKPOINT_DIALS, ...HERO_FRAMING_DIALS, ...HERO_MOBILE_DIALS];
+    return [
+      ...HERO_PLACEMENT_DIALS,
+      ...HERO_FRAMING_DIALS,
+      ...HERO_MOBILE_DIALS,
+      ...HERO_BREAKPOINT_DIALS,
+    ];
   }
-  /* Desktop's framing is the full canvas and deliberately has no offset dial. */
-  if (breakpoint === 'tablet') return [...HERO_BREAKPOINT_DIALS, ...HERO_FRAMING_DIALS];
-  return HERO_BREAKPOINT_DIALS;
+  if (breakpoint === 'tablet') {
+    return [...HERO_PLACEMENT_DIALS, ...HERO_FRAMING_DIALS, ...HERO_BREAKPOINT_DIALS];
+  }
+  /* Desktop's framing is the full canvas and deliberately has no window dial. */
+  return [...HERO_PLACEMENT_DIALS, ...HERO_BREAKPOINT_DIALS];
 }
 
 export function sanitizeHeroResponsive(raw: unknown): {

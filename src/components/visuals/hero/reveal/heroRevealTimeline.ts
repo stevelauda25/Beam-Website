@@ -127,6 +127,14 @@ export const EASE = {
  * does not cascade into the others and silently restructure the sequence.
  */
 export type HeroRevealTuning = {
+  /**
+   * INITIAL HOLD, ms. The opening frame — panel, files and hand at rest, no
+   * arming, no upload — is held still for this long before anything moves.
+   * Implemented as a uniform shift of every span in `heroSpans`, so every beat
+   * after it keeps its exact relative timing. Global: the same hold applies to
+   * every responsive band.
+   */
+  initialHoldDuration: number;
   // hand + file stack
   /**
    * The stack and the hand each get their OWN travel. They default to identical
@@ -246,6 +254,8 @@ export type ProgressCurveName = 'blend' | 'easeOut' | 'clerk' | 'linear';
 
 /** The shipped sequence, value for value. */
 export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
+  /* A readable still frame before motion begins. */
+  initialHoldDuration: 1000,
   stackStartX: -470,
   stackStartY: 34,
   stackTargetX: 0,
@@ -390,7 +400,25 @@ export function heroContactTime(k: HeroRevealTuning): number {
   return approachEnd;
 }
 
+/**
+ * Every phase span, with the INITIAL HOLD applied.
+ *
+ * The hold is a single uniform shift: `rawSpans` lays the sequence out exactly
+ * as authored, from time 0, and every span then moves later by
+ * `initialHoldDuration`. No phase is retimed individually, so the relative
+ * timing between approach, release, upload and resolve is untouched, and the
+ * frame shown throughout the hold is the authored frame 0.
+ */
 export function heroSpans(k: HeroRevealTuning) {
+  const raw = rawSpans(k);
+  const hold = k.initialHoldDuration;
+  if (!hold) return raw;
+  return Object.fromEntries(
+    Object.entries(raw).map(([name, [from, to]]) => [name, [from + hold, to + hold] as const]),
+  ) as unknown as ReturnType<typeof rawSpans>;
+}
+
+function rawSpans(k: HeroRevealTuning) {
   /*
    * Arrival -> hold -> hand opens -> delay -> release. Everything downstream of
    * the release is SHIFTED by however much that moved, so lengthening the hold
@@ -453,6 +481,36 @@ export function heroRevealDuration(k: HeroRevealTuning = HERO_REVEAL_DEFAULTS) {
   return Math.max(...Object.values(s).map((span) => span[1]));
 }
 
+export type HeroWorkspaceHandoff = {
+  /** Upload panel leaving: 0..1 over the dismiss span. Same curve as the frame. */
+  dismiss: number;
+  /** Workspace arriving: 0..1 over the reveal span. Same curve as the frame. */
+  reveal: number;
+  /** The whole resolve window, 0..1 — dismiss start to reveal end. */
+  handoff: number;
+};
+
+/**
+ * The workspace handoff's phases, on the SAME spans and curve the frame uses
+ * (`dismiss` and `reveal` in sampleHeroReveal). Exposed so a renderer can
+ * sequence framing with the handoff — the mobile band exits the reveal
+ * composition while the upload panel dismisses and enters the 1:1 window with
+ * the workspace — without a second clock or easing that could drift from the
+ * opacities it accompanies.
+ */
+export function heroWorkspaceHandoff(
+  time: number,
+  k: HeroRevealTuning = HERO_REVEAL_DEFAULTS,
+): HeroWorkspaceHandoff {
+  const S = k === HERO_REVEAL_DEFAULTS ? T : heroSpans(k);
+  const t = Math.max(0, Math.min(heroRevealDuration(k), time));
+  return {
+    dismiss: phase(t, S.dismiss, EASE.clerkReveal),
+    reveal: phase(t, S.reveal, EASE.clerkReveal),
+    handoff: phase(t, S.resolve, EASE.clerkReveal),
+  };
+}
+
 /** The progress shapes selectable in the lab. `blend` is the shipped one. */
 export function progressCurveFor(name: ProgressCurveName): (p: number) => number {
   if (name === 'easeOut') return (p) => EASE.out2(clamp01(p));
@@ -502,7 +560,8 @@ export function timeAtUploadProgress(target: number): number {
 /** Named markers for the lab scrubber. */
 export function heroRevealMarkers(): { id: string; label: string; time: number }[] {
   return [
-    { id: 'start', label: 'Files approach', time: 0 },
+    { id: 'hold', label: 'Opening frame', time: 0 },
+    { id: 'start', label: 'Files approach', time: T.approach[0] },
     { id: 'armed', label: 'Target armed', time: T.arm[1] },
     { id: 'drop', label: 'Drop', time: T.release[1] },
     { id: 'upload', label: 'Upload starts', time: T.upload[0] },
@@ -820,7 +879,19 @@ export const HERO_REVEAL_END = sampleHeroReveal(HERO_REVEAL_DURATION);
  * hands. At 845 the target is visually armed (arm resolves to 0.99), the hand
  * is still fully closed and the files are intact.
  */
-export const HERO_REDUCED_STEPS = [845, 2200, 3620, HERO_REVEAL_DURATION] as const;
+const REDUCED_STEP_FRAMES = [845, 2200, 3620] as const;
+
+/**
+ * The stepped frames for a given tuning. Each representative frame moves with
+ * the initial hold so it still shows the same state; the stepper jumps straight
+ * to the first one, so reduced-motion visitors never sit through the hold.
+ */
+export function heroReducedSteps(k: HeroRevealTuning = HERO_REVEAL_DEFAULTS): readonly number[] {
+  const hold = k.initialHoldDuration;
+  return [...REDUCED_STEP_FRAMES.map((frame) => frame + hold), heroRevealDuration(k)];
+}
+
+export const HERO_REDUCED_STEPS = heroReducedSteps();
 export const HERO_REDUCED_STEP_MS = 520;
 
 /** Panel geometry is re-exported so consumers never reach for a second source. */

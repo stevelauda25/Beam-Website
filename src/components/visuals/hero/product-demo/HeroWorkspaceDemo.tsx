@@ -123,7 +123,38 @@ function RowMenu({ onOpen, onRename, onShare, onDownload, onDelete }: {
   );
 }
 
-export function HeroWorkspaceDemo() {
+export type HeroWorkspaceLayout = 'mobile' | 'desktop';
+
+/** The same threshold the stylesheet's mobile rules used when they were a media query. */
+const MOBILE_LAYOUT_QUERY = '(max-width: 639px)';
+
+/**
+ * Which layout to render.
+ *
+ * An explicit `layout` wins: the Hero Reveal passes its own responsive band,
+ * so a LOGICAL mobile viewport (Motion Lab's preset inside a desktop window)
+ * gets the mobile workspace. Without one, the physical window decides through
+ * matchMedia — the exact query the mobile CSS block used to be, so a
+ * standalone demo renders precisely as before.
+ */
+function useWorkspaceLayout(explicit?: HeroWorkspaceLayout): HeroWorkspaceLayout {
+  const [media, setMedia] = useState<HeroWorkspaceLayout>(() =>
+    typeof window !== 'undefined' && window.matchMedia(MOBILE_LAYOUT_QUERY).matches
+      ? 'mobile'
+      : 'desktop',
+  );
+  useEffect(() => {
+    const query = window.matchMedia(MOBILE_LAYOUT_QUERY);
+    const update = () => setMedia(query.matches ? 'mobile' : 'desktop');
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return explicit ?? media;
+}
+
+export function HeroWorkspaceDemo({ layout: explicitLayout }: { layout?: HeroWorkspaceLayout } = {}) {
+  const layout = useWorkspaceLayout(explicitLayout);
   const [workspaceId, setWorkspaceId] = useState<DemoWorkspace['id']>('personal');
   const initialContent = initialWorkspaceContent('personal');
   const [folders, setFolders] = useState<DemoFolder[]>(initialContent.folders);
@@ -464,6 +495,7 @@ export function HeroWorkspaceDemo() {
   return (
     <div
       className={`${styles.app} ${isDragging ? styles.dragging : ''}`}
+      data-layout={layout}
       onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
       onDragOver={(event) => event.preventDefault()}
       onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDragging(false); }}
@@ -597,7 +629,7 @@ export function HeroWorkspaceDemo() {
       {folderDialog && <div className={styles.overlay} onMouseDown={() => setFolderDialog(null)}><form className={styles.dialog} onSubmit={(event) => { event.preventDefault(); saveFolder(); }} onMouseDown={(event) => event.stopPropagation()}><div className={styles.dialogIcon}><FolderPlus size={18} /></div><h3>Rename folder</h3><label>Folder name<input autoFocus value={folderDraft} onChange={(event) => setFolderDraft(event.target.value)} placeholder="Folder name" /></label><div className={styles.dialogActions}><button type="button" onClick={() => setFolderDialog(null)}>Cancel</button><button className={styles.primaryButton} type="submit">Save</button></div></form></div>}
 
       {preview.status !== 'idle' && <div className={styles.preview}>
-        <div className={styles.previewBar}><div className={styles.previewBreadcrumb}><button type="button" aria-label="Back to files" title="Back to files" onClick={() => setPreview({ status: 'idle' })}><ChevronLeft size={12} /></button><strong>{preview.file.name}</strong></div><div>{preview.status === 'ready' && <><button type="button" aria-label="Share file" onClick={() => void shareFile(preview.file)}><Share2 size={12} /></button><button type="button" aria-label="Download file" onClick={() => void downloadFile(preview.file)}><Download size={12} /></button></>}<button type="button" aria-label="Close preview" onClick={() => setPreview({ status: 'idle' })}><X size={13} /></button></div></div>
+        <div className={styles.previewBar}><button className={styles.previewBreadcrumb} type="button" aria-label={`Back to files (${preview.file.name})`} title="Back to files" onClick={() => setPreview({ status: 'idle' })}><ChevronLeft size={12} aria-hidden="true" /><strong>{preview.file.name}</strong></button><div>{preview.status === 'ready' && <><button type="button" aria-label="Share file" onClick={() => void shareFile(preview.file)}><Share2 size={12} /></button><button type="button" aria-label="Download file" onClick={() => void downloadFile(preview.file)}><Download size={12} /></button></>}<button type="button" aria-label="Close preview" onClick={() => setPreview({ status: 'idle' })}><X size={13} /></button></div></div>
         <div className={styles.previewBody}>{preview.status === 'loading' && <div className={styles.loading}><span /><span>Loading preview…</span></div>}{preview.status === 'error' && <div className={styles.previewMessage}><FileText size={28} /><strong>Preview unavailable</strong><span>{preview.message}</span></div>}{preview.status === 'ready' && preview.text && <pre>{preview.text}</pre>}{preview.status === 'ready' && preview.url && (preview.file.mimeType === 'application/pdf' ? <PdfPreview url={preview.url} title={preview.file.name} /> : <img src={preview.url} alt={preview.file.name} />)}</div>
       </div>}
 

@@ -26,14 +26,17 @@ import {
   sampleHeroReveal,
   type HeroRevealTuning,
 } from './heroRevealTimeline';
-import { HERO_RIGHT_WASH } from './heroRevealScenes';
 import {
-  HERO_FLUID_MIN,
+  HERO_MOBILE_WORKSPACE_WINDOW,
   HERO_RESPONSIVE_DEFAULTS,
   heroBreakpoint,
   heroComposition,
   heroCompositionTranslateX,
-  heroRightWash,
+  heroCompositionTranslateY,
+  heroFilesScale,
+  heroMobileWorkspaceFraming,
+  heroPointerScale,
+  heroUploadOffset,
   heroVisualScale,
   resolveHeroRevealTuning,
   type HeroResponsiveTuning,
@@ -110,6 +113,12 @@ export function HeroRevealSequence({
   const breakpoint = heroBreakpoint(viewportWidth);
   /* Whole-composition shift, screen px, outermost in the transform below. */
   const translateX = heroCompositionTranslateX(viewportWidth, responsive);
+  const translateY = heroCompositionTranslateY(viewportWidth, responsive);
+  /* Hand-only and files-only sizes for this band; 1 draws the authored art. */
+  const pointerScale = heroPointerScale(viewportWidth, responsive);
+  const filesScale = heroFilesScale(viewportWidth, responsive);
+  /* Upload-panel-only offset for this band, canvas px; 0/0 is the authored place. */
+  const uploadOffset = heroUploadOffset(viewportWidth, responsive);
   const measured = containerWidth > 0;
   /* Fit the framed rectangle to the container, then enlarge per band. */
   const scale = measured
@@ -119,15 +128,48 @@ export function HeroRevealSequence({
   const resolved = resolveHeroRevealTuning(tuning, responsive, breakpoint, composition);
 
   /*
-   * The wash is authored in canvas space (x 1164..1440), which is outside every
-   * mobile frame. Below 640 it is re-anchored to the frame instead. At exactly
-   * 640 the frame IS the full canvas, so the two agree to the pixel and the
-   * seam is continuous rather than switched.
+   * MOBILE ONLY: ONE SHELL, three contents.
+   *
+   * The panel shell — frame, inner panel, washes, and the workspace inside it
+   * — is drawn at the canonical My Beam geometry for EVERY state: canvas at
+   * 1:1, window at canvas x 112 at the container's width, 344px box clipped
+   * vertically, fade from 133px (HERO_MOBILE_WORKSPACE_WINDOW). It never
+   * scales, moves or resizes, so the drag / drop, upload and resolved states
+   * share exactly one outer panel and the handoff is content-only: the upload
+   * panel fades and blurs out on its own curve, then the workspace fades in on
+   * its own, both inside the same shell, exactly as desktop and tablet do.
+   *
+   * The band's tuned composition — framing, Visual Position, Visual Scale,
+   * Frame Window / Zoom — no longer frames the canvas; it places the SCENE
+   * CONTENT (files, hand, dashed target, upload panel) inside the shell. The
+   * mapping below reproduces, in canvas space, the exact on-screen placement
+   * the old whole-canvas framing gave that content, so every existing mobile
+   * dial value keeps producing the same picture it did:
+   *
+   *   old screen x = tx + s * (p - x0)         (whole canvas framed and scaled)
+   *   new screen x = (c + s * p) - windowX     (shell at 1:1, content mapped)
+   *   => c = tx + windowX - s * x0             (and likewise for y)
+   *
+   * Desktop and tablet never enter this branch and render as before.
    */
-  const rightWash =
-    viewportWidth < HERO_FLUID_MIN
-      ? heroRightWash(composition, HERO_RIGHT_WASH.width)
+  const mobile = breakpoint === 'mobile';
+  const frameRect = mobile ? heroMobileWorkspaceFraming(containerWidth) : composition;
+  const drawScale = mobile ? 1 : scale;
+  const drawTranslateX = mobile ? 0 : translateX;
+  const drawTranslateY = mobile ? 0 : translateY;
+  const boxHeight = mobile ? HERO_MOBILE_WORKSPACE_WINDOW.height : composition.height * scale;
+  const bottomWash = mobile
+    ? { top: HERO_MOBILE_WORKSPACE_WINDOW.fadeTop, height: HERO_MOBILE_WORKSPACE_WINDOW.fadeHeight }
+    : undefined;
+  const contentTransform =
+    mobile && measured
+      ? {
+          x: translateX + HERO_MOBILE_WORKSPACE_WINDOW.canvasX - scale * composition.x,
+          y: translateY - scale * composition.y,
+          scale,
+        }
       : undefined;
+  const frame = sampleHeroReveal(time, resolved);
 
   return (
     <div
@@ -143,8 +185,16 @@ export function HeroRevealSequence({
                * the bottom. At >=744 this reproduces the stylesheet's own
                * aspect-ratio result exactly (1454 -> 545.25, 680 -> 315.31).
                */
-              height: composition.height * scale,
+              height: boxHeight,
               aspectRatio: 'auto',
+              /*
+               * The 1:1 mobile window is shorter than the canvas it looks
+               * through, so the box clips vertically (the old wrapper's
+               * overflow-hidden did the same). Horizontal overflow stays
+               * visible, cut at the viewport by <main>, as the tuned mobile
+               * composition already relies on.
+               */
+              overflowY: mobile ? 'clip' : undefined,
             }
           : undefined
       }
@@ -157,16 +207,30 @@ export function HeroRevealSequence({
           /*
            * Right-to-left: frame the canvas (translate in canvas px), scale it
            * to the container, then move the finished result on screen. The
-           * leading translateX is therefore in SCREEN px and moves everything
+           * leading translate is therefore in SCREEN px and moves everything
            * — panel, dropzone, copy, upload panel, washes, workspace — as one.
+           * With no vertical shift it stays the single-axis form, so a band
+           * that has not tuned Y renders the identical transform it always did.
            */
-          transform: `translateX(${translateX}px) scale(${scale}) translate(${-composition.x}px, ${-composition.y}px)`,
+          transform: `${
+            drawTranslateY === 0
+              ? `translateX(${drawTranslateX}px)`
+              : `translate(${drawTranslateX}px, ${drawTranslateY}px)`
+          } scale(${drawScale}) translate(${-frameRect.x}px, ${-frameRect.y}px)`,
         }}
       >
         <HeroCanvas
-          frame={sampleHeroReveal(time, resolved)}
+          frame={frame}
           tuning={resolved}
-          rightWash={rightWash}
+          bottomWash={bottomWash}
+          /* The reveal's band is the one responsive source of truth, so the
+           * workspace's layout follows the LOGICAL viewport — a Motion Lab
+           * mobile preset inside a desktop window gets the mobile workspace. */
+          workspaceLayout={mobile ? 'mobile' : 'desktop'}
+          contentTransform={contentTransform}
+          uploadOffset={uploadOffset}
+          pointerScale={pointerScale}
+          filesScale={filesScale}
         />
       </div>
     </div>

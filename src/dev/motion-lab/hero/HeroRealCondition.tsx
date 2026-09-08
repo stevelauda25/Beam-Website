@@ -29,12 +29,21 @@ import {
   type HeroTuningSnapshot,
 } from '../tuning/heroRevealTuningStore';
 import {
+  HERO_DESKTOP_MIN,
   HERO_RESPONSIVE_DEFAULTS,
+  HERO_TABLET_MIN,
   heroBreakpoint,
   heroComposition,
+  heroCompositionTranslateX,
+  heroCompositionTranslateY,
+  heroFilesScale,
+  heroPointerScale,
+  heroVisualScale,
   type HeroBreakpoint,
   type HeroResponsiveTuning,
 } from '../../../components/visuals/hero/reveal/heroRevealComposition';
+import type { HeroRevealPlayer } from '../../../components/visuals/hero/reveal/useHeroRevealPlayer';
+import { HeroTuningPromotion } from './HeroTuningPromotion';
 import {
   heroRevealMarkers,
   HERO_FRAME_MS,
@@ -49,6 +58,7 @@ import styles from './HeroSceneReview.module.css';
 function phasesFor(k: HeroRevealTuning) {
   const S = heroSpans(k);
   return [
+    { label: 'Initial hold (still frame)', span: [0, S.approach[0]] as const },
     { label: 'Files approach', span: S.approach },
     { label: 'Arrival hold (settle)', span: S.arrivalHold },
     { label: 'Target arms', span: S.arm },
@@ -106,14 +116,71 @@ const RESPONSIVE_FOLDERS: Record<string, HeroBreakpoint> = {
   responsiveMobile: 'mobile',
 };
 
+/**
+ * DialKit row name per STORAGE key.
+ *
+ * DialKit labels a row from its key (camelCase -> Title Case), so the row
+ * names below are what the panel shows: "Visual Position X", "Visual Scale",
+ * "Pointer Scale", "Files Scale", "Frame Window X", "Frame Zoom". The storage
+ * keys are deliberately NOT renamed — `compositionTranslateX` and
+ * `visualScale` already hold tuned values in every saved payload, and a
+ * rename would either drop them or need a migration. The alias is a display
+ * mapping only; every mirror and push goes through it in both directions.
+ */
+const RESPONSIVE_DIAL_NAMES: Record<string, string> = {
+  compositionTranslateX: 'visualPositionX',
+  compositionTranslateY: 'visualPositionY',
+  visualScale: 'visualScale',
+  pointerScale: 'pointerScale',
+  filesScale: 'filesScale',
+  uploadOffsetX: 'uploadPanelPositionX',
+  uploadOffsetY: 'uploadPanelPositionY',
+  framingOffsetX: 'frameWindowX',
+  compositionScale: 'frameZoom',
+  compositionOffsetX: 'frameZoomOffsetX',
+  compositionOffsetY: 'frameZoomOffsetY',
+};
+const dialNameFor = (storageKey: string) => RESPONSIVE_DIAL_NAMES[storageKey] ?? storageKey;
+
 function responsiveFolder(
   responsive: HeroResponsiveTuning,
   breakpoint: HeroBreakpoint,
 ): Record<string, [number, number, number, number]> {
   const values = responsive[breakpoint] as unknown as Record<string, number>;
   return Object.fromEntries(
-    heroBreakpointKeys(breakpoint).map((key) => [key, rdial(key, values[key])]),
+    heroBreakpointKeys(breakpoint).map((key) => [dialNameFor(key), rdial(key, values[key])]),
   );
+}
+
+/**
+ * WHERE A POSITION DIAL IS VISIBLE.
+ *
+ * The hand and the files are on screen only between the approach and the
+ * pointer's exit — roughly the first quarter of the sequence. The lab
+ * autoplays on mount and rests on the resolved workspace, where none of the
+ * entry / target / offset / exit dials can show anything, which is exactly
+ * how "the responsive controls do nothing" was experienced. So when one of
+ * those dials changes while playback is not running, the clock is moved to
+ * the frame where that dial's effect is visible: entry dials to a third of
+ * the way through the approach (the stack is entering), target and offset
+ * dials to the arrival hold (parked on the target), release dials to
+ * mid-release, and exit dials to mid-exit. Placement dials (Visual Position,
+ * Visual Scale) are visible at every frame and never move the clock.
+ * Pointer Scale and Files Scale seek to the hold so the sizes can be read.
+ * Nothing here changes any tuning; it only changes what frame is shown.
+ */
+function focusTimeFor(key: string, tuning: HeroRevealTuning): number | null {
+  const S = heroSpans(tuning);
+  const at = (span: readonly [number, number], f: number) => span[0] + (span[1] - span[0]) * f;
+  if (/^(stack|hand)Start[XY]$/.test(key)) return at(S.approach, 0.35);
+  if (/^(stack|hand)Target[XY]$/.test(key)) return at(S.arrivalHold, 0.5);
+  if (/^handOffset[XY]$/.test(key)) return at(S.arrivalHold, 0.5);
+  if (key === 'pointerScale' || key === 'filesScale') return at(S.arrivalHold, 0.5);
+  /* The upload panel is only on screen during the upload; land mid-progress. */
+  if (/^uploadOffset[XY]$/.test(key)) return at(S.upload, 0.5);
+  if (/^releaseOffset[XY]$/.test(key)) return at(S.release, 0.55);
+  if (/^pointerExit[XY]$/.test(key)) return at(S.pointerExit, 0.6);
+  return null;
 }
 
 /**
@@ -152,7 +219,7 @@ function buildConfig(
     const lockedBand = (breakpoint: HeroBreakpoint) => {
       const values = responsive[breakpoint] as unknown as Record<string, number>;
       return Object.fromEntries(
-        heroBreakpointKeys(breakpoint).map((key) => [key, lockedRow(values[key])]),
+        heroBreakpointKeys(breakpoint).map((key) => [dialNameFor(key), lockedRow(values[key])]),
       );
     };
     return {
@@ -178,6 +245,8 @@ function buildConfig(
        * them can legitimately differ per breakpoint. What stays here is what is
        * genuinely shared: opacities, spans and easings.
        */
+      /* Global: the same still frame precedes motion on every band. */
+      initialHoldDuration: dial('initialHoldDuration', k.initialHoldDuration),
       handOpacity: dial('handOpacity', k.handOpacity),
       stackOpacity: dial('stackOpacity', k.stackOpacity),
       releaseBlur: dial('releaseBlur', k.releaseBlur),
@@ -259,6 +328,7 @@ function buildConfig(
 /** Which tuning keys live in which folder — one source for config and reset. */
 const FOLDER_KEYS = {
   handAndStack: [
+    'initialHoldDuration',
     'handOpacity', 'stackOpacity', 'releaseBlur', 'approachStart', 'approachDuration', 'approachEase',
     'arrivalHoldDuration', 'releaseDelay', 'settleOffsetY',
     'handOpenDuration', 'releaseDuration',
@@ -319,10 +389,16 @@ function isEditableTarget(target: EventTarget | null) {
  * number is computed instead of being read from a media query, and it computes
  * to what the real site measures at the same width (834/768 -> 680,
  * 430/390/375 -> the viewport, 1440 -> 1454).
+ *
+ * The `lg:` prefix is THIS PROJECT's Tailwind screen, which tailwind.config.js
+ * sets to 1200px — not Tailwind's stock 1024. The thresholds below are the
+ * reveal's own exported breakpoints for that reason: an earlier mirror used
+ * 1024 here, which made the Fluid preset at 1024–1199 draw a desktop-width
+ * column while the real site keeps the 680px tablet column.
  */
 function heroLogicalContainerWidth(viewportWidth: number) {
-  if (viewportWidth >= 1024) return Math.min((viewportWidth - 264) * 1.2365, 1454);
-  if (viewportWidth >= 744) return 680;
+  if (viewportWidth >= HERO_DESKTOP_MIN) return Math.min((viewportWidth - 264) * 1.2365, 1454);
+  if (viewportWidth >= HERO_TABLET_MIN) return 680;
   return viewportWidth;
 }
 
@@ -379,15 +455,24 @@ export function HeroRealCondition({
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+  /*
+   * LAYOUT width, not the bounding rect. The stage sits inside FittedStage,
+   * which scales it with a transform to fit the lab column; the rect is the
+   * width AFTER that scale, so reading it here showed a "container" the real
+   * site never has (e.g. 589px for the 680px tablet column). offsetWidth
+   * ignores transforms and is the same number HeroRevealSequence measures.
+   * Re-measured whenever the logical viewport changes, because a preset
+   * change relays the holder without any window resize.
+   */
   useEffect(() => {
     const node = holderRef.current;
     if (!node) return;
-    const read = () => setHolderWidth(node.getBoundingClientRect().width);
+    const read = () => setHolderWidth(node.offsetWidth);
     read();
     const observer = new ResizeObserver(read);
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [viewport]);
 
   const { values, setValues } = useDialKitController('Hero · reveal', config, {
     id: PANEL_ID,
@@ -425,6 +510,16 @@ export function HeroRealCondition({
    */
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
+  /*
+   * Current store values and the player, readable from inside the mirror
+   * effects without adding them to the effect deps (which would re-run the
+   * mirrors on every clock tick). Assigned during render, read in effects.
+   */
+  const responsiveRef = useRef(responsive);
+  responsiveRef.current = responsive;
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const playerRef = useRef<HeroRevealPlayer | null>(null);
   /*
    * Declared up here because the boot effect below needs it; the assignment
    * happens further down, during render, so it is always set by the time any
@@ -492,18 +587,34 @@ export function HeroRealCondition({
     commit(patch as Partial<HeroRevealTuning>);
   }, [raw, commit, locked]);
 
-  /* Same mirroring for the three responsive bands, one commit per band. */
+  /*
+   * Same mirroring for the three responsive bands, one commit per band.
+   *
+   * Dial rows are read through their display names and written back under
+   * their storage keys. A dial that actually moved (differs from the store)
+   * also moves the clock to the frame where its effect is visible — see
+   * focusTimeFor — unless playback is running, in which case the change is
+   * simply seen as the sequence passes through.
+   */
   useEffect(() => {
     if (locked || !passes(skipResponsiveMirror)) return;
+    let focus: number | null = null;
     for (const [name, breakpoint] of Object.entries(RESPONSIVE_FOLDERS)) {
       const group = folder(raw, name);
+      const current = responsiveRef.current[breakpoint] as unknown as Record<string, number>;
       const patch: Record<string, number> = {};
       for (const key of heroBreakpointKeys(breakpoint)) {
-        const value = group[key];
-        if (typeof value === 'number') patch[key] = value;
+        const value = group[dialNameFor(key)];
+        if (typeof value !== 'number') continue;
+        patch[key] = value;
+        if (value !== current[key] && focus === null) {
+          focus = focusTimeFor(key, stateRef.current);
+        }
       }
       if (Object.keys(patch).length) commitResponsive(breakpoint, patch);
     }
+    const player = playerRef.current;
+    if (focus !== null && player && !player.playing) player.seek(focus);
   }, [raw, commitResponsive, locked]);
 
   /** Push a whole snapshot back into the live panel (undo/redo and reset). */
@@ -517,7 +628,7 @@ export function HeroRealCondition({
       for (const [name, breakpoint] of Object.entries(RESPONSIVE_FOLDERS)) {
         const band = next.responsive[breakpoint] as unknown as Record<string, number>;
         payload[name] = Object.fromEntries(
-          heroBreakpointKeys(breakpoint).map((key) => [key, band[key]]),
+          heroBreakpointKeys(breakpoint).map((key) => [dialNameFor(key), band[key]]),
         );
       }
       setValues(payload as never);
@@ -553,6 +664,7 @@ export function HeroRealCondition({
   }, [externalUpdate, pushToPanel, locked]);
 
   const player = useHeroRevealPlayer(true, state);
+  playerRef.current = player;
 
   /*
    * Space toggles playback. `toggle` resumes from the current position — the
@@ -607,7 +719,26 @@ export function HeroRealCondition({
   }, [player, locked, undo, redo, pushToPanel]);
   const band = heroBreakpoint(viewport);
   const comp = heroComposition(viewport, responsive);
-  const compScale = holderWidth > 0 ? holderWidth / comp.width : 1;
+  /*
+   * The same three numbers HeroRevealSequence puts in its transform, derived
+   * with the same functions, so the readout reports what is actually drawn:
+   * fit the framed rectangle to the container, enlarge per band, then shift.
+   */
+  const bandScale = heroVisualScale(viewport, responsive);
+  const translateX = heroCompositionTranslateX(viewport, responsive);
+  const translateY = heroCompositionTranslateY(viewport, responsive);
+  const pointerScale = heroPointerScale(viewport, responsive);
+  const filesScale = heroFilesScale(viewport, responsive);
+  const renderScale = holderWidth > 0 ? (holderWidth / comp.width) * bandScale : 1;
+  const BAND_FOLDER: Record<HeroBreakpoint, string> = {
+    desktop: 'Responsive Desktop',
+    tablet: 'Responsive Tablet',
+    mobile: 'Responsive Mobile',
+  };
+  const otherFolders = (Object.keys(BAND_FOLDER) as HeroBreakpoint[])
+    .filter((bp) => bp !== band)
+    .map((bp) => BAND_FOLDER[bp])
+    .join(' and ');
   const PHASES = useMemo(() => phasesFor(state), [state]);
   const active = PHASES.filter((p) => player.time >= p.span[0] && player.time <= p.span[1]);
 
@@ -728,10 +859,29 @@ export function HeroRealCondition({
           </div>
         )}
         <div className={styles.continuity} data-ok>
+          <strong>Active band: {band.toUpperCase()}</strong> — this preset is driven by the{' '}
+          <strong>{BAND_FOLDER[band]}</strong> folder. Dials in {otherFolders} do not change this
+          view; switch preset to tune those. Entry, target, offset and exit dials are only visible
+          while the hand and files are on screen — moving one while paused jumps the clock to that
+          frame.
+          {band === 'mobile' && (
+            <>
+              {' '}
+              <strong>Mobile uses ONE shell for every state</strong>: the panel is drawn at the
+              1:1 My Beam geometry (canvas x 112, 344px tall, fade from 133px — the pre-reveal
+              mobile hero) throughout, and the handoff is content-only inside it. The Mobile
+              placement, Frame Window and Frame Zoom dials place the drag / drop / upload
+              content inside that shell — mapped so each value gives the same on-screen picture
+              it gave when it framed the whole canvas. The shell itself is fixed and is not a
+              dial.
+            </>
+          )}
+        </div>
+        <div className={styles.continuity} data-ok>
           <strong>Composition:</strong>{' '}
           <span className={labStyles.mono}>
-            {band} · viewport {viewport}px · container {holderWidth.toFixed(0)}px · scale{' '}
-            {compScale.toFixed(4)}
+            {band} · logical viewport {viewport}px · container {holderWidth.toFixed(0)}px (layout)
+            · pointer ×{pointerScale} · files ×{filesScale}
           </span>
           <br />
           Framing canvas x{' '}
@@ -742,8 +892,20 @@ export function HeroRealCondition({
           <span className={labStyles.mono}>
             {comp.y.toFixed(1)} – {(comp.y + comp.height).toFixed(1)}
           </span>
-          . One timeline drives every band; only this rectangle and the entry/exit
-          positions resolved against its left edge change with the viewport.
+          <br />
+          Rendered transform{' '}
+          <span className={labStyles.mono}>
+            {translateY === 0
+              ? `translateX(${translateX}px)`
+              : `translate(${translateX}px, ${translateY}px)`}{' '}
+            scale({renderScale.toFixed(6)}) translate(
+            {(-comp.x).toFixed(2)}px, {(-comp.y).toFixed(2)}px)
+          </span>{' '}
+          — fit {holderWidth > 0 ? (holderWidth / comp.width).toFixed(4) : '—'} × band{' '}
+          {bandScale}. Same numbers the homepage draws at this width; the stage&rsquo;s own
+          &ldquo;shown at&rdquo; fit above is display-only and is not in them. One timeline
+          drives every band; only this rectangle and the entry/exit positions resolved against
+          its left edge change with the viewport.
         </div>
         <div>
           <strong>Now:</strong>{' '}
@@ -768,6 +930,13 @@ export function HeroRealCondition({
           authored frame as drawn.
         </div>
       </div>
+
+      {/*
+        * Promotion: live tuning vs the checked-in production defaults, with
+        * copy / save-to-repo for review. A reader of `snapshot` only — it
+        * cannot change tuning, storage, or the defaults.
+        */}
+      <HeroTuningPromotion snapshot={snapshot} />
     </div>
   );
 }
