@@ -44,7 +44,7 @@ import {
   HERO_DROP_LEFT_OFFSET,
   HERO_PANEL,
 } from './heroRevealScenes';
-import { HERO_REVEAL_DEFAULTS, type HeroRevealTuning } from './heroRevealTimeline';
+import type { HeroRevealTuning } from './heroRevealTimeline';
 
 export type HeroBreakpoint = 'desktop' | 'tablet' | 'mobile';
 
@@ -162,38 +162,6 @@ export type HeroBreakpointTuning = {
 };
 
 /**
- * How far the tablet/mobile window slides left over the canvas by default.
- *
- * Chosen against the two constraints together: the panel's left edge has to
- * move off the screen edge and in toward the middle, AND the release point has
- * to stay visible near the left of the dropzone. At -200 the panel's left edge
- * lands at 113px on tablet and 66px on mobile, the release at 168px / 97px, and
- * the upload panel (canvas 435.9..1003.6) is still entirely inside the window.
- * Sliding the window the other way puts both the panel edge and the release
- * point off-screen, so this is the only direction that satisfies both.
- */
-const DEFAULT_FRAMING_OFFSET_X = -200;
-
-/**
- * Default root translation per band, in screen px.
- *
- * Sized so the panel's left edge sits at roughly a quarter of the container —
- * clearly distinct from desktop's 9% — while the upload panel's right edge
- * still fits inside the container at every tablet and mobile width. Pushing
- * further is a dial move, but past about +64 on tablet / +34 on mobile the
- * upload toast starts leaving the right edge.
- */
-const DEFAULT_COMPOSITION_TRANSLATE_X = { tablet: 60, mobile: 30 } as const;
-
-/**
- * Default enlargement per band. Bounded by readability: at these values the
- * upload panel's percentage and close control (canvas x <= 924) still land
- * inside the viewport — 834 on tablet, 390 on mobile — on top of the band's
- * translation. Past ~1.21 tablet / ~1.09 mobile they start to leave it.
- */
-const DEFAULT_VISUAL_SCALE = { tablet: 1.2, mobile: 1.08 } as const;
-
-/**
  * ON-SCREEN PLACEMENT of the whole key visual, per band.
  *
  * These are the "Visual Position X / Y", "Visual Scale", "Pointer Scale" and
@@ -285,44 +253,6 @@ export type HeroResponsiveTuning = {
 };
 
 /**
- * Placement that changes nothing. Every band starts here; the tablet and
- * mobile defaults below then override X and scale with the values that
- * shipped before the placement dials existed, so their render is unchanged.
- */
-const NEUTRAL_PLACEMENT: HeroPlacementTuning = {
-  compositionTranslateX: 0,
-  compositionTranslateY: 0,
-  visualScale: 1,
-  pointerScale: 1,
-  filesScale: 1,
-  uploadOffsetX: 0,
-  uploadOffsetY: 0,
-};
-
-/**
- * Every breakpoint starts from the SAME authored numbers. The composition — not
- * a different set of dials — is what moves the hand and stack into frame, so a
- * freshly reset panel reproduces the shipped sequence at all three widths and
- * neither seam can jump until someone deliberately tunes one band.
- */
-const AUTHORED_POSITIONS: HeroBreakpointTuning = {
-  stackStartX: HERO_REVEAL_DEFAULTS.stackStartX,
-  stackStartY: HERO_REVEAL_DEFAULTS.stackStartY,
-  stackTargetX: HERO_REVEAL_DEFAULTS.stackTargetX,
-  stackTargetY: HERO_REVEAL_DEFAULTS.stackTargetY,
-  handStartX: HERO_REVEAL_DEFAULTS.handStartX,
-  handStartY: HERO_REVEAL_DEFAULTS.handStartY,
-  handTargetX: HERO_REVEAL_DEFAULTS.handTargetX,
-  handTargetY: HERO_REVEAL_DEFAULTS.handTargetY,
-  handOffsetX: HERO_REVEAL_DEFAULTS.handOffsetX,
-  handOffsetY: HERO_REVEAL_DEFAULTS.handOffsetY,
-  releaseOffsetX: HERO_REVEAL_DEFAULTS.releaseOffsetX,
-  releaseOffsetY: HERO_REVEAL_DEFAULTS.releaseOffsetY,
-  pointerExitX: HERO_REVEAL_DEFAULTS.pointerExitX,
-  pointerExitY: HERO_REVEAL_DEFAULTS.pointerExitY,
-};
-
-/**
  * DESKTOP RELEASE TARGET.
  *
  * The authored rest position leaves the stack straddling the drop target's
@@ -380,38 +310,85 @@ export const HERO_SUPERSEDED_SIDE_TARGETS: Readonly<Record<string, readonly numb
   handTargetY: [0, HERO_DROP_CENTRE_OFFSET.y],
 };
 
+/**
+ * APPROVED RESPONSIVE TUNING — baked from the Motion Lab snapshot saved
+ * 2026-09-08T12:55:03.457Z (hero-reveal.snapshot.json, sha256 4ed8b6a57017ceda…). One explicit
+ * literal per band so each band is independent and production reads
+ * nothing but this object. Re-bake by saving a new snapshot and
+ * promoting it; do not hand-edit single values.
+ */
 export const HERO_RESPONSIVE_DEFAULTS: HeroResponsiveTuning = {
   desktop: {
-    ...AUTHORED_POSITIONS,
-    /* Neutral: desktop draws exactly as it did before placement was tunable. */
-    ...NEUTRAL_PLACEMENT,
-    stackTargetX: HERO_DESKTOP_RELEASE_TARGET.x,
-    stackTargetY: HERO_DESKTOP_RELEASE_TARGET.y,
-    handTargetX: HERO_DESKTOP_RELEASE_TARGET.x,
-    handTargetY: HERO_DESKTOP_RELEASE_TARGET.y,
+    stackStartX: -480,
+    stackStartY: 34,
+    stackTargetX: 465,
+    stackTargetY: 0,
+    handStartX: -540,
+    handStartY: 34,
+    handTargetX: 445,
+    handTargetY: -15,
+    handOffsetX: 0,
+    handOffsetY: 0,
+    releaseOffsetX: 12,
+    releaseOffsetY: -22,
+    pointerExitX: 10,
+    pointerExitY: 173,
+    compositionTranslateX: 0,
+    compositionTranslateY: 0,
+    visualScale: 1,
+    pointerScale: 0.56,
+    filesScale: 0.76,
+    uploadOffsetX: 0,
+    uploadOffsetY: 0,
   },
   tablet: {
-    ...AUTHORED_POSITIONS,
-    ...NEUTRAL_PLACEMENT,
-    framingOffsetX: DEFAULT_FRAMING_OFFSET_X,
-    compositionTranslateX: DEFAULT_COMPOSITION_TRANSLATE_X.tablet,
-    visualScale: DEFAULT_VISUAL_SCALE.tablet,
-    stackTargetX: HERO_LEFT_RELEASE_TARGET.x,
-    stackTargetY: HERO_LEFT_RELEASE_TARGET.y,
-    handTargetX: HERO_LEFT_RELEASE_TARGET.x,
-    handTargetY: HERO_LEFT_RELEASE_TARGET.y,
+    stackStartX: -620,
+    stackStartY: 34,
+    stackTargetX: 103,
+    stackTargetY: 0,
+    handStartX: -690,
+    handStartY: 34,
+    handTargetX: 75,
+    handTargetY: -13,
+    handOffsetX: 0,
+    handOffsetY: 0,
+    releaseOffsetX: 46,
+    releaseOffsetY: -22,
+    pointerExitX: 20,
+    pointerExitY: 427,
+    compositionTranslateX: -12,
+    compositionTranslateY: 50,
+    visualScale: 1.5,
+    pointerScale: 0.6,
+    filesScale: 0.76,
+    uploadOffsetX: -142,
+    uploadOffsetY: 0,
+    framingOffsetX: 0,
   },
   mobile: {
-    ...AUTHORED_POSITIONS,
-    ...NEUTRAL_PLACEMENT,
-    framingOffsetX: DEFAULT_FRAMING_OFFSET_X,
-    compositionTranslateX: DEFAULT_COMPOSITION_TRANSLATE_X.mobile,
-    visualScale: DEFAULT_VISUAL_SCALE.mobile,
-    stackTargetX: HERO_LEFT_RELEASE_TARGET.x,
-    stackTargetY: HERO_LEFT_RELEASE_TARGET.y,
-    handTargetX: HERO_LEFT_RELEASE_TARGET.x,
-    handTargetY: HERO_LEFT_RELEASE_TARGET.y,
-    compositionScale: 1,
+    stackStartX: -470,
+    stackStartY: 34,
+    stackTargetX: 136,
+    stackTargetY: 0,
+    handStartX: -560,
+    handStartY: 34,
+    handTargetX: 121,
+    handTargetY: -13,
+    handOffsetX: 0,
+    handOffsetY: 0,
+    releaseOffsetX: 46,
+    releaseOffsetY: -22,
+    pointerExitX: -300,
+    pointerExitY: 26,
+    compositionTranslateX: 78,
+    compositionTranslateY: 42,
+    visualScale: 1.42,
+    pointerScale: 0.6,
+    filesScale: 0.86,
+    uploadOffsetX: -280,
+    uploadOffsetY: 0,
+    framingOffsetX: 0,
+    compositionScale: 1.13,
     compositionOffsetX: 0,
     compositionOffsetY: 0,
   },

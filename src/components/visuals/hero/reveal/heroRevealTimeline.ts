@@ -254,79 +254,73 @@ export type ProgressCurveName = 'blend' | 'easeOut' | 'clerk' | 'linear';
 
 /** The shipped sequence, value for value. */
 export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
-  /* A readable still frame before motion begins. */
+  /*
+   * APPROVED TUNING — baked from the Motion Lab snapshot saved 2026-09-08T12:55:03.457Z
+   * (src/dev/motion-lab/tuning/snapshots/hero-reveal.snapshot.json,
+   * sha256 4ed8b6a57017ceda…). These literals ARE the shipped sequence; production
+   * reads nothing else. Re-bake by saving a new snapshot and promoting it.
+   * Position dials here (stack/hand start, target, offsets, pointer exit)
+   * are overridden per band by HERO_RESPONSIVE_DEFAULTS at render time.
+   */
   initialHoldDuration: 1000,
-  stackStartX: -470,
-  stackStartY: 34,
-  stackTargetX: 0,
-  stackTargetY: 0,
-  handStartX: -470,
-  handStartY: 34,
-  handTargetX: 0,
-  handTargetY: 0,
-  handOffsetX: 0,
-  handOffsetY: 0,
-  releaseOffsetX: 46,
+  stackStartX: -500,
+  stackStartY: 35,
+  stackTargetX: 415,
+  stackTargetY: 32,
+  handStartX: -500,
+  handStartY: 35,
+  handTargetX: 360,
+  handTargetY: 32,
+  handOffsetX: -16,
+  handOffsetY: -18,
+  releaseOffsetX: 26,
   releaseOffsetY: -22,
   handOpacity: 1,
   stackOpacity: 1,
   releaseBlur: 4,
-  approachStart: 0,
-  approachDuration: 720,
-  approachEase: 'approach',
-  /*
-   * 130 + 50 reproduces the previous absolute timings exactly: the approach
-   * ends at 720, the hand opens at 850 and the files leave at 900. Long enough
-   * to read as "deliberately positioned over the target", short enough that
-   * nothing sits still — the target is still arming through it.
-   */
-  arrivalHoldDuration: 130,
+  approachStart: 280,
+  approachDuration: 320,
+  approachEase: "outSoft",
+  arrivalHoldDuration: 260,
   releaseDelay: 50,
   settleOffsetY: 0,
   handOpenDuration: 120,
-  releaseDuration: 280,
-  /*
-   * The exit waits for the drop acceptance to register (the confirmation has
-   * faded in by 1080, the press peaks ~993) and then leaves over 360ms rather
-   * than 220ms. `depart` accelerates away from a near-standstill, so the hand
-   * lingers briefly and then goes — secondary motion, not a snap. It still
-   * clears before the progress bar starts moving at 1460.
-   */
+  releaseDuration: 430,
   pointerExitDelay: 220,
-  pointerExitDuration: 360,
+  pointerExitDuration: 460,
   pointerExitX: -300,
-  pointerExitY: 26,
-  armTrigger: 'contact',
+  pointerExitY: 25,
+  armTrigger: "contact",
   pointerExitOpacity: 0,
-  pointerExitEase: 'depart',
+  pointerExitEase: "clerkReveal",
   armStart: 640,
   armDuration: 240,
   pressAmount: 0.006,
   pressStart: 900,
   pressDuration: 280,
-  armedIntensity: 1,
+  armedIntensity: 1.15,
   confirmOpacity: 1,
   confirmInStart: 900,
   confirmInDuration: 180,
   confirmHoldDuration: 200,
   confirmOutDuration: 280,
-  dashedFadeStart: 1180,
+  dashedFadeStart: 1290,
   dashedFadeDuration: 260,
   copyFadeStart: 1100,
   copyFadeDuration: 200,
-  uploadInStart: 1160,
+  uploadInStart: 1320,
   uploadInDuration: 420,
   uploadY: 6,
   uploadOpacity: 1,
   uploadStart: 1460,
   uploadDuration: 1800,
-  progressCurve: 'blend',
+  progressCurve: "blend",
   textureOpacity: 1,
   textureBandStrength: 1,
   completeMixDuration: 300,
   completeBlur: 2,
-  resolveDelay: 420,
-  resolveDuration: 500,
+  resolveDelay: 380,
+  resolveDuration: 760,
   workspaceOpacity: 1,
   dismissDuration: 300,
   dismissBlur: 5,
