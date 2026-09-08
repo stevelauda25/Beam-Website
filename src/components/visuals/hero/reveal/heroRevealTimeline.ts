@@ -336,12 +336,14 @@ export type ProgressCurveName = 'blend' | 'easeOut' | 'clerk' | 'linear';
 /** The shipped sequence, value for value. */
 export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
   /*
-   * APPROVED TUNING — baked from the Motion Lab snapshot saved 2026-09-08T12:55:03.457Z
+   * APPROVED TUNING — baked from the Motion Lab snapshot saved 2026-09-08T17:53:59.514Z
    * (src/dev/motion-lab/tuning/snapshots/hero-reveal.snapshot.json,
-   * sha256 4ed8b6a57017ceda…). These literals ARE the shipped sequence; production
+   * sha256 bd82809d3fed9118…). These literals ARE the shipped sequence; production
    * reads nothing else. Re-bake by saving a new snapshot and promoting it.
    * Position dials here (stack/hand start, target, offsets, pointer exit)
    * are overridden per band by HERO_RESPONSIVE_DEFAULTS at render time.
+   * Retired keys are still carried so stored payloads round-trip; they are
+   * baked at whatever the snapshot holds and nothing reads them.
    */
   initialHoldDuration: 1000,
   stackStartX: -500,
@@ -358,19 +360,18 @@ export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
   releaseOffsetY: -22,
   handOpacity: 1,
   stackOpacity: 1,
-  releaseBlur: 4,
-  /* Was the hard-coded LAG_MAX; 26 reproduces the sequence exactly as baked. */
-  cardLag: 26,
-  approachStart: 280,
-  approachDuration: 320,
-  approachEase: "outSoft",
-  arrivalHoldDuration: 260,
-  releaseDelay: 50,
+  releaseBlur: 0,
+  cardLag: 0,
+  approachStart: 0,
+  approachDuration: 840,
+  approachEase: "out2",
+  arrivalHoldDuration: 700,
+  releaseDelay: 0,
   settleOffsetY: 0,
-  handOpenDuration: 120,
-  releaseDuration: 430,
-  pointerExitDelay: 220,
-  pointerExitDuration: 460,
+  handOpenDuration: 60,
+  releaseDuration: 120,
+  pointerExitDelay: 700,
+  pointerExitDuration: 900,
   pointerExitX: -300,
   pointerExitY: 25,
   armTrigger: "contact",
@@ -388,9 +389,9 @@ export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
   confirmHoldDuration: 200,
   confirmOutDuration: 280,
   dashedFadeStart: 1290,
-  dashedFadeDuration: 260,
+  dashedFadeDuration: 100,
   copyFadeStart: 1100,
-  copyFadeDuration: 200,
+  copyFadeDuration: 80,
   uploadInStart: 1320,
   uploadInDuration: 420,
   uploadY: 6,
@@ -402,7 +403,7 @@ export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
   textureBandStrength: 1,
   completeMixDuration: 300,
   completeBlur: 2,
-  resolveDelay: 380,
+  resolveDelay: 360,
   resolveDuration: 760,
   workspaceOpacity: 1,
   dismissDuration: 300,

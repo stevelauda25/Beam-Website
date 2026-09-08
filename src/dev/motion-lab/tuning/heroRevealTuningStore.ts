@@ -136,7 +136,12 @@ export const HERO_TUNING_RANGES: Record<string, Range> = {
   completeMixDuration: { min: 120, max: 800, step: 20 },
   completeBlur: { min: 0, max: 4, step: 0.25 },
   // workspace handoff
-  resolveDelay: { min: 0, max: 1200, step: 20 },
+  /*
+   * The completion hold. Step 10 (2026-09-09) so values like 250 land on the
+   * grid; at step 20 the clamp snapped 250 to 260. Every previously stored
+   * value is a multiple of 10, so nothing already saved moves.
+   */
+  resolveDelay: { min: 0, max: 1200, step: 10 },
   resolveDuration: { min: 200, max: 1200, step: 20 },
   workspaceOpacity: { min: 0.4, max: 1, step: 0.05 },
   /* Handoff inside the resolve window; both clamp to it, so total time is fixed. */
