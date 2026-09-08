@@ -105,6 +105,23 @@ const cursorRect = {
   height: STACK.cursor.image.height,
 } as const;
 
+/*
+ * The open hand's drawing-scale correction (see `openArtScale`), applied about
+ * the POINTER HOTSPOT — the centre of the cursor frame — expressed in the
+ * image's own coordinates. Scaling about the hotspot is what the pointer's own
+ * scale does, so the correction cannot move the grip point: only the size of
+ * the artwork changes, and the closed hand is untouched.
+ */
+const openArtStyle =
+  STACK.cursor.openArtScale === 1
+    ? undefined
+    : {
+        transform: `scale(${STACK.cursor.openArtScale})`,
+        transformOrigin: `${STACK.cursor.frame.size / 2 - STACK.cursor.image.left}px ${
+          STACK.cursor.frame.size / 2 - STACK.cursor.image.top
+        }px`,
+      };
+
 /**
  * The pointer hotspot in the drag stack's OWN coordinates — the centre of the
  * authored cursor frame, i.e. the point the hand grips the files with. Both
@@ -225,39 +242,17 @@ export function HeroCanvas({
             height: panel.height,
             borderRadius: panel.radius,
             backgroundImage: PANEL_GRADIENT,
-            /*
-             * The press is applied HERE so the frame, its ring, the inner panel
-             * and everything inside compress as one physical surface — the
-             * brief's requirement that the whole panel responds, not just part
-             * of the dropzone. transform-origin stays centred and the value
-             * returns to exactly 1, so nothing is displaced afterwards.
-             */
-            transform: `scale(${frame.panelPress})`,
+            /* No press: the frame never transforms (drop response simplified 2026-09-08). */
           }}
         >
           {/*
             * Figma stacks a solid black 20% fill above the frame gradient when
-            * the target is armed. Rendered as its own layer so arming animates
-            * opacity (composite) instead of rebuilding a background-image
-            * string every frame (paint).
+            * the target is armed. It is deliberately NOT rendered (2026-09-09):
+            * the panel no longer reacts to the files being carried over it, so
+            * its appearance is identical from the opening frame to the drop.
+            * The dashed rule still acknowledges contact through its own stroke.
             */}
-          <div
-            className={styles.panelArm}
-            style={{ opacity: frame.panelArm, borderRadius: panel.radius }}
-          />
-
-          {/*
-            * Confirmation ring. Same layer technique as the armed fill — the
-            * opaque inner panel covers the middle, so only the ring shows.
-            * Opacity only: no clip-path, no directional reveal. It fades in
-            * with the press and back out as the upload panel arrives.
-            */}
-          {frame.borderConfirm > 0 && (
-            <div
-              className={styles.panelConfirm}
-              style={{ opacity: frame.borderConfirm, borderRadius: panel.radius }}
-            />
-          )}
+          {/* The black confirmation ring was removed (2026-09-08): the drop goes straight to the upload panel. */}
           <div
             className={styles.panelInner}
             data-hero-panel="inner"
@@ -339,8 +334,6 @@ export function HeroCanvas({
                 complete={frame.upload.complete}
                 style={{
                   opacity: frame.upload.opacity,
-                  /* Only while dismissing — a 0px filter would still cost a layer. */
-                  filter: frame.upload.blur > 0 ? `blur(${frame.upload.blur}px)` : undefined,
                   /*
                    * Authored centring, at every breakpoint.
                    *
@@ -354,10 +347,8 @@ export function HeroCanvas({
                    */
                   transform:
                     uploadOffset && (uploadOffset.x !== 0 || uploadOffset.y !== 0)
-                      ? `translate(calc(-50% + ${uploadOffset.x}px), ${
-                          frame.upload.y + uploadOffset.y
-                        }px)`
-                      : `translate(-50%, ${frame.upload.y}px)`,
+                      ? `translate(calc(-50% + ${uploadOffset.x}px), ${uploadOffset.y}px)`
+                      : 'translate(-50%, 0px)',
                 }}
               />
             )}
@@ -432,19 +423,19 @@ export function HeroCanvas({
             }}
           >
             {/*
-              * The three cards travel as ONE group. The group carries the
-              * stack's travel, lag and release drift (all three cards always
-              * shared the same values), and the files-only scale sits INSIDE
-              * that translation about the grip point — so changing the size
-              * never changes the path or the release position. At scale 1 the
-              * group's translate composes with each card's own scale exactly
-              * as the previous per-card transform did.
+              * The three cards travel as ONE group, and they exist only until
+              * the drop: at the release event the frame's cardOpacity cuts to
+              * 0 and the group is simply not drawn — no fade, blur, drift or
+              * settle. The group carries the stack's travel and lag, with the
+              * files-only scale INSIDE that translation about the grip point,
+              * so changing the size never changes the path.
               */}
+            {frame.dragStack!.cardOpacity > 0 && (
             <div
               className={styles.dragCards}
               style={{
                 transformOrigin: GRIP_ORIGIN,
-                transform: `translate(${frame.dragStack!.stackX + frame.dragStack!.cardLagX + frame.dragStack!.cardDropX}px, ${frame.dragStack!.stackY + frame.dragStack!.cardDropY}px)${
+                transform: `translate(${frame.dragStack!.stackX}px, ${frame.dragStack!.stackY}px)${
                   filesScale === 1 ? '' : ` scale(${filesScale})`
                 }`,
               }}
@@ -460,14 +451,6 @@ export function HeroCanvas({
                   height: card.wrapper.height,
                   zIndex: index,
                   opacity: frame.dragStack!.cardOpacity,
-                  /* Cards only — the hand keeps its authored crispness. */
-                  filter:
-                    frame.dragStack!.cardBlur > 0
-                      ? `blur(${frame.dragStack!.cardBlur}px)`
-                      : undefined,
-                  // Release shrink, about the card's own centre — the travel
-                  // is on the group above.
-                  transform: `scale(${frame.dragStack!.cardScale})`,
                 }}
               >
                 <div
@@ -475,7 +458,8 @@ export function HeroCanvas({
                   style={{
                     width: card.box.width,
                     height: card.box.height,
-                    transform: `rotate(${card.rotate + frame.dragStack!.cardRotate}deg)`,
+                    /* The authored tilt only. Velocity no longer rotates anything. */
+                    transform: `rotate(${card.rotate}deg)`,
                   }}
                 >
                   <img
@@ -495,6 +479,7 @@ export function HeroCanvas({
               </div>
             ))}
             </div>
+            )}
 
             <div
               className={styles.cursor}
@@ -532,7 +517,11 @@ export function HeroCanvas({
                 className={styles.cursorArt}
                 src={STACK.cursor.src}
                 alt=""
-                style={{ ...cursorRect, opacity: frame.dragStack.handOpen }}
+                style={{
+                  ...cursorRect,
+                  ...openArtStyle,
+                  opacity: frame.dragStack.handOpen,
+                }}
               />
             </div>
           </div>

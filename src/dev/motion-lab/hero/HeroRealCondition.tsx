@@ -60,22 +60,15 @@ function phasesFor(k: HeroRevealTuning) {
   return [
     { label: 'Initial hold (still frame)', span: [0, S.approach[0]] as const },
     { label: 'Files approach', span: S.approach },
-    { label: 'Arrival hold (settle)', span: S.arrivalHold },
-    { label: 'Target arms', span: S.arm },
+    /* Nothing settles any more — the unit stops dead and holds. */
+    { label: 'Arrival hold (still)', span: S.arrivalHold },
+    /* Dashed stroke only — the panel itself does not react. */
+    { label: 'Dashed target acknowledges contact', span: S.arm },
     { label: 'Files release', span: S.release },
-    { label: 'Hand opens', span: S.handOpen },
-    { label: 'Panel press', span: S.panelPress },
-    { label: 'Black confirmation fades in', span: S.confirmIn },
-    { label: 'Black confirmation holds', span: S.confirmHold },
-    { label: 'Black returns to default', span: S.confirmOut },
     { label: 'Pointer exits', span: S.pointerExit },
-    { label: 'Instruction copy resolves', span: S.copyOut },
-    { label: 'Dashed target resolves', span: S.dashedOut },
-    { label: 'Upload panel in', span: S.uploadIn },
     { label: 'Upload 0 → 100%', span: S.upload },
-    { label: 'Hold at 100%', span: S.hold },
-    { label: 'Upload panel dismisses (fade + blur)', span: S.dismiss },
-    { label: 'Workspace reveals', span: S.reveal },
+    /* Ends on the frame the workspace replaces the panel — see completeHold. */
+    { label: 'Completed state holds (Resolve Delay)', span: S.completeHold },
   ];
 }
 
@@ -142,13 +135,63 @@ const RESPONSIVE_DIAL_NAMES: Record<string, string> = {
 };
 const dialNameFor = (storageKey: string) => RESPONSIVE_DIAL_NAMES[storageKey] ?? storageKey;
 
+/*
+ * Dials that no longer drive anything: the cards cut to hidden at the drop, so
+ * the release drift and blur have nothing to act on. Their stored values are
+ * left untouched (the store still carries them), they are just not shown.
+ */
+const RETIRED_DIALS = new Set([
+  'releaseBlur',
+  'releaseOffsetX',
+  'releaseOffsetY',
+  /* Drop response simplified 2026-09-08: no press, no black ring, no scheduled starts. */
+  'pressAmount',
+  'pressStart',
+  'pressDuration',
+  'confirmOpacity',
+  'confirmInStart',
+  'confirmInDuration',
+  'confirmHoldDuration',
+  'confirmOutDuration',
+  'dashedFadeStart',
+  'copyFadeStart',
+  'uploadInStart',
+  /* Upload panel cuts in at the drop (2026-09-08): no entrance to tune. */
+  'uploadInDuration',
+  'uploadY',
+  /* Progress starts at the drop (2026-09-08). */
+  'uploadStart',
+  /*
+   * Rigid drag unit (2026-09-08): the files hang off the pointer at a fixed
+   * grip, so they have no start of their own, no trailing and no settle.
+   */
+  'stackStartX',
+  'stackStartY',
+  'cardLag',
+  'settleOffsetY',
+  /* The drop is a state switch (2026-09-08): nothing fades out, so nothing to time. */
+  'dashedFadeDuration',
+  'copyFadeDuration',
+  /* Upload -> workspace is a one-frame cut (2026-09-08): nothing to fade. */
+  'resolveDuration',
+  'dismissDuration',
+  'dismissBlur',
+  'revealDelay',
+  /* The panel's grey armed fill was removed (2026-09-09). */
+  'armedIntensity',
+  /* The hand opens ON the drop frame, so there is no duration to tune. */
+  'handOpenDuration',
+]);
+const liveBreakpointKeys = (breakpoint: HeroBreakpoint) =>
+  heroBreakpointKeys(breakpoint).filter((key) => !RETIRED_DIALS.has(key));
+
 function responsiveFolder(
   responsive: HeroResponsiveTuning,
   breakpoint: HeroBreakpoint,
 ): Record<string, [number, number, number, number]> {
   const values = responsive[breakpoint] as unknown as Record<string, number>;
   return Object.fromEntries(
-    heroBreakpointKeys(breakpoint).map((key) => [dialNameFor(key), rdial(key, values[key])]),
+    liveBreakpointKeys(breakpoint).map((key) => [dialNameFor(key), rdial(key, values[key])]),
   );
 }
 
@@ -178,7 +221,6 @@ function focusTimeFor(key: string, tuning: HeroRevealTuning): number | null {
   if (key === 'pointerScale' || key === 'filesScale') return at(S.arrivalHold, 0.5);
   /* The upload panel is only on screen during the upload; land mid-progress. */
   if (/^uploadOffset[XY]$/.test(key)) return at(S.upload, 0.5);
-  if (/^releaseOffset[XY]$/.test(key)) return at(S.release, 0.55);
   if (/^pointerExit[XY]$/.test(key)) return at(S.pointerExit, 0.6);
   return null;
 }
@@ -219,7 +261,7 @@ function buildConfig(
     const lockedBand = (breakpoint: HeroBreakpoint) => {
       const values = responsive[breakpoint] as unknown as Record<string, number>;
       return Object.fromEntries(
-        heroBreakpointKeys(breakpoint).map((key) => [dialNameFor(key), lockedRow(values[key])]),
+        liveBreakpointKeys(breakpoint).map((key) => [dialNameFor(key), lockedRow(values[key])]),
       );
     };
     return {
@@ -249,7 +291,6 @@ function buildConfig(
       initialHoldDuration: dial('initialHoldDuration', k.initialHoldDuration),
       handOpacity: dial('handOpacity', k.handOpacity),
       stackOpacity: dial('stackOpacity', k.stackOpacity),
-      releaseBlur: dial('releaseBlur', k.releaseBlur),
       approachStart: dial('approachStart', k.approachStart),
       approachDuration: dial('approachDuration', k.approachDuration),
       approachEase: {
@@ -259,8 +300,6 @@ function buildConfig(
       },
       arrivalHoldDuration: dial('arrivalHoldDuration', k.arrivalHoldDuration),
       releaseDelay: dial('releaseDelay', k.releaseDelay),
-      settleOffsetY: dial('settleOffsetY', k.settleOffsetY),
-      handOpenDuration: dial('handOpenDuration', k.handOpenDuration),
       releaseDuration: dial('releaseDuration', k.releaseDuration),
       pointerExitDelay: dial('pointerExitDelay', k.pointerExitDelay),
       pointerExitDuration: dial('pointerExitDuration', k.pointerExitDuration),
@@ -279,26 +318,9 @@ function buildConfig(
       },
       armStart: dial('armStart', k.armStart),
       armDuration: dial('armDuration', k.armDuration),
-      armedIntensity: dial('armedIntensity', k.armedIntensity),
-      pressAmount: dial('pressAmount', k.pressAmount),
-      pressStart: dial('pressStart', k.pressStart),
-      pressDuration: dial('pressDuration', k.pressDuration),
-      confirmOpacity: dial('confirmOpacity', k.confirmOpacity),
-      confirmInStart: dial('confirmInStart', k.confirmInStart),
-      confirmInDuration: dial('confirmInDuration', k.confirmInDuration),
-      confirmHoldDuration: dial('confirmHoldDuration', k.confirmHoldDuration),
-      confirmOutDuration: dial('confirmOutDuration', k.confirmOutDuration),
-      dashedFadeStart: dial('dashedFadeStart', k.dashedFadeStart),
-      dashedFadeDuration: dial('dashedFadeDuration', k.dashedFadeDuration),
-      copyFadeStart: dial('copyFadeStart', k.copyFadeStart),
-      copyFadeDuration: dial('copyFadeDuration', k.copyFadeDuration),
     },
     uploadState: {
-      uploadInStart: dial('uploadInStart', k.uploadInStart),
-      uploadInDuration: dial('uploadInDuration', k.uploadInDuration),
-      uploadY: dial('uploadY', k.uploadY),
       uploadOpacity: dial('uploadOpacity', k.uploadOpacity),
-      uploadStart: dial('uploadStart', k.uploadStart),
       uploadDuration: dial('uploadDuration', k.uploadDuration),
       progressCurve: {
         type: 'select',
@@ -312,11 +334,7 @@ function buildConfig(
     },
     workspaceHandoff: {
       resolveDelay: dial('resolveDelay', k.resolveDelay),
-      resolveDuration: dial('resolveDuration', k.resolveDuration),
       workspaceOpacity: dial('workspaceOpacity', k.workspaceOpacity),
-      dismissDuration: dial('dismissDuration', k.dismissDuration),
-      dismissBlur: dial('dismissBlur', k.dismissBlur),
-      revealDelay: dial('revealDelay', k.revealDelay),
     },
     responsiveDesktop: responsiveFolder(responsive, 'desktop'),
     responsiveTablet: responsiveFolder(responsive, 'tablet'),
@@ -329,26 +347,22 @@ function buildConfig(
 const FOLDER_KEYS = {
   handAndStack: [
     'initialHoldDuration',
-    'handOpacity', 'stackOpacity', 'releaseBlur', 'approachStart', 'approachDuration', 'approachEase',
-    'arrivalHoldDuration', 'releaseDelay', 'settleOffsetY',
-    'handOpenDuration', 'releaseDuration',
+    'handOpacity', 'stackOpacity', 'approachStart', 'approachDuration', 'approachEase',
+    'arrivalHoldDuration', 'releaseDelay',
+    'releaseDuration',
     'pointerExitDelay', 'pointerExitDuration',
     'pointerExitOpacity', 'pointerExitEase',
   ],
   dropResponse: [
-    'armTrigger', 'armStart', 'armDuration', 'armedIntensity', 'pressAmount', 'pressStart',
-    'pressDuration', 'confirmOpacity', 'confirmInStart', 'confirmInDuration',
-    'confirmHoldDuration', 'confirmOutDuration', 'dashedFadeStart',
-    'dashedFadeDuration', 'copyFadeStart', 'copyFadeDuration',
+    'armTrigger', 'armStart', 'armDuration',
   ],
   uploadState: [
-    'uploadInStart', 'uploadInDuration', 'uploadY', 'uploadOpacity', 'uploadStart',
+    'uploadOpacity',
     'uploadDuration', 'progressCurve', 'textureOpacity', 'textureBandStrength',
     'completeMixDuration', 'completeBlur',
   ],
   workspaceHandoff: [
-    'resolveDelay', 'resolveDuration', 'workspaceOpacity',
-    'dismissDuration', 'dismissBlur', 'revealDelay',
+    'resolveDelay', 'workspaceOpacity',
   ],
 } as const;
 

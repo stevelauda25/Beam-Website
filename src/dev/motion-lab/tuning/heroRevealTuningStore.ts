@@ -80,14 +80,25 @@ export const HERO_TUNING_RANGES: Record<string, Range> = {
   handOpacity: { min: 0.2, max: 1, step: 0.05 },
   stackOpacity: { min: 0.2, max: 1, step: 0.05 },
   releaseBlur: { min: 0, max: 8, step: 0.5 },
+  /* Cap on how far the cards trail the pointer during the carry; 0 = attached. */
+  cardLag: { min: 0, max: 40, step: 1 },
   approachStart: { min: 0, max: 600, step: 20 },
-  approachDuration: { min: 320, max: 1400, step: 20 },
   /*
-   * Bounded so the hold reads as a settle rather than a stall: at 400ms the
-   * stack sits visibly still, which is the top of what reads as intentional
-   * before it becomes a dead interval.
+   * Left = fastest, right = slowest. Range widened both ways on 2026-09-08:
+   * max 1400 -> 2500 so the carry can be made much slower, min 320 -> 100 so
+   * it can be tested faster. Step 10 so 250 / 150 land on the grid (a 20ms
+   * step from 100 would snap them). Every beat after the approach shifts by
+   * the added or removed time; nothing is compressed or stretched.
    */
-  arrivalHoldDuration: { min: 0, max: 400, step: 10 },
+  approachDuration: { min: 100, max: 2500, step: 10 },
+  /*
+   * The pause between arrival and the hand opening. Widened to 1000ms
+   * (2026-09-08) so a clearly readable "files are over the dropzone" beat can
+   * be tuned; everything after the release shifts later by the same amount.
+   * Step stays 10: the clamp snaps stored values to the step grid, so a
+   * coarser step would silently move an existing value (260 -> 250 at 25).
+   */
+  arrivalHoldDuration: { min: 0, max: 1000, step: 10 },
   releaseDelay: { min: 0, max: 300, step: 10 },
   settleOffsetY: { min: -12, max: 12, step: 1 },
   handOpenDuration: { min: 60, max: 400, step: 10 },
@@ -138,7 +149,16 @@ export const HERO_TUNING_NUMERIC = Object.keys(HERO_TUNING_RANGES);
 
 /** Selects, kept separate because they are strings rather than sliders. */
 export const HERO_TUNING_SELECTS = {
-  approachEase: ['approach', 'outSoft', 'out2', 'clerkReveal', 'confirm', 'inOut'],
+  approachEase: [
+    'approach',
+    'outSoft',
+    'out2',
+    'clerkReveal',
+    'confirm',
+    'inOut',
+    'linear',
+    'nearLinear',
+  ],
   pointerExitEase: ['depart', 'out2', 'outSoft', 'clerkReveal', 'inOut'],
   progressCurve: ['blend', 'easeOut', 'clerk', 'linear'],
   /* 'contact' derives the grey from geometry; 'time' uses the armStart dial. */

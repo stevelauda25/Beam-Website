@@ -148,8 +148,18 @@ export function HeroUploadPanel({
           <span className={styles.uploadPercent}>{`${percent}%`}</span>
         </div>
         <div className={styles.uploadActions}>
-          <span className={styles.uploadAction}>
-            <img src={`${ICONS}/icon-pause.svg`} alt="" />
+          {/*
+            * Pause while uploading, check once uploaded. Both icons sit in the
+            * same 26.38 action cell and crossfade on the SAME `complete` value
+            * that swaps the label, so the icon and the copy change together:
+            * one completion state, no separate timer, no layout change. The
+            * check is the approved completed-state glyph from the workspace's
+            * own upload toast (/assets/hero/upload/check.svg), redrawn at this
+            * toast's 17.59 frame and 1.466 stroke to match its siblings.
+            */}
+          <span className={`${styles.uploadAction} ${styles.uploadActionSwap}`}>
+            <img src={`${ICONS}/icon-pause.svg`} alt="" style={{ opacity: 1 - complete }} />
+            <img src={`${ICONS}/icon-check.svg`} alt="" style={{ opacity: complete }} />
           </span>
           <span className={styles.uploadAction}>
             <img src={`${ICONS}/icon-chevron.svg`} alt="" />

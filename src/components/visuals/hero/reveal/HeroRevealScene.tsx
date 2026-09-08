@@ -17,12 +17,7 @@ const AUTHORED_BAR = 0.8504;
 function frameForScene(id: HeroRevealSceneId): HeroRevealFrame {
   const scene = findHeroRevealScene(id);
   return {
-    panelArm: scene.state.panelOverlayFill ? 1 : 0,
     dim: scene.state.innerFill === '#ffffff' ? 0 : 1,
-    rightWashOpacity: scene.state.rightWash ? 1 : 0,
-    // Static review states are at rest: no press, no confirmation.
-    panelPress: 1,
-    borderConfirm: 0,
     overlay: scene.overlay
       ? { opacity: 1, copyOpacity: 1, armed: scene.id === 'drop-target' ? 1 : 0 }
       : null,
@@ -35,13 +30,7 @@ function frameForScene(id: HeroRevealSceneId): HeroRevealFrame {
           handY: 0,
           handOffsetX: 0,
           handOffsetY: 0,
-          cardLagX: 0,
-          cardRotate: 0,
           cardOpacity: 1,
-          cardBlur: 0,
-          cardScale: 1,
-          cardDropX: 0,
-          cardDropY: 0,
           pointerOpacity: 1,
           pointerExitX: 0,
           pointerExitY: 0,
@@ -52,9 +41,6 @@ function frameForScene(id: HeroRevealSceneId): HeroRevealFrame {
     upload: scene.uploadToast
       ? {
           opacity: 1,
-          y: 0,
-          // Static reference: never dismissing, so never blurred.
-          blur: 0,
           // Label from the authored percent; the bar is decoupled here ONLY so
           // the authored frame can be compared against Figma as drawn.
           progress: scene.uploadToast.percent / 100,

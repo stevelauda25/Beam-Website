@@ -292,6 +292,16 @@
   height: 17.5897px;
 }
 
+/* Two icons in one cell, stacked, so a state swap cannot move anything. */
+.uploadActionSwap {
+  display: grid;
+  place-items: center;
+}
+
+.uploadActionSwap > img {
+  grid-area: 1 / 1;
+}
+
 .uploadDivider {
   display: block;
   width: .7329px;
@@ -332,26 +342,10 @@
 }
 
 /*
- * Armed / dim treatments as their own layers so they animate on opacity.
- *
- * ARMED IS GREY, NOT BLACK. Figma authors this fill as solid black at 20%
- * opacity (1008:9767), so the paint carries the 20% and the layer's own
- * `opacity` carries only the 0..1 animation strength. An earlier pass moved the
- * 20% into the strength value and left the paint at solid #000, which meant a
- * fully armed ring rendered 100% black — the bug this comment exists to
- * prevent. Black is reserved exclusively for drop confirmation.
- *
- * Keeping the authored alpha (rather than a flat grey hex) also preserves the
- * frame gradient underneath, so the ring stays lighter toward the bottom-right
- * exactly as Figma draws it.
+ * .panelArm was removed: Figma stacks a black-20% fill over the panel frame
+ * while the target is armed, but the panel no longer responds to the files at
+ * all, so nothing paints it.
  */
-.panelArm {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  background: rgb(0 0 0 / 20%);
-  pointer-events: none;
-}
 
 .panelDim {
   position: absolute;

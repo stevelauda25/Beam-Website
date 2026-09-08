@@ -68,6 +68,25 @@ export const EASE = {
    * the same arrival point with no overshoot.
    */
   approach: cubicBezier(0.45, 0.45, 0.7, 1),
+  /**
+   * CARRY CURVES — a pointer dragging files, not an object being animated.
+   *
+   * A real drag moves at close to constant speed: the person is steering, not
+   * accelerating, and stops where they mean to stop. Both of these keep the
+   * velocity essentially flat through the middle of the travel and have no
+   * ease-out tail, so the stack never crawls the last few pixels.
+   *
+   * `linear`: constant velocity, start to finish. Direct and predictable; the
+   * stop is a hard stop.
+   *
+   * `nearLinear`: the same, with only a subtle check in the final fifth —
+   * velocity holds within ±9% of the average for the first three quarters,
+   * dips to ~70% of it in the last 40ms, and the final 1% of the distance
+   * takes ~5ms (the shipped `outSoft` spends 111ms on it). No spring, no
+   * overshoot; the arrival point is identical.
+   */
+  linear: (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x),
+  nearLinear: cubicBezier(0.4, 0.4, 0.8, 0.9),
   /** The project's existing entrance curve (Hero AgentPromptButton, OnDemand). */
   outSoft: cubicBezier(0.22, 1, 0.36, 1),
   /**
@@ -142,8 +161,20 @@ export type HeroRevealTuning = {
    * them separate dials is what allows one to lead, trail or be repositioned
    * without touching code.
    */
+  /**
+   * RETIRED (2026-09-08): the files no longer have a trajectory of their own,
+   * so they have no start of their own either — they begin wherever the
+   * pointer begins, plus the grip offset. Kept as stored keys so no saved
+   * tuning payload is rewritten; nothing reads them.
+   */
   stackStartX: number;
   stackStartY: number;
+  /**
+   * THE GRIP. Still the files' position at the target, and now also what
+   * defines the fixed offset they hold from the pointer for the whole carry:
+   * grip = stackTarget - handTarget. Tuning it moves the files relative to the
+   * hand without giving them any independent motion.
+   */
   stackTargetX: number;
   stackTargetY: number;
   handStartX: number;
@@ -153,18 +184,23 @@ export type HeroRevealTuning = {
   /** Static offset of the hand from its authored spot inside the stack frame. */
   handOffsetX: number;
   handOffsetY: number;
-  /** Where the cards drift to as they release. */
+  /**
+   * RETIRED (2026-09-08): the cards no longer drift after the drop — they cut
+   * to hidden at the release event. Kept as stored keys so no saved tuning
+   * payload is rewritten; nothing reads them. Not shown in the lab.
+   */
   releaseOffsetX: number;
   releaseOffsetY: number;
   handOpacity: number;
   stackOpacity: number;
-  /**
-   * Peak blur on the released cards, px. Grows with the same linear presence
-   * decay that drives their opacity, so the files read as resolving into the
-   * upload state rather than simply switching off. Opacity stays the primary
-   * cue; the hand is not blurred.
-   */
+  /** RETIRED (2026-09-08): see releaseOffsetX. The cards are never blurred. */
   releaseBlur: number;
+  /**
+   * RETIRED (2026-09-08): the cards are rigidly attached to the pointer, so
+   * there is no trailing to cap and no velocity-derived tilt. Key kept for
+   * backward compatibility; nothing reads it.
+   */
+  cardLag: number;
   approachStart: number;
   approachDuration: number;
   approachEase: EaseName;
@@ -179,8 +215,17 @@ export type HeroRevealTuning = {
    */
   arrivalHoldDuration: number;
   releaseDelay: number;
-  /** Tiny settle as the stack lands: an offset that eases to 0 over the hold. */
+  /**
+   * RETIRED (2026-09-08): a settle is motion the files would have on their own
+   * after the pointer has stopped, which is exactly what the rigid link
+   * removes. Key kept; nothing reads it.
+   */
   settleOffsetY: number;
+  /**
+   * RETIRED (2026-09-09): the hand does not open over time any more. Opening
+   * IS the drop, so it happens on the drop frame, in one step, together with
+   * the files being released. Key kept; nothing reads it.
+   */
   handOpenDuration: number;
   releaseDuration: number;
   /** Delay after the release begins before the pointer starts leaving. */
@@ -202,26 +247,59 @@ export type HeroRevealTuning = {
   pointerExitEase: EaseName;
   // drop response
   armStart: number;
+  /**
+   * How long the target takes to acknowledge contact. Since 2026-09-09 the
+   * only thing it drives is the dashed rule's stroke crossfade — the panel
+   * itself no longer responds at all.
+   */
   armDuration: number;
+  /**
+   * RETIRED (2026-09-08): the drop no longer has a press, a black ring or a
+   * confirmation beat — the upload panel IS the confirmation. Kept as stored
+   * keys so no saved tuning payload is rewritten; nothing reads them and the
+   * lab does not show them.
+   */
   pressAmount: number;
   pressStart: number;
   pressDuration: number;
+  /**
+   * RETIRED (2026-09-09): the panel's grey armed fill was removed, so there is
+   * no intensity left to scale. Key kept so stored payloads are not rewritten;
+   * nothing reads it.
+   */
   armedIntensity: number;
-  /** Peak opacity of the black confirmation ring. */
   confirmOpacity: number;
   confirmInStart: number;
   confirmInDuration: number;
   confirmHoldDuration: number;
   confirmOutDuration: number;
+  /**
+   * RETIRED (2026-09-08): the drop is a STATE SWITCH, not a set of fades. The
+   * dashed target, the instruction copy and the whole drop overlay are gone on
+   * the drop frame, so there is no start and no duration left to tune. Keys
+   * kept so stored payloads are not rewritten; nothing reads them.
+   */
   dashedFadeStart: number;
   dashedFadeDuration: number;
   copyFadeStart: number;
   copyFadeDuration: number;
   // upload state
+  /**
+   * RETIRED (2026-09-08): the upload panel has NO entrance any more. It is
+   * absent before the drop and present, at full opacity and its final tuned
+   * position, from the release event onward — a cut, like the cards. Keys are
+   * kept so stored payloads are not rewritten; nothing reads them.
+   */
   uploadInStart: number;
   uploadInDuration: number;
   uploadY: number;
+  /** Steady-state opacity of the upload panel while it is shown. */
   uploadOpacity: number;
+  /**
+   * RETIRED (2026-09-08): progress starts AT THE DROP, the same event that
+   * shows the panel — an upload that starts on its own, not one waiting for
+   * a scheduled time. Key kept so stored payloads are not rewritten.
+   */
   uploadStart: number;
   uploadDuration: number;
   progressCurve: ProgressCurveName;
@@ -230,22 +308,25 @@ export type HeroRevealTuning = {
   completeMixDuration: number;
   completeBlur: number;
   // workspace handoff
-  resolveDelay: number;
-  resolveDuration: number;
-  workspaceOpacity: number;
   /**
-   * The upload panel's dismissal, inside the resolve window: how long its
-   * blur + fade takes from the start of that window, and its peak blur in px.
-   * Opacity is the primary cue; the blur is restrained on purpose.
+   * THE COMPLETION HOLD, ms. How long the finished upload — 100%, "Uploaded 3
+   * files", checkmark — is held before the workspace takes over. Measured from
+   * the END of the label/icon crossfade, so the state is fully established
+   * before the clock on it starts. Shown in the lab as Resolve Delay.
    */
+  resolveDelay: number;
+  /**
+   * RETIRED (2026-09-08): the upload panel does not dissolve into the
+   * workspace any more — it is replaced by it, in one frame. There is no
+   * resolve window, no dismissal and no reveal left to time. Keys kept so
+   * stored payloads are not rewritten; nothing reads them.
+   */
+  resolveDuration: number;
+  /** Opacity the settled workspace is drawn at. 1 is the shipped value. */
+  workspaceOpacity: number;
+  /** RETIRED (2026-09-08): see resolveDuration. Nothing fades or blurs. */
   dismissDuration: number;
   dismissBlur: number;
-  /**
-   * When the workspace starts to reveal, from the start of the resolve window.
-   * Kept later than most of the dismissal so the panel is already nearly gone
-   * before the content under it becomes readable — a small crossfade for
-   * continuity, never a frame where both are strong.
-   */
   revealDelay: number;
 };
 
@@ -278,6 +359,8 @@ export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
   handOpacity: 1,
   stackOpacity: 1,
   releaseBlur: 4,
+  /* Was the hard-coded LAG_MAX; 26 reproduces the sequence exactly as baked. */
+  cardLag: 26,
   approachStart: 280,
   approachDuration: 320,
   approachEase: "outSoft",
@@ -327,8 +410,11 @@ export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
   revealDelay: 250,
 };
 
-/** The release time the shipped sequence is authored around. */
-const BASELINE_RELEASE_START = 900;
+/*
+ * There is no longer a "baseline release time": every post-drop beat is
+ * anchored to the release event itself (see rawSpans), so nothing needs to be
+ * re-based when the hold or the approach changes.
+ */
 
 /** Resolve the tuning into the absolute spans the sampler runs on. */
 /**
@@ -422,15 +508,24 @@ function rawSpans(k: HeroRevealTuning) {
   const approachEnd = k.approachStart + k.approachDuration;
   const handOpenStart = approachEnd + k.arrivalHoldDuration;
   const releaseStart = handOpenStart + k.releaseDelay;
-  const shift = releaseStart - BASELINE_RELEASE_START;
-  const at = (ms: number) => ms + shift;
-  const confirmInStart = at(k.confirmInStart);
-  const confirmInEnd = confirmInStart + k.confirmInDuration;
-  const confirmHoldEnd = confirmInEnd + k.confirmHoldDuration;
-  const uploadStart = at(k.uploadStart);
+  /*
+   * The upload runs from the drop: the panel appears and its progress starts
+   * in the same frame, so there is never an idle "0%" beat waiting for a
+   * scheduled start. Everything after completion is measured from its end.
+   */
+  const uploadStart = releaseStart;
   const uploadEnd = uploadStart + k.uploadDuration;
-  const resolveStart = uploadEnd + k.resolveDelay;
-  const resolveEnd = resolveStart + k.resolveDuration;
+  /*
+   * THE COMPLETED STATE IS ESTABLISHED FIRST, THEN HELD, THEN REPLACED.
+   *
+   * The label and the icon finish crossfading at `completeMixEnd`; only from
+   * there does the completion hold run. Cutting from the hold's old anchor
+   * (the end of the progress) would have started the clock while the panel
+   * still said "Uploading", which is the one thing the completed state exists
+   * to show.
+   */
+  const completeMixEnd = uploadEnd + k.completeMixDuration;
+  const switchAt = completeMixEnd + k.resolveDelay;
   /* Grey is a response to contact, not a timestamp. See `heroContactTime`. */
   const armStart = k.armTrigger === 'contact' ? heroContactTime(k) : k.armStart;
   return {
@@ -438,34 +533,28 @@ function rawSpans(k: HeroRevealTuning) {
     arm: [armStart, armStart + k.armDuration] as const,
     /** Stack has landed; nothing has been released yet. */
     arrivalHold: [approachEnd, handOpenStart] as const,
-    handOpen: [handOpenStart, handOpenStart + k.handOpenDuration] as const,
     release: [releaseStart, releaseStart + k.releaseDuration] as const,
-    panelPress: [at(k.pressStart), at(k.pressStart) + k.pressDuration] as const,
     pointerExit: [
       releaseStart + k.pointerExitDelay,
       releaseStart + k.pointerExitDelay + k.pointerExitDuration,
     ] as const,
-    confirmIn: [confirmInStart, confirmInEnd] as const,
-    confirmHold: [confirmInEnd, confirmHoldEnd] as const,
-    confirmOut: [confirmHoldEnd, confirmHoldEnd + k.confirmOutDuration] as const,
-    copyOut: [at(k.copyFadeStart), at(k.copyFadeStart) + k.copyFadeDuration] as const,
-    dashedOut: [
-      at(k.dashedFadeStart),
-      at(k.dashedFadeStart) + k.dashedFadeDuration,
-    ] as const,
-    uploadIn: [at(k.uploadInStart), at(k.uploadInStart) + k.uploadInDuration] as const,
+    /*
+     * THE DROP IS A STATE SWITCH, NOT A SET OF FADES.
+     *
+     * Everything that belongs to the drag / drop state — the grey armed fill,
+     * the dashed target, the instruction copy, the overlay backdrop and the
+     * files — is gone on the drop frame, and the upload state is fully present
+     * on that same frame. The two states never overlap, so there are no
+     * "resolving" spans left here: see `dropped` in the sampler.
+     */
     upload: [uploadStart, uploadEnd] as const,
     completeMix: [uploadEnd, uploadEnd + k.completeMixDuration] as const,
-    hold: [uploadEnd, resolveStart] as const,
-    resolve: [resolveStart, resolveEnd] as const,
     /*
-     * The handoff is two phases inside the resolve window, not one shared
-     * value. Driving the panel out and the workspace in from the SAME number
-     * put both at 0.5 in the middle — the overlap this exists to remove. Both
-     * are clamped inside the window so the total duration cannot change.
+     * The finished state, held. Its end IS the handoff: on that frame the
+     * upload panel stops being rendered and the workspace is drawn at full
+     * opacity. One frame, no window, so there is nothing to overlap.
      */
-    dismiss: [resolveStart, Math.min(resolveStart + k.dismissDuration, resolveEnd)] as const,
-    reveal: [Math.min(resolveStart + k.revealDelay, resolveEnd - 1), resolveEnd] as const,
+    completeHold: [completeMixEnd, switchAt] as const,
   };
 }
 
@@ -475,35 +564,12 @@ export function heroRevealDuration(k: HeroRevealTuning = HERO_REVEAL_DEFAULTS) {
   return Math.max(...Object.values(s).map((span) => span[1]));
 }
 
-export type HeroWorkspaceHandoff = {
-  /** Upload panel leaving: 0..1 over the dismiss span. Same curve as the frame. */
-  dismiss: number;
-  /** Workspace arriving: 0..1 over the reveal span. Same curve as the frame. */
-  reveal: number;
-  /** The whole resolve window, 0..1 — dismiss start to reveal end. */
-  handoff: number;
-};
-
-/**
- * The workspace handoff's phases, on the SAME spans and curve the frame uses
- * (`dismiss` and `reveal` in sampleHeroReveal). Exposed so a renderer can
- * sequence framing with the handoff — the mobile band exits the reveal
- * composition while the upload panel dismisses and enters the 1:1 window with
- * the workspace — without a second clock or easing that could drift from the
- * opacities it accompanies.
+/*
+ * A `heroWorkspaceHandoff` helper used to live here, exposing the dismiss /
+ * reveal progress so a renderer could sequence framing with the crossfade.
+ * There is no crossfade any more — the handoff is a single frame — so it had
+ * nothing left to report and has been removed.
  */
-export function heroWorkspaceHandoff(
-  time: number,
-  k: HeroRevealTuning = HERO_REVEAL_DEFAULTS,
-): HeroWorkspaceHandoff {
-  const S = k === HERO_REVEAL_DEFAULTS ? T : heroSpans(k);
-  const t = Math.max(0, Math.min(heroRevealDuration(k), time));
-  return {
-    dismiss: phase(t, S.dismiss, EASE.clerkReveal),
-    reveal: phase(t, S.reveal, EASE.clerkReveal),
-    handoff: phase(t, S.resolve, EASE.clerkReveal),
-  };
-}
 
 /** The progress shapes selectable in the lab. `blend` is the shipped one. */
 export function progressCurveFor(name: ProgressCurveName): (p: number) => number {
@@ -557,12 +623,14 @@ export function heroRevealMarkers(): { id: string; label: string; time: number }
     { id: 'hold', label: 'Opening frame', time: 0 },
     { id: 'start', label: 'Files approach', time: T.approach[0] },
     { id: 'armed', label: 'Target armed', time: T.arm[1] },
-    { id: 'drop', label: 'Drop', time: T.release[1] },
+    /* The cards cut to hidden at the release event — this is the visible drop. */
+    { id: 'drop', label: 'Drop', time: T.release[0] },
     { id: 'upload', label: 'Upload starts', time: T.upload[0] },
     { id: 'at85', label: 'Authored 85%', time: timeAtUploadProgress(0.8504) },
     { id: 'at92', label: '92%', time: timeAtUploadProgress(0.92) },
     { id: 'complete', label: '100%', time: T.upload[1] },
-    { id: 'workspace', label: 'Workspace', time: T.resolve[1] },
+    /* The one frame the workspace replaces the panel. */
+    { id: 'workspace', label: 'Workspace', time: T.completeHold[1] },
   ];
 }
 
@@ -609,26 +677,16 @@ export function uploadCurve(p: number): number {
 /* ------------------------------------------------------------------- state */
 
 export type HeroRevealFrame = {
-  /** 0..1 strength of the armed fill on the panel frame. Rendered as opacity. */
-  panelArm: number;
   /** 0..1 strength of the #f3f3f3 dim over the inner panel. Rendered as opacity. */
   dim: number;
-  rightWashOpacity: number;
   overlay: {
-    /** Dropzone surface + dashed rule. */
+    /** Dropzone surface + dashed rule. 1 while the drag / drop state is up. */
     opacity: number;
     /** Instruction copy, multiplied by `opacity` — leads the dashed rule out. */
     copyOpacity: number;
     /** 0..1 crossfade from the unarmed stroke to the armed one. */
     armed: number;
   } | null;
-  /**
-   * Uniform scale on the panel frame — the whole surface, ring included.
-   * Returns to exactly 1; this is a compression, not an overshoot.
-   */
-  panelPress: number;
-  /** Black confirmation ring opacity — fades in, holds, fades to default. */
-  borderConfirm: number;
   dragStack: {
     /** Stack travel — carries the cards. */
     stackX: number;
@@ -639,16 +697,12 @@ export type HeroRevealFrame = {
     /** Static hand offset within the stack frame. */
     handOffsetX: number;
     handOffsetY: number;
-    /** Cards trail the pointer proportionally to speed. */
-    cardLagX: number;
-    cardRotate: number;
+    /**
+     * `stackOpacity` until the drop, then exactly 0 from the first frame of the
+     * release span: a HARD CUT, no interpolation. The renderer does not draw
+     * the cards at 0. Nothing about the cards animates after the drop.
+     */
     cardOpacity: number;
-    /** Release blur, px. 0 until the hand opens. */
-    cardBlur: number;
-    cardScale: number;
-    /** Drift toward the upload panel on release — object permanence. */
-    cardDropX: number;
-    cardDropY: number;
     pointerOpacity: number;
     /** Exit displacement, added on top of the hand's travel. */
     pointerExitX: number;
@@ -657,10 +711,8 @@ export type HeroRevealFrame = {
     handOpen: number;
   } | null;
   upload: {
+    /** Steady: the panel is either drawn at this or not drawn at all. */
     opacity: number;
-    y: number;
-    /** Dismissal blur, px. 0 until the panel starts to leave. */
-    blur: number;
     /**
      * THE canonical progress value, 0..1. Everything inside the panel derives
      * from this one number — percentage, line width, transferred region and the
@@ -672,11 +724,6 @@ export type HeroRevealFrame = {
   } | null;
   workspaceOpacity: number;
 };
-
-/** Sampling gap used to derive the cards' trailing lag from pointer speed. */
-const LAG_MS = 70;
-const LAG_GAIN = 0.5;
-const LAG_MAX = 26;
 
 /**
  * The whole sequence at time `t`, for a given tuning.
@@ -693,20 +740,22 @@ export function sampleHeroReveal(
   const t = Math.max(0, Math.min(heroRevealDuration(k), time));
 
   const approachAt = (at: number) => phase(at, S.approach, EASE[k.approachEase]);
-  const stackXAt = (at: number) => lerp(k.stackStartX, k.stackTargetX, approachAt(at));
-  const stackYAt = (at: number) => lerp(k.stackStartY, k.stackTargetY, approachAt(at));
 
-  const arm = phase(t, S.arm, EASE.out2);
-  const release = phase(t, S.release, EASE.out2);
   /*
-   * The cards' MOTION eases out, but their PRESENCE decays evenly. Fading
-   * opacity on the same front-loaded curve put them at 0.02 by 1100 — visually
-   * gone before the upload panel even started arriving, which reopened the void
-   * the handoff exists to close.
+   * THE DROP IS A CUT. The moment the release span begins — the hand has
+   * opened and the files leave it — the cards are gone. No fade, blur, drift
+   * or settle follows: a dropped file does not linger under the pointer, and
+   * the panel's own acknowledgement (press, black ring, upload panel) carries
+   * the continuity from here. The condition is the release EVENT itself, not a
+   * separate timer, so it moves with every dial that moves the release.
    */
-  const releasePresence = clamp01((t - S.release[0]) / (S.release[1] - S.release[0]));
-  const dashedOut = phase(t, S.dashedOut, EASE.out2);
-  const copyOut = phase(t, S.copyOut, EASE.out2);
+  const dropped = t >= S.release[0];
+  /*
+   * Contact acknowledgement, and ONLY on the dashed rule's stroke: the panel
+   * itself does not react to the files arriving over it (2026-09-09). Ramps in
+   * on contact and is simply not there once they have been dropped.
+   */
+  const arm = dropped ? 0 : phase(t, S.arm, EASE.out2);
   /*
    * Departure, not an arrival. `depart` accelerates away from a near-standstill
    * so the hand lingers while the drop registers, then leaves — subordinate
@@ -714,97 +763,80 @@ export function sampleHeroReveal(
    */
   const pointerOut = phase(t, S.pointerExit, EASE[k.pointerExitEase]);
   /*
-   * Clerk's reveal curve, not a steep entrance: a front-loaded curve landed the
-   * panel before the dropzone had resolved and never actually crossfaded with
-   * the confirmation. A gentler curve keeps it rising across the whole window.
+   * The upload panel CUTS IN at the drop (2026-09-08): no opacity ramp, no
+   * slide, no easing. Same event that hides the cards, so the picture goes
+   * files-over-target -> uploading in one frame.
    */
-  const uploadIn = phase(t, S.uploadIn, EASE.clerkReveal);
   /*
-   * Dismiss first, reveal after. `dismiss` takes the upload panel out (opacity
-   * plus a restrained blur), `reveal` brings the workspace in. See heroSpans.
+   * THE HANDOFF IS ONE FRAME. Before it the upload panel is the only thing
+   * drawn over the panel; from it the workspace is, at full opacity. There is
+   * no window in which both exist, and none in which neither does.
    */
-  const dismiss = phase(t, S.dismiss, EASE.clerkReveal);
-  const reveal = phase(t, S.reveal, EASE.clerkReveal);
+  const switched = t >= S.completeHold[1];
 
   /*
-   * The press. Asymmetric: it compresses in the first third and eases back over
-   * the remaining two thirds. A symmetric swell builds as slowly as it decays,
-   * which reads as staged and contradicts Clerk's "immediate response".
+   * No press and no black confirmation ring any more (2026-09-08): the drop
+   * goes straight to the upload panel. See rawSpans.
    */
-  const pressRaw = clamp01((t - S.panelPress[0]) / (S.panelPress[1] - S.panelPress[0]));
-  const ATTACK = 1 / 3;
-  const press =
-    pressRaw <= 0
-      ? 0
-      : pressRaw < ATTACK
-        ? EASE.out2(pressRaw / ATTACK)
-        : 1 - EASE.out2((pressRaw - ATTACK) / (1 - ATTACK));
 
   /*
-   * The confirmation is an OPACITY transition, not a travelling mask: it fades
-   * in with the release and the press, holds, then fades back toward the
-   * default ring as the upload panel arrives — one continuous response rather
-   * than a separate gesture with its own direction.
+   * ONE DRAG UNIT, ONE TRAJECTORY.
+   *
+   * The pointer is the only thing that moves: it interpolates from its own
+   * start to its own target on the approach curve. The files do not
+   * interpolate at all — they are placed at the pointer plus a FIXED grip
+   * offset, so by construction they share the pointer's progress, its
+   * velocity, its first moving frame and its last. Nothing can drift, lag,
+   * catch up, settle or tilt, because there is no second interpolation left
+   * to disagree with the first.
+   *
+   * The grip is taken at the TARGET, so both the pointer's and the files'
+   * arrival positions are exactly what the band's dials say; only the files'
+   * (mostly off-screen) starting point is now derived rather than dialled.
    */
-  const confirmIn = phase(t, S.confirmIn, EASE.out2);
-  const confirmOut = phase(t, S.confirmOut, EASE.out2);
-  const handOpen = phase(t, S.handOpen, EASE.out2);
+  const p = approachAt(t);
+  const handX = lerp(k.handStartX, k.handTargetX, p);
+  const handY = lerp(k.handStartY, k.handTargetY, p);
+  const stackX = handX + (k.stackTargetX - k.handTargetX);
+  const stackY = handY + (k.stackTargetY - k.handTargetY);
 
-  const stackX = stackXAt(t);
-  /*
-   * The settle: a small offset present the instant the stack lands, easing to 0
-   * across the hold. Defaults to 0, so the shipped sequence has none.
-   */
-  const settle = k.settleOffsetY
-    ? k.settleOffsetY * (1 - phase(t, S.arrivalHold, EASE.out2))
-    : 0;
-  const stackY = stackYAt(t) + (t >= S.approach[1] ? settle : 0);
-  const handX = lerp(k.handStartX, k.handTargetX, approachAt(t));
-  const handY = lerp(k.handStartY, k.handTargetY, approachAt(t));
-  // Lag is derived from the STACK's own speed — it is the cards that trail.
-  const lag = Math.max(
-    -LAG_MAX,
-    Math.min(LAG_MAX, -(stackX - stackXAt(t - LAG_MS)) * LAG_GAIN),
-  );
-
-  const uploadActive = t >= S.uploadIn[0];
+  /* Present from the drop until the workspace replaces it. Never both. */
+  const uploadActive = dropped && !switched;
   const uploadT = clamp01((t - S.upload[0]) / (S.upload[1] - S.upload[0]));
   const progress = t < S.upload[0] ? 0 : progressCurveFor(k.progressCurve)(uploadT);
 
   return {
     /*
-     * Grey ARMED holds beneath the black confirmation and releases with it, so
-     * the ring resolves once rather than stepping black -> grey -> default.
-     * Figma authors the black-20% fill on scene 2 only, so it must not survive
-     * into the upload state or the handoff lands on a darker panel than ships.
-     */
-    panelArm: arm * (1 - confirmOut) * k.armedIntensity,
-    // Compression only, and back to exactly 1. No elastic overshoot.
-    panelPress: 1 - k.pressAmount * press,
-    borderConfirm: confirmIn * (1 - confirmOut) * k.confirmOpacity,
-    /*
      * Figma stacks #f3f3f3 over #ffffff for the transfer (scene 3) and back to
-     * white for the workspace (scene 4), so the dim is driven by the drop
-     * itself, not by arming — the two release at different times. Rendered as
-     * an opacity layer, which is both the faithful stacking and composite-only.
+     * white for the workspace (scene 4). The white belongs to the drag / drop
+     * state, so it goes with the rest of it: the interior is the transfer's
+     * fill from the drop frame, not 430ms later underneath an upload panel
+     * that is already fully present. It resolves back to white as the
+     * workspace reveals. Rendered as an opacity layer, which is both the
+     * faithful stacking and composite-only.
      */
-    dim: release * (1 - reveal),
-    rightWashOpacity: 1 - dashedOut,
-    overlay:
-      dashedOut >= 1
-        ? null
-        : {
-            opacity: 1 - dashedOut,
-            /*
-             * Copy carries its own alpha ON TOP of the layer's, so it resolves
-             * ahead of the dashed rule without needing a second element tree.
-             */
-            copyOpacity: 1 - copyOut,
-            // Crossfaded between two strokes, not a per-frame stroke rewrite.
-            armed: arm,
-          },
+    dim: dropped && !switched ? 1 : 0,
+    /*
+     * The whole drop overlay — backdrop, dashed rule and instruction copy —
+     * belongs to the drag / drop state and is removed with it, on the drop
+     * frame. Nothing of it survives under the upload panel.
+     */
+    overlay: dropped
+      ? null
+      : {
+          opacity: 1,
+          copyOpacity: 1,
+          // Crossfaded between two strokes, not a per-frame stroke rewrite.
+          armed: arm,
+        },
+    /*
+     * Only the pointer is left after the drop, so the node survives until the
+     * release span and the exit have both finished — the same moment as
+     * before, expressed against the span rather than an eased value nothing
+     * else needs any more.
+     */
     dragStack:
-      release >= 1 && pointerOut >= 1
+      t >= S.release[1] && pointerOut >= 1
         ? null
         : {
             stackX,
@@ -813,35 +845,28 @@ export function sampleHeroReveal(
             handY,
             handOffsetX: k.handOffsetX,
             handOffsetY: k.handOffsetY,
-            cardLagX: lag,
-            cardRotate: lag * 0.06,
-            cardOpacity: (1 - releasePresence) * k.stackOpacity,
-            cardBlur: k.releaseBlur * releasePresence,
-            cardScale: lerp(1, 0.94, release),
-            /*
-             * Object permanence: the files must not dissolve where they stand
-             * and be replaced by an unrelated panel. They drift toward where
-             * the upload panel is about to appear. A directional hint, not a
-             * flight.
-             */
-            cardDropX: lerp(0, k.releaseOffsetX, release),
-            cardDropY: lerp(0, k.releaseOffsetY, release),
+            cardOpacity: dropped ? 0 : k.stackOpacity,
             pointerOpacity: lerp(k.handOpacity, k.pointerExitOpacity, pointerOut),
             pointerExitX: k.pointerExitX * pointerOut,
             pointerExitY: k.pointerExitY * pointerOut,
-            handOpen,
+            /*
+             * ONE EVENT, THREE STATE CHANGES. The hand opening, the closed
+             * hand leaving and the files being released are the same physical
+             * moment, so they are the same boolean: on the drop frame the grab
+             * hand is off, the open hand is on and the cards are gone. A
+             * crossfade here — even a short one — showed an open hand still
+             * holding the files, which is the disconnect this removes.
+             */
+            handOpen: dropped ? 1 : 0,
           },
     upload: uploadActive
       ? {
-          opacity: (1 - dismiss) * uploadIn * k.uploadOpacity,
-          /* Entrance slide only. Dismissal is opacity + blur, no movement. */
-          y: lerp(k.uploadY, 0, uploadIn),
-          blur: k.dismissBlur * dismiss,
+          opacity: k.uploadOpacity,
           progress,
           complete: phase(t, S.completeMix, EASE.clerkReveal),
         }
       : null,
-    workspaceOpacity: reveal * k.workspaceOpacity,
+    workspaceOpacity: switched ? k.workspaceOpacity : 0,
   };
 }
 
@@ -862,27 +887,28 @@ export const HERO_REVEAL_END = sampleHeroReveal(HERO_REVEAL_DURATION);
  * state changes that carry meaning. The last entry is the settled workspace, so
  * the sequence still ends usable and interactive.
  */
-/*
- * Every checkpoint must be a SETTLED state. 3400 used to sit inside the label
- * crossfade (measured 0.27 / 0.73), so the stepped variant landed on a frame
- * showing two overlapping strings — the exact transitional frame stepping
- * exists to avoid. 3620 is after the crossfade completes and before the
- * workspace reveal begins.
- * 845 replaces 880 for the same reason: pulling `handOpen` earlier (850-970)
- * put 880 inside the hand crossfade, which would have rendered two ghosted
- * hands. At 845 the target is visually armed (arm resolves to 0.99), the hand
- * is still fully closed and the files are intact.
- */
-const REDUCED_STEP_FRAMES = [845, 2200, 3620] as const;
-
 /**
- * The stepped frames for a given tuning. Each representative frame moves with
- * the initial hold so it still shows the same state; the stepper jumps straight
- * to the first one, so reduced-motion visitors never sit through the hold.
+ * The stepped frames for a given tuning.
+ *
+ * DERIVED FROM THE SPANS, not authored as absolute times: every checkpoint has
+ * to be a SETTLED state, and fixed timestamps silently stopped being settled
+ * as the sequence was retimed — the old third frame (3620 + hold) ended up
+ * past the end of the shortened sequence, so it clamped onto the workspace and
+ * the stepper showed that state twice. Each frame below is the middle of a
+ * phase, so it moves with whatever the tuning does:
+ *
+ *   1. mid arrival hold  — files over the target, hand still closed
+ *   2. mid upload        — the transfer, in progress
+ *   3. mid completion    — "Uploaded", checkmark, panel still up
+ *   4. the settled, interactive workspace
+ *
+ * The stepper jumps straight to the first, so reduced-motion visitors never
+ * sit through the initial hold.
  */
 export function heroReducedSteps(k: HeroRevealTuning = HERO_REVEAL_DEFAULTS): readonly number[] {
-  const hold = k.initialHoldDuration;
-  return [...REDUCED_STEP_FRAMES.map((frame) => frame + hold), heroRevealDuration(k)];
+  const S = heroSpans(k);
+  const mid = (span: readonly [number, number]) => Math.round((span[0] + span[1]) / 2);
+  return [mid(S.arrivalHold), mid(S.upload), mid(S.completeHold), heroRevealDuration(k)];
 }
 
 export const HERO_REDUCED_STEPS = heroReducedSteps();

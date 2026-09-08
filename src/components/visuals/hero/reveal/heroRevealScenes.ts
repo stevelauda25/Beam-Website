@@ -174,6 +174,11 @@ export type HeroRevealScene = {
     cursor: {
       frame: { left: number; top: number; size: number };
       image: { left: number; top: number; width: number; height: number };
+      /**
+       * Drawing-scale correction for the OPEN hand, applied about the pointer
+       * hotspot. See the value for why it exists.
+       */
+      openArtScale: number;
       /** Open hand. */
       src: string;
       /** Closed / grabbing hand, shown while the files are carried. */
@@ -243,6 +248,30 @@ export const HERO_REVEAL_SCENES: HeroRevealScene[] = [
       cursor: {
         frame: { left: 187.18, top: 126.62, size: 129.376 },
         image: { left: 17.37, top: 21.42, width: 94.1654, height: 95.3904 },
+        /*
+         * THE TWO HAND ASSETS ARE NOT DRAWN AT THE SAME SCALE.
+         *
+         * They share one rect — the open hand's — because that is the only
+         * placement the hero frame gives us, but they were exported
+         * differently: cursor-grab.svg carries a TIGHT frame auto-fitted to
+         * its artwork (viewBox 94.1654 x 95.3904, ink filling ~86% of it),
+         * while cursor-grabbing.svg is the cursor family's BASE component
+         * (viewBox 20 x 20, ink filling ~68%). Stretched into the same box the
+         * open hand therefore renders about a quarter larger than the closed
+         * one, at every Pointer Scale, because both are multiplied by the same
+         * factor — the states scale together but do not MATCH.
+         *
+         * Rasterising both into that shared box and measuring the palm — the
+         * one part of a hand that does not change with the pose — gives the
+         * open glyph at 1.2498x the closed glyph, i.e. 5:4. This is the
+         * reciprocal, applied to the open art only, about the pointer hotspot
+         * so nothing moves. It puts both poses on one drawing scale, which is
+         * what makes a single Pointer Scale govern both.
+         *
+         * If the closed hand's authored instance size is ever recovered from
+         * Figma, that is the authority and this should be replaced by it.
+         */
+        openArtScale: 0.8,
         /** Cursor/Grab (561:9785) — the hero's own authored OPEN hand. */
         src: '/assets/hero/reveal/cursor-grab.svg',
         /**
