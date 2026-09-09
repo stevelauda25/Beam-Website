@@ -1,10 +1,9 @@
 {
   "version": 1,
-  "savedAt": "2026-09-08T17:53:59.514Z",
+  "savedAt": "2026-09-09T15:19:51.542Z",
   "source": "motion-lab",
   "changedKeys": [
-    "base.approachDuration",
-    "base.resolveDelay"
+    "base.approachDuration"
   ],
   "base": {
     "initialHoldDuration": 1000,
@@ -25,7 +24,7 @@
     "releaseBlur": 0,
     "cardLag": 0,
     "approachStart": 0,
-    "approachDuration": 840,
+    "approachDuration": 1200,
     "approachEase": "out2",
     "arrivalHoldDuration": 700,
     "releaseDelay": 0,

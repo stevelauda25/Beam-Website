@@ -32,14 +32,25 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Geist Mono';
-  src: url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-mono/GeistMono-variable.woff2')
-    format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+/*
+ * Geist Mono is deliberately NOT declared.
+ *
+ * The rule that stood here pointed at
+ * .../geist-mono/GeistMono-variable.woff2, which 404s — the published file
+ * is GeistMono-Variable.woff2, with a capital V. So the face has never
+ * loaded: `document.fonts` reported `Geist Mono: error` on every measured
+ * load, and a platform-font check of the terminal card found only TikTok
+ * Sans rasterising. Every `font-mono` element has always fallen through to
+ * `ui-monospace, SFMono-Regular, Menlo, monospace`, which is what it still
+ * does now that the rule is gone.
+ *
+ * Removing it — rather than correcting the URL — is the change that keeps
+ * the rendered page identical. Loading the real Geist Mono would be a
+ * visible typography change and is a design decision, not a performance
+ * one. The family is left at the head of `fontFamily.mono` in the Tailwind
+ * config: an undeclared family is simply skipped, so it costs nothing and
+ * records the intent if the font is ever adopted properly.
+ */
 
 html {
   font-family: theme('fontFamily.sans');

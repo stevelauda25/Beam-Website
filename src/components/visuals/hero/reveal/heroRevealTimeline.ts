@@ -363,7 +363,7 @@ export const HERO_REVEAL_DEFAULTS: HeroRevealTuning = {
   releaseBlur: 0,
   cardLag: 0,
   approachStart: 0,
-  approachDuration: 840,
+  approachDuration: 1200,
   approachEase: "out2",
   arrivalHoldDuration: 700,
   releaseDelay: 0,
