@@ -1,8 +1,29 @@
+import { lazy, Suspense } from 'react';
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import { ShareVisual } from '../visuals/share/ShareVisual';
 import toggleActive from '../../assets/icons/common/toggle-active.svg';
+
+/*
+ * Split out of the main bundle (2026-09-09 performance pass).
+ *
+ * This visual is a large inline-SVG payload and is the single biggest module
+ * in its section; keeping it in the entry chunk meant the browser had to
+ * parse, compile and evaluate it before the hero could mount, which is where
+ * the long tasks measured on Lighthouse actually live. It is below the fold
+ * and nothing above the fold reads from it.
+ *
+ * NO LAYOUT CONSEQUENCE: the wrapper below carries a fixed `aspect-[809/692]`,
+ * so the box reserves its exact final height from the first paint whether or
+ * not the chunk has arrived. The fallback is deliberately `null` rather than a
+ * placeholder — a placeholder would be a visual change, an empty box of the
+ * correct size is not, and the chunk resolves long before this section can be
+ * scrolled to. Document height, and therefore every ScrollTrigger position,
+ * is identical from the first frame.
+ */
+const ShareVisual = lazy(() =>
+  import('../visuals/share/ShareVisual').then((m) => ({ default: m.ShareVisual })),
+);
 
 export default function ShareHost() {
   return (
@@ -10,7 +31,9 @@ export default function ShareHost() {
       <div className="mx-auto flex max-w-[1440px] flex-col items-center min-[744px]:w-[680px] lg:w-full lg:flex-row-reverse lg:items-stretch">
         <FadeIn className="w-full sm:max-w-[640px] min-[744px]:w-[520px] lg:w-[809px] lg:max-w-none">
           <div className="aspect-[809/692] w-full [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full">
-            <ShareVisual />
+            <Suspense fallback={null}>
+              <ShareVisual />
+            </Suspense>
           </div>
         </FadeIn>
 

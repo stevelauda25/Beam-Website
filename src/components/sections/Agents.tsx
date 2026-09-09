@@ -1,8 +1,29 @@
+import { lazy, Suspense } from 'react';
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import { AgentVisual } from '../visuals/agents/AgentVisual';
 import toggleActive from '../../assets/icons/common/toggle-active.svg';
+
+/*
+ * Split out of the main bundle (2026-09-09 performance pass).
+ *
+ * This visual is a large inline-SVG payload and is the single biggest module
+ * in its section; keeping it in the entry chunk meant the browser had to
+ * parse, compile and evaluate it before the hero could mount, which is where
+ * the long tasks measured on Lighthouse actually live. It is below the fold
+ * and nothing above the fold reads from it.
+ *
+ * NO LAYOUT CONSEQUENCE: the wrapper below carries a fixed `aspect-[809/692]`,
+ * so the box reserves its exact final height from the first paint whether or
+ * not the chunk has arrived. The fallback is deliberately `null` rather than a
+ * placeholder — a placeholder would be a visual change, an empty box of the
+ * correct size is not, and the chunk resolves long before this section can be
+ * scrolled to. Document height, and therefore every ScrollTrigger position,
+ * is identical from the first frame.
+ */
+const AgentVisual = lazy(() =>
+  import('../visuals/agents/AgentVisual').then((m) => ({ default: m.AgentVisual })),
+);
 
 export default function Agents() {
   return (
@@ -24,7 +45,9 @@ export default function Agents() {
             used 809/692 and are unaffected.
           */}
           <div className="aspect-[809/692] w-full overflow-hidden [&>div]:h-full [&>div]:w-full [&_svg]:h-auto [&_svg]:w-full min-[744px]:overflow-visible min-[744px]:[&_svg]:h-full">
-            <AgentVisual />
+            <Suspense fallback={null}>
+              <AgentVisual />
+            </Suspense>
           </div>
         </FadeIn>
 

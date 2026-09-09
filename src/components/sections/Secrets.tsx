@@ -1,8 +1,29 @@
+import { lazy, Suspense } from 'react';
 import FadeIn from '../ui/FadeIn';
 import SectionLabel from '../ui/SectionLabel';
 import FeatureItem from '../ui/FeatureItem';
-import { SecretVisual } from '../visuals/secrets/SecretVisual';
 import toggleActive from '../../assets/icons/common/toggle-active.svg';
+
+/*
+ * Split out of the main bundle (2026-09-09 performance pass).
+ *
+ * This visual is a large inline-SVG payload and is the single biggest module
+ * in its section; keeping it in the entry chunk meant the browser had to
+ * parse, compile and evaluate it before the hero could mount, which is where
+ * the long tasks measured on Lighthouse actually live. It is below the fold
+ * and nothing above the fold reads from it.
+ *
+ * NO LAYOUT CONSEQUENCE: the wrapper below carries a fixed `aspect-[1178/484]`,
+ * so the box reserves its exact final height from the first paint whether or
+ * not the chunk has arrived. The fallback is deliberately `null` rather than a
+ * placeholder — a placeholder would be a visual change, an empty box of the
+ * correct size is not, and the chunk resolves long before this section can be
+ * scrolled to. Document height, and therefore every ScrollTrigger position,
+ * is identical from the first frame.
+ */
+const SecretVisual = lazy(() =>
+  import('../visuals/secrets/SecretVisual').then((m) => ({ default: m.SecretVisual })),
+);
 
 const features = [
   {
@@ -41,7 +62,9 @@ export default function Secrets() {
 
         <FadeIn delay={0.05} className="order-1 mb-9 w-full sm:mb-0 min-[744px]:w-[520px] lg:order-2 lg:w-full">
           <div className="aspect-[1178/484] w-full scale-150 [&>div]:h-full [&>div]:w-full [&_svg]:h-full [&_svg]:w-full sm:scale-100">
-            <SecretVisual />
+            <Suspense fallback={null}>
+              <SecretVisual />
+            </Suspense>
           </div>
         </FadeIn>
 

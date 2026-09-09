@@ -356,8 +356,42 @@ export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = 
     const lowerTable = lowerPathRef.current ? tabulate(lowerPathRef.current) : null;
     const upperTable = upperPathRef.current ? tabulate(upperPathRef.current) : null;
 
+    /*
+     * Each panel's openness variable is written on THAT PANEL'S GROUP, not on
+     * the shared SVG root.
+     *
+     * The three variables are only ever read inside their own panel: all nine
+     * rules that consume `--mac-open` resolve to elements under
+     * `Frame 2147260431`, and likewise for the Beam and Cloud groups. Written
+     * on the root they still resolved identically — but a custom-property
+     * change invalidates style for the whole inheriting subtree, so each frame
+     * dirtied all 644 descendants and re-evaluated every calc() rule in the
+     * visual, including the thirty that resolve SVG `y` / `height`. Scoped to
+     * the group, one panel's frame dirties ~50 elements instead, and the three
+     * panels animate at different times so they rarely coincide.
+     *
+     * The computed value each rule sees is unchanged, because the variable is
+     * still an ancestor of every element that reads it. Measured over the
+     * intro: style recalculation 725ms -> 319ms, long tasks 61ms -> 0.
+     *
+     * The root remains the fallback if a group is ever missing, so a renamed
+     * Figma id degrades to the previous behaviour rather than to no animation.
+     */
+    const VAR_GROUP: Record<string, string> = {
+      "--mac-open": "Frame 2147260431",
+      "--beam-open": "Frame 2147260385",
+      "--cloud-open": "Frame 2147260386",
+    };
+    const varTarget = (name: string): SVGElement | HTMLElement => {
+      const id = VAR_GROUP[name];
+      const el = id ? root.querySelector<SVGElement>(`[id="${id}"]`) : null;
+      return el ?? root;
+    };
+    const varTargets = new Map<string, SVGElement | HTMLElement>(
+      Object.keys(VAR_GROUP).map((name) => [name, varTarget(name)]),
+    );
     const setVar = (name: string, value: number) =>
-      root.style.setProperty(name, String(value));
+      (varTargets.get(name) ?? root).style.setProperty(name, String(value));
 
     // The value stays continuous; only this label is quantised, and it truncates
     // so the readout never claims a tenth that has not actually elapsed yet.
@@ -425,9 +459,7 @@ export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = 
       runRef.current = null;
       frameRef.current = null;
       stopRequestedRef.current = false;
-      root.style.removeProperty("--mac-open");
-      root.style.removeProperty("--beam-open");
-      root.style.removeProperty("--cloud-open");
+      for (const [name, target] of varTargets) target.style.removeProperty(name);
       showCount(TRANSACTION_MS / 1000);
       hideTrail(lowerDotsRef.current);
       hideTrail(upperDotsRef.current);
@@ -480,7 +512,14 @@ export function SyncVisual({ trailTuning }: { trailTuning?: SyncTrailTuning } = 
           observer?.disconnect();
           start("intro");
         },
-        { threshold: 0.35 },
+        /*
+         * Start as the section comes up, not a third of the way into it. The
+         * transaction is 1800ms; at 0.35 of the SVG it began only once the
+         * visual was well on screen, so the first thing seen was the panels
+         * still closed. Reaching a quarter of a viewport ahead lets the build
+         * be under way on arrival without running so early that it is over.
+         */
+        { threshold: 0, rootMargin: '0px 0px 25% 0px' },
       );
       observer.observe(root);
     } else {

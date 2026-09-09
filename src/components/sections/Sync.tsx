@@ -10,7 +10,25 @@ export default function Sync() {
   return (
     <section className="w-full overflow-hidden bg-canvas px-5 py-12 sm:px-8 sm:py-16 lg:px-0 lg:py-[100px]">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center min-[744px]:w-[680px] lg:w-full lg:flex-row lg:items-stretch">
-        <FadeIn className="w-full sm:max-w-[640px] min-[744px]:w-[520px] lg:w-[809px] lg:max-w-none">
+        {/*
+          * Revealed early, and only here.
+          *
+          * The default trigger waits until a fifth of the element is on screen,
+          * which for this visual meant scrolling into a panel that was still at
+          * opacity 0 and watching it fade up after it was already being looked
+          * at. It is also the most expensive visual on the page to draw, so the
+          * fade overlapped its own build. Reaching half a viewport further down
+          * means it is opaque and settled before it is reached, and the reveal
+          * is no longer competing with the transaction animation.
+          *
+          * Scoped to this one call: the shared default is untouched, so every
+          * other section — ProblemSolution included — reveals exactly as before.
+          */}
+        <FadeIn
+          amount={0}
+          margin="0px 0px 50% 0px"
+          className="w-full sm:max-w-[640px] min-[744px]:w-[520px] lg:w-[809px] lg:max-w-none"
+        >
           <SyncVisual />
         </FadeIn>
 
