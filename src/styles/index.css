@@ -4,8 +4,27 @@
 
 @font-face {
   font-family: 'TikTok Sans';
+  /*
+   * WOFF2 first, the original TTF kept behind it as a fallback.
+   *
+   * Same file, not a different cut: the .woff2 was produced from the .ttf by
+   * lossless container compression (fontTools/brotli), and was verified table
+   * by table against the source — identical glyph order, identical hmtx
+   * advance widths, identical cmap (910 mappings), identical unitsPerEm /
+   * hhea / OS-2 metrics, and the same four axes (opsz 12-36, wdth 75-150,
+   * wght 300-900, slnt -6-0) with all 14 named instances. The only bytes that
+   * differ are head.checkSumAdjustment, head.modified, and head flags bit 11 —
+   * the spec's "lossless transform applied" marker, which WOFF2 conversion is
+   * required to set. None of the three affect rasterisation or metrics.
+   *
+   * 759,080 B -> 347,696 B. The browser takes the first format it supports, so
+   * every current browser fetches only the WOFF2 and the TTF is never
+   * requested; it stays as a safety net rather than being deleted.
+   */
   src: local('TikTok Sans'),
     local('TikTokSans'),
+    url('/TikTok_Sans/TikTokSans-VariableFont_opsz,slnt,wdth,wght.woff2')
+      format('woff2'),
     url('/TikTok_Sans/TikTokSans-VariableFont_opsz,slnt,wdth,wght.ttf')
       format('truetype');
   font-weight: 100 1000;
